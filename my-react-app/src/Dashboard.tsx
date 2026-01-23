@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import {
   AppBar,
@@ -40,12 +40,76 @@ interface DashboardProps {
   onLogout: () => void;
 }
 
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  companyName: string;
+}
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
 const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [userName] = useState('John Doe'); // In real app, this would come from authentication
+  const [userName, setUserName] = useState<string>('User');
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState<'dashboard' | 'calculation' | 'report' | 'sharing'>('dashboard');
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Fetch current user data on component mount
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          onLogout();
+          return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/users/me`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.user) {
+            setUser(data.user);
+            // Use username as display name (not companyName)
+            setUserName(data.user.username || 'User');
+          }
+        } else if (response.status === 401) {
+          // Token expired or invalid
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          onLogout();
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+        // Fallback to stored user data from localStorage
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          try {
+            const userData = JSON.parse(storedUser);
+            setUser(userData);
+            // Use username as display name (not companyName)
+            setUserName(userData.username || 'User');
+          } catch (e) {
+            console.error('Error parsing stored user:', e);
+          }
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCurrentUser();
+  }, [onLogout]);
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -210,8 +274,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             startIcon={<AccountCircle />}
             endIcon={<MenuIcon />}
             sx={{ color: 'text.primary' }}
+            disabled={loading}
           >
-            {userName}
+            {loading ? 'Loading...' : userName}
           </Button>
           
           <Menu
@@ -243,7 +308,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           {/* Welcome Section */}
           <Box mb={4}>
             <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
-              Welcome back, {userName}!
+              {loading ? 'Loading...' : `Welcome back, ${userName}!`}
             </Typography>
             <Typography variant="h6" color="text.secondary">
               Manage your CBAM compliance and emissions reporting
