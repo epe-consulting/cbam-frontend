@@ -20,6 +20,7 @@ import {
 import {
   ArrowBack,
   ArrowForward,
+  Add,
 } from '@mui/icons-material';
 
 // Fuel data with units and emission factors
@@ -75,27 +76,67 @@ const NewCalculation: React.FC = () => {
   const [productionProcess, setProductionProcess] = useState('');
   const [dataQualityLevel, setDataQualityLevel] = useState('');
   
-  // Fuel input state
-  const [selectedFuel, setSelectedFuel] = useState('');
-  const [selectedUnit, setSelectedUnit] = useState('');
-  const [fuelAmount, setFuelAmount] = useState<string>('');
+  // Fuel input state - array of fuel entries
+  interface FuelEntry {
+    id: number;
+    fuel: string;
+    amount: string;
+    unit: string;
+  }
+  const [fuelEntries, setFuelEntries] = useState<FuelEntry[]>([
+    { id: 1, fuel: '', amount: '', unit: '' }
+  ]);
 
   // Get the selected fuel's unit
-  const getSelectedFuelUnit = () => {
-    const fuel = fuelData.find(f => f.name === selectedFuel);
+  const getFuelUnit = (fuelName: string) => {
+    const fuel = fuelData.find(f => f.name === fuelName);
     return fuel ? fuel.unit : '';
   };
 
   // Get the selected fuel's emission factor
-  const getSelectedFuelEmissionFactor = () => {
-    const fuel = fuelData.find(f => f.name === selectedFuel);
+  const getFuelEmissionFactor = (fuelName: string) => {
+    const fuel = fuelData.find(f => f.name === fuelName);
     return fuel ? fuel.emissionFactor : 0;
   };
 
   // Handle fuel selection change - reset unit when fuel changes
-  const handleFuelChange = (fuelName: string) => {
-    setSelectedFuel(fuelName);
-    setSelectedUnit(''); // Reset unit selection when fuel changes
+  const handleFuelChange = (id: number, fuelName: string) => {
+    setFuelEntries(prev => prev.map(entry => 
+      entry.id === id 
+        ? { ...entry, fuel: fuelName, unit: '' } 
+        : entry
+    ));
+  };
+
+  // Handle fuel amount change
+  const handleFuelAmountChange = (id: number, amount: string) => {
+    setFuelEntries(prev => prev.map(entry => 
+      entry.id === id 
+        ? { ...entry, amount } 
+        : entry
+    ));
+  };
+
+  // Handle fuel unit change
+  const handleFuelUnitChange = (id: number, unit: string) => {
+    setFuelEntries(prev => prev.map(entry => 
+      entry.id === id 
+        ? { ...entry, unit } 
+        : entry
+    ));
+  };
+
+  // Add a new fuel entry
+  const handleAddFuel = () => {
+    const newId = Math.max(...fuelEntries.map(e => e.id), 0) + 1;
+    setFuelEntries(prev => [...prev, { id: newId, fuel: '', amount: '', unit: '' }]);
+  };
+
+  // Remove a fuel entry
+  const handleRemoveFuel = (id: number) => {
+    if (fuelEntries.length > 1) {
+      setFuelEntries(prev => prev.filter(entry => entry.id !== id));
+    }
   };
 
   // Helper function to convert category name to URL slug
@@ -314,10 +355,11 @@ const NewCalculation: React.FC = () => {
       setStep(5); // Go to calculation form (A3, A4, or A5 based on selection)
     } else if (step === 5) {
       // Step 5 is the fuel input form (for fuels route)
-      // Validation: require fuel, unit, and amount for fuels route
+      // Validation: require fuel, unit, and amount for all fuel entries
       if (category === 'Aluminium' && aluminumProductType === 'unwrought' && dataQualityLevel === 'real-data') {
-        if (!selectedFuel || !selectedUnit || !fuelAmount) {
-          return; // Validation - all fields required
+        const allValid = fuelEntries.every(entry => entry.fuel && entry.unit && entry.amount);
+        if (!allValid || fuelEntries.length === 0) {
+          return; // Validation - all fields required for all entries
         }
         // Navigate to anodes step
         const slug = categoryToSlug(category);
@@ -869,62 +911,95 @@ const NewCalculation: React.FC = () => {
                 <Typography variant="h6" component="h3" gutterBottom sx={{ fontWeight: 600, mb: 3, mt: 2 }}>
                   Unos podataka o gorivima
                 </Typography>
-                <Grid container spacing={3}>
-                  <Grid size={{ xs: 12, md: 5 }}>
-                    <FormControl fullWidth>
-                      <InputLabel>Vrsta goriva</InputLabel>
-                      <Select
-                        value={selectedFuel}
-                        label="Vrsta goriva"
-                        onChange={(e) => handleFuelChange(e.target.value)}
-                      >
-                        {fuelData.map((fuel) => (
-                          <MenuItem key={fuel.name} value={fuel.name}>
-                            {fuel.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 4 }}>
-                    <TextField
-                      fullWidth
-                      label="Količina"
-                      type="number"
-                      value={fuelAmount}
-                      onChange={(e) => setFuelAmount(e.target.value)}
-                      slotProps={{ htmlInput: { min: 0, step: 'any' } }}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 3 }}>
-                    <FormControl fullWidth disabled={!selectedFuel}>
-                      <InputLabel>Jedinica</InputLabel>
-                      <Select
-                        value={selectedUnit}
-                        label="Jedinica"
-                        onChange={(e) => setSelectedUnit(e.target.value)}
-                      >
-                        {selectedFuel && (
-                          <MenuItem value={getSelectedFuelUnit()}>
-                            {getSelectedFuelUnit()}
-                          </MenuItem>
-                        )}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  {selectedFuel && selectedUnit && fuelAmount && (
-                    <Grid size={12}>
-                      <Paper elevation={1} sx={{ p: 2, mt: 1, backgroundColor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
-                        <Typography variant="body2" color="text.secondary">
-                          <strong>Emisijski faktor:</strong> {getSelectedFuelEmissionFactor()} kg CO₂e / {selectedUnit}
-                        </Typography>
-                        <Typography variant="body1" sx={{ mt: 1, fontWeight: 600 }}>
-                          <strong>Izračunate emisije:</strong> {(Number.parseFloat(fuelAmount) * getSelectedFuelEmissionFactor()).toFixed(2)} kg CO₂e
-                        </Typography>
-                      </Paper>
+                {fuelEntries.map((entry, index) => (
+                  <Box key={entry.id} sx={{ mb: 3 }}>
+                    <Grid container spacing={3} alignItems="flex-start">
+                      <Grid size={{ xs: 12, md: 5 }}>
+                        <FormControl fullWidth>
+                          <InputLabel>Vrsta goriva</InputLabel>
+                          <Select
+                            value={entry.fuel}
+                            label="Vrsta goriva"
+                            onChange={(e) => handleFuelChange(entry.id, e.target.value)}
+                          >
+                            {fuelData.map((fuel) => (
+                              <MenuItem key={fuel.name} value={fuel.name}>
+                                {fuel.name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 4 }}>
+                        <TextField
+                          fullWidth
+                          label="Količina"
+                          type="number"
+                          value={entry.amount}
+                          onChange={(e) => handleFuelAmountChange(entry.id, e.target.value)}
+                          slotProps={{ htmlInput: { min: 0, step: 'any' } }}
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 3 }}>
+                        <FormControl fullWidth disabled={!entry.fuel}>
+                          <InputLabel>Jedinica</InputLabel>
+                          <Select
+                            value={entry.unit}
+                            label="Jedinica"
+                            onChange={(e) => handleFuelUnitChange(entry.id, e.target.value)}
+                          >
+                            {entry.fuel && (
+                              <MenuItem value={getFuelUnit(entry.fuel)}>
+                                {getFuelUnit(entry.fuel)}
+                              </MenuItem>
+                            )}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      {entry.fuel && entry.unit && entry.amount && (
+                        <Grid size={12}>
+                          <Paper elevation={1} sx={{ p: 2, mt: 1, backgroundColor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
+                            <Typography variant="body2" color="text.secondary">
+                              <strong>Emisijski faktor:</strong> {getFuelEmissionFactor(entry.fuel)} kg CO₂e / {entry.unit}
+                            </Typography>
+                            <Typography variant="body1" sx={{ mt: 1, fontWeight: 600 }}>
+                              <strong>Izračunate emisije:</strong> {(Number.parseFloat(entry.amount) * getFuelEmissionFactor(entry.fuel)).toFixed(2)} kg CO₂e
+                            </Typography>
+                          </Paper>
+                        </Grid>
+                      )}
                     </Grid>
-                  )}
-                </Grid>
+                  </Box>
+                ))}
+                <Box sx={{ mt: 2, mb: 3 }}>
+                  <Button
+                    variant="outlined"
+                    onClick={handleAddFuel}
+                    startIcon={<Add />}
+                    sx={{ mr: 2 }}
+                  >
+                    Add another fuel
+                  </Button>
+                </Box>
+                {fuelEntries.some(entry => entry.fuel && entry.unit && entry.amount) && (
+                  <Box sx={{ mt: 2 }}>
+                    <Paper elevation={1} sx={{ p: 2, backgroundColor: 'success.50', border: '1px solid', borderColor: 'success.200' }}>
+                      <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+                        Ukupne izračunate emisije:
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 600, fontSize: '1.2rem' }}>
+                        {fuelEntries
+                          .filter(entry => entry.fuel && entry.unit && entry.amount)
+                          .reduce((total, entry) => {
+                            const amount = Number.parseFloat(entry.amount) || 0;
+                            const factor = getFuelEmissionFactor(entry.fuel);
+                            return total + (amount * factor);
+                          }, 0)
+                          .toFixed(2)} kg CO₂e
+                      </Typography>
+                    </Paper>
+                  </Box>
+                )}
               </>
             )}
 
