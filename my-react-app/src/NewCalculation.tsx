@@ -110,6 +110,23 @@ const NewCalculation: React.FC = () => {
   const [primaryAluminumQuantityOvervoltage, setPrimaryAluminumQuantityOvervoltage] = useState<string>('');
   const [cellTechnologyOvervoltage, setCellTechnologyOvervoltage] = useState<string>('');
 
+  // Electricity source state
+  const [electricitySource, setElectricitySource] = useState<string>('');
+
+  // Grid electricity consumption state
+  const [gridConsumption, setGridConsumption] = useState<string>('');
+  const [gridConsumptionUnit, setGridConsumptionUnit] = useState<string>('kWh');
+
+  // Self-power electricity state
+  const [selfPowerFuelType, setSelfPowerFuelType] = useState<string>('');
+  const [selfPowerConsumption, setSelfPowerConsumption] = useState<string>('');
+
+  // PPA electricity state
+  const [ppaHasEmissionFactor, setPpaHasEmissionFactor] = useState<string>('');
+  const [ppaEmissionFactor, setPpaEmissionFactor] = useState<string>('');
+  const [ppaConsumption, setPpaConsumption] = useState<string>('');
+  const [ppaConsumptionUnit, setPpaConsumptionUnit] = useState<string>('kWh');
+
   // Get x1 coefficient based on cell technology
   const getX1Coefficient = (technology: string): number => {
     const coefficients: { [key: string]: number } = {
@@ -209,6 +226,84 @@ const NewCalculation: React.FC = () => {
   const getFuelEmissionFactor = (fuelName: string) => {
     const fuel = fuelData.find(f => f.name === fuelName);
     return fuel ? fuel.emissionFactor : 0;
+  };
+
+  // Calculate grid electricity emissions
+  const calculateGridEmissions = (): number => {
+    if (!gridConsumption) {
+      return 0;
+    }
+
+    const consumption = Number.parseFloat(gridConsumption) || 0;
+    
+    // Formula: input * 0.77 for kWh, input * 0.77 * 1000 for MWh
+    if (gridConsumptionUnit === 'kWh') {
+      return consumption * 0.77;
+    } else if (gridConsumptionUnit === 'MWh') {
+      return consumption * 0.77 * 1000;
+    }
+    
+    return 0;
+  };
+
+  // Get emission factor for self-power fuel type
+  const getSelfPowerEmissionFactor = (fuelType: string): number => {
+    const factors: { [key: string]: number } = {
+      'ugalj': 0.33621,
+      'prirodni-gas': 0.2027,
+      'loz-ulje': 0.27288,
+      'mazut': 0.28523,
+      'biomasa': 0.3615,
+      'biogas': 0.19924,
+      'obnovljivi': 0,
+    };
+    return factors[fuelType] || 0;
+  };
+
+  // Calculate self-power electricity emissions
+  const calculateSelfPowerEmissions = (): number => {
+    if (!selfPowerFuelType || !selfPowerConsumption) {
+      return 0;
+    }
+
+    const consumption = Number.parseFloat(selfPowerConsumption) || 0;
+    const emissionFactor = getSelfPowerEmissionFactor(selfPowerFuelType);
+    
+    // Formula: consumption (kWh) * emission factor
+    return consumption * emissionFactor;
+  };
+
+  // Calculate PPA electricity emissions
+  const calculatePpaEmissions = (): number => {
+    if (!ppaConsumption) {
+      return 0;
+    }
+
+    const consumption = Number.parseFloat(ppaConsumption) || 0;
+    
+    if (ppaHasEmissionFactor === 'yes') {
+      // If user has verified emission factor: emission factor (kgCO2/kWh) * consumption
+      if (!ppaEmissionFactor) {
+        return 0;
+      }
+      const emissionFactor = Number.parseFloat(ppaEmissionFactor) || 0;
+      // Convert consumption to kWh if needed
+      let consumptionInKWh = consumption;
+      if (ppaConsumptionUnit === 'MWh') {
+        consumptionInKWh = consumption * 1000; // Convert MWh to kWh
+      }
+      // Formula: emission factor (kgCO2/kWh) * consumption (kWh) = emissions (kg CO₂)
+      return emissionFactor * consumptionInKWh;
+    } else {
+      // If NO, use same logic as grid: input * 0.77 for kWh, input * 0.77 * 1000 for MWh
+      if (ppaConsumptionUnit === 'kWh') {
+        return consumption * 0.77;
+      } else if (ppaConsumptionUnit === 'MWh') {
+        return consumption * 0.77 * 1000;
+      }
+    }
+    
+    return 0;
   };
 
   // Handle fuel selection change - reset unit when fuel changes
@@ -368,8 +463,57 @@ const NewCalculation: React.FC = () => {
     }
     
     // Check routes in order of specificity (most specific first)
-    // 1. Check for /slope or /overvoltage route first (most specific - both show step 8)
-    if (location.pathname.endsWith('/slope') || location.pathname.endsWith('/overvoltage')) {
+    // 1. Check for /grid, /self-power, /ppa/yes, /ppa/no, or /ppa routes first (most specific - shows step 10)
+    if (location.pathname.endsWith('/grid') || location.pathname.endsWith('/self-power') || 
+        location.pathname.endsWith('/ppa/yes') || location.pathname.endsWith('/ppa/no') || 
+        location.pathname.endsWith('/ppa')) {
+      setStep(10);
+      // Ensure dataQualityLevel is set if we have the param
+      if (dataLevelParam && productTypeParam === 'unwrought' && !dataQualityLevel) {
+        const validDataLevels = ['fuels', 'emissions', 'nothing'];
+        if (validDataLevels.includes(dataLevelParam)) {
+          setDataQualityLevel(slugToDataLevel(dataLevelParam));
+        }
+      }
+      // Set electricity source based on route
+      if (location.pathname.endsWith('/grid') && !electricitySource) {
+        setElectricitySource('grid');
+      } else if (location.pathname.endsWith('/self-power') && !electricitySource) {
+        setElectricitySource('self-power');
+      } else if ((location.pathname.endsWith('/ppa') || location.pathname.endsWith('/ppa/yes') || location.pathname.endsWith('/ppa/no')) && !electricitySource) {
+        setElectricitySource('ppa');
+      }
+      // Set PPA answer based on route
+      if (location.pathname.endsWith('/ppa/yes') && !ppaHasEmissionFactor) {
+        setPpaHasEmissionFactor('yes');
+      } else if (location.pathname.endsWith('/ppa/no') && !ppaHasEmissionFactor) {
+        setPpaHasEmissionFactor('no');
+      }
+    }
+    // 2. Check for /electricity route (but not /grid, /self-power, /ppa, /ppa/yes, or /ppa/no)
+    else if (location.pathname.endsWith('/electricity') && 
+             !location.pathname.endsWith('/grid') && 
+             !location.pathname.endsWith('/self-power') &&
+             !location.pathname.endsWith('/ppa') &&
+             !location.pathname.endsWith('/ppa/yes') &&
+             !location.pathname.endsWith('/ppa/no')) {
+      setStep(9);
+      // Ensure dataQualityLevel is set if we have the param
+      if (dataLevelParam && productTypeParam === 'unwrought' && !dataQualityLevel) {
+        const validDataLevels = ['fuels', 'emissions', 'nothing'];
+        if (validDataLevels.includes(dataLevelParam)) {
+          setDataQualityLevel(slugToDataLevel(dataLevelParam));
+        }
+      }
+    }
+    // 3. Check for /slope or /overvoltage route (but not /electricity, /grid, /self-power, /ppa, /ppa/yes, or /ppa/no)
+    else if ((location.pathname.endsWith('/slope') || location.pathname.endsWith('/overvoltage')) && 
+             !location.pathname.endsWith('/electricity') &&
+             !location.pathname.endsWith('/grid') &&
+             !location.pathname.endsWith('/self-power') &&
+             !location.pathname.endsWith('/ppa') &&
+             !location.pathname.endsWith('/ppa/yes') &&
+             !location.pathname.endsWith('/ppa/no')) {
       setStep(8);
       // Ensure dataQualityLevel is set if we have the param
       if (dataLevelParam && productTypeParam === 'unwrought' && !dataQualityLevel) {
@@ -379,10 +523,16 @@ const NewCalculation: React.FC = () => {
         }
       }
     }
-    // 2. Check for /pfc route (but not /slope or /overvoltage)
+    // 4. Check for /pfc route (but not /slope, /overvoltage, /electricity, /grid, /self-power, /ppa, /ppa/yes, or /ppa/no)
     else if (location.pathname.endsWith('/pfc') && 
              !location.pathname.endsWith('/slope') && 
-             !location.pathname.endsWith('/overvoltage')) {
+             !location.pathname.endsWith('/overvoltage') &&
+             !location.pathname.endsWith('/electricity') &&
+             !location.pathname.endsWith('/grid') &&
+             !location.pathname.endsWith('/self-power') &&
+             !location.pathname.endsWith('/ppa') &&
+             !location.pathname.endsWith('/ppa/yes') &&
+             !location.pathname.endsWith('/ppa/no')) {
       setStep(7);
       // Ensure dataQualityLevel is set if we have the param
       if (dataLevelParam && productTypeParam === 'unwrought' && !dataQualityLevel) {
@@ -392,14 +542,20 @@ const NewCalculation: React.FC = () => {
         }
       }
     }
-    // 3. Check for /anode-elektrode route (but not /pfc, /slope, or /overvoltage)
+    // 5. Check for /anode-elektrode route (but not /pfc, /slope, /overvoltage, /electricity, /grid, /self-power, /ppa, /ppa/yes, or /ppa/no)
     else if (location.pathname.endsWith('/anode-elektrode') && 
              !location.pathname.endsWith('/pfc') && 
              !location.pathname.endsWith('/slope') &&
-             !location.pathname.endsWith('/overvoltage')) {
+             !location.pathname.endsWith('/overvoltage') &&
+             !location.pathname.endsWith('/electricity') &&
+             !location.pathname.endsWith('/grid') &&
+             !location.pathname.endsWith('/self-power') &&
+             !location.pathname.endsWith('/ppa') &&
+             !location.pathname.endsWith('/ppa/yes') &&
+             !location.pathname.endsWith('/ppa/no')) {
       setStep(6);
     }
-    // 4. Default to step 5 if we have dataLevelParam but no specific route
+    // 5. Default to step 5 if we have dataLevelParam but no specific route
     else if (dataLevelParam && productTypeParam === 'unwrought') {
       const validDataLevels = ['fuels', 'emissions', 'nothing'];
       if (dataQualityLevel || validDataLevels.includes(dataLevelParam)) {
@@ -542,11 +698,148 @@ const NewCalculation: React.FC = () => {
       } else {
         setStep(8);
       }
+    } else if (step === 8) {
+      // Step 8 is slope or overvoltage - navigate to electricity
+      // Validation: check if required fields are filled based on the method
+      if (category === 'Aluminium' && aluminumProductType === 'unwrought' && dataQualityLevel === 'real-data') {
+        const slug = categoryToSlug(category);
+        const productTypeSlug = productTypeToSlug(aluminumProductType);
+        const processSlug = processToSlug(productionProcess);
+        const dataLevelSlug = dataLevelToSlug(dataQualityLevel);
+        
+        // Check which method we're on and validate accordingly
+        if (location.pathname.endsWith('/slope')) {
+          // Validate slope method fields
+          if (!anodeEffectFrequency || !anodeEffectDuration || !primaryAluminumQuantity || !cellTechnology) {
+            return; // Validation - all fields required
+          }
+          navigate(`/dashboard/new-calculation/${slug}/${productTypeSlug}/${processSlug}/${dataLevelSlug}/anode-elektrode/pfc/slope/electricity`, { replace: true });
+        } else if (location.pathname.endsWith('/overvoltage')) {
+          // Validate overvoltage method fields
+          if (!aeo || !ce || !primaryAluminumQuantityOvervoltage || !cellTechnologyOvervoltage) {
+            return; // Validation - all fields required
+          }
+          navigate(`/dashboard/new-calculation/${slug}/${productTypeSlug}/${processSlug}/${dataLevelSlug}/anode-elektrode/pfc/overvoltage/electricity`, { replace: true });
+        }
+        setStep(9); // Go to electricity step
+      } else {
+        setStep(9);
+      }
+    } else if (step === 9 && !location.pathname.endsWith('/grid') && !location.pathname.endsWith('/self-power') && !location.pathname.endsWith('/ppa') && !location.pathname.endsWith('/ppa/yes') && !location.pathname.endsWith('/ppa/no')) {
+      // Step 9 is electricity source selection - navigate based on selection
+      if (!electricitySource) {
+        return; // Validation - source must be selected
+      }
+      
+      if (category === 'Aluminium' && aluminumProductType === 'unwrought' && dataQualityLevel === 'real-data') {
+        const slug = categoryToSlug(category);
+        const productTypeSlug = productTypeToSlug(aluminumProductType);
+        const processSlug = processToSlug(productionProcess);
+        const dataLevelSlug = dataLevelToSlug(dataQualityLevel);
+        
+        // Determine base path (slope or overvoltage)
+        let basePath = '';
+        if (location.pathname.includes('/slope/electricity')) {
+          basePath = `/dashboard/new-calculation/${slug}/${productTypeSlug}/${processSlug}/${dataLevelSlug}/anode-elektrode/pfc/slope/electricity`;
+        } else if (location.pathname.includes('/overvoltage/electricity')) {
+          basePath = `/dashboard/new-calculation/${slug}/${productTypeSlug}/${processSlug}/${dataLevelSlug}/anode-elektrode/pfc/overvoltage/electricity`;
+        } else {
+          basePath = `/dashboard/new-calculation/${slug}/${productTypeSlug}/${processSlug}/${dataLevelSlug}/anode-elektrode/pfc/electricity`;
+        }
+        
+        // Navigate based on selection
+        if (electricitySource === 'grid') {
+          navigate(`${basePath}/grid`, { replace: true });
+        } else if (electricitySource === 'self-power') {
+          navigate(`${basePath}/self-power`, { replace: true });
+        } else if (electricitySource === 'ppa') {
+          navigate(`${basePath}/ppa`, { replace: true });
+        }
+        setStep(10);
+      } else {
+        setStep(10);
+      }
+    } else if (step === 10 && location.pathname.endsWith('/ppa') && !location.pathname.endsWith('/ppa/yes') && !location.pathname.endsWith('/ppa/no')) {
+      // Step 10 on /ppa - navigate based on answer
+      if (!ppaHasEmissionFactor) {
+        return; // Validation - answer must be selected
+      }
+      
+      if (category === 'Aluminium' && aluminumProductType === 'unwrought' && dataQualityLevel === 'real-data') {
+        const slug = categoryToSlug(category);
+        const productTypeSlug = productTypeToSlug(aluminumProductType);
+        const processSlug = processToSlug(productionProcess);
+        const dataLevelSlug = dataLevelToSlug(dataQualityLevel);
+        
+        // Determine base path (slope or overvoltage)
+        let basePath = '';
+        if (location.pathname.includes('/slope/electricity')) {
+          basePath = `/dashboard/new-calculation/${slug}/${productTypeSlug}/${processSlug}/${dataLevelSlug}/anode-elektrode/pfc/slope/electricity/ppa`;
+        } else if (location.pathname.includes('/overvoltage/electricity')) {
+          basePath = `/dashboard/new-calculation/${slug}/${productTypeSlug}/${processSlug}/${dataLevelSlug}/anode-elektrode/pfc/overvoltage/electricity/ppa`;
+        } else {
+          basePath = `/dashboard/new-calculation/${slug}/${productTypeSlug}/${processSlug}/${dataLevelSlug}/anode-elektrode/pfc/electricity/ppa`;
+        }
+        
+        // Navigate based on answer
+        if (ppaHasEmissionFactor === 'yes') {
+          navigate(`${basePath}/yes`, { replace: true });
+        } else if (ppaHasEmissionFactor === 'no') {
+          navigate(`${basePath}/no`, { replace: true });
+        }
+      }
     }
   };
 
   const handleBack = () => {
-    if (step === 8) {
+    if (step === 10) {
+      // Going back from step 10 (grid/self-power/ppa/yes/ppa/no) to step 9 (electricity) or /ppa
+      if (category === 'Aluminium' && aluminumProductType === 'unwrought' && dataQualityLevel === 'real-data') {
+        const slug = categoryToSlug(category);
+        const productTypeSlug = productTypeToSlug(aluminumProductType);
+        const processSlug = processToSlug(productionProcess);
+        const dataLevelSlug = dataLevelToSlug(dataQualityLevel);
+        
+        // If on /ppa/yes or /ppa/no, go back to /ppa
+        if (location.pathname.endsWith('/ppa/yes') || location.pathname.endsWith('/ppa/no')) {
+          if (location.pathname.includes('/slope/electricity')) {
+            navigate(`/dashboard/new-calculation/${slug}/${productTypeSlug}/${processSlug}/${dataLevelSlug}/anode-elektrode/pfc/slope/electricity/ppa`, { replace: true });
+          } else if (location.pathname.includes('/overvoltage/electricity')) {
+            navigate(`/dashboard/new-calculation/${slug}/${productTypeSlug}/${processSlug}/${dataLevelSlug}/anode-elektrode/pfc/overvoltage/electricity/ppa`, { replace: true });
+          } else {
+            navigate(`/dashboard/new-calculation/${slug}/${productTypeSlug}/${processSlug}/${dataLevelSlug}/anode-elektrode/pfc/electricity/ppa`, { replace: true });
+          }
+          setPpaHasEmissionFactor('');
+          return;
+        }
+        
+        // Remove /grid, /self-power, or /ppa from URL
+        if (location.pathname.includes('/slope/electricity')) {
+          navigate(`/dashboard/new-calculation/${slug}/${productTypeSlug}/${processSlug}/${dataLevelSlug}/anode-elektrode/pfc/slope/electricity`, { replace: true });
+        } else if (location.pathname.includes('/overvoltage/electricity')) {
+          navigate(`/dashboard/new-calculation/${slug}/${productTypeSlug}/${processSlug}/${dataLevelSlug}/anode-elektrode/pfc/overvoltage/electricity`, { replace: true });
+        } else {
+          navigate(`/dashboard/new-calculation/${slug}/${productTypeSlug}/${processSlug}/${dataLevelSlug}/anode-elektrode/pfc/electricity`, { replace: true });
+        }
+      }
+      setStep(9);
+    } else if (step === 9) {
+      // Going back from step 9 (electricity) to step 8 (slope or overvoltage)
+      if (category === 'Aluminium' && aluminumProductType === 'unwrought' && dataQualityLevel === 'real-data') {
+        const slug = categoryToSlug(category);
+        const productTypeSlug = productTypeToSlug(aluminumProductType);
+        const processSlug = processToSlug(productionProcess);
+        const dataLevelSlug = dataLevelToSlug(dataQualityLevel);
+        
+        // Determine which method we came from (slope or overvoltage)
+        if (location.pathname.includes('/slope/electricity')) {
+          navigate(`/dashboard/new-calculation/${slug}/${productTypeSlug}/${processSlug}/${dataLevelSlug}/anode-elektrode/pfc/slope`, { replace: true });
+        } else if (location.pathname.includes('/overvoltage/electricity')) {
+          navigate(`/dashboard/new-calculation/${slug}/${productTypeSlug}/${processSlug}/${dataLevelSlug}/anode-elektrode/pfc/overvoltage`, { replace: true });
+        }
+      }
+      setStep(8);
+    } else if (step === 8) {
       // Going back from step 8 (slope or overvoltage) to step 7 (PFC)
       if (category === 'Aluminium' && aluminumProductType === 'unwrought' && dataQualityLevel === 'real-data') {
         // Remove /slope or /overvoltage from URL
@@ -1712,6 +2005,466 @@ const NewCalculation: React.FC = () => {
                 </Grid>
               </Grid>
             )}
+          </>
+        )}
+
+        {step === 9 && !location.pathname.endsWith('/grid') && !location.pathname.endsWith('/self-power') && !location.pathname.endsWith('/ppa') && (
+          <>
+            <Grid container spacing={3}>
+              <Grid size={12}>
+                <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                  Pitanje: Odakle dolazi električna energija?
+                </Typography>
+                <FormControl component="fieldset" fullWidth>
+                  <RadioGroup
+                    value={electricitySource}
+                    onChange={(e) => setElectricitySource(e.target.value)}
+                  >
+                    <FormControlLabel
+                      value="grid"
+                      control={<Radio />}
+                      label="Iz mreže"
+                      sx={{ mb: 1 }}
+                    />
+                    <FormControlLabel
+                      value="self-power"
+                      control={<Radio />}
+                      label="Sopstvena elektrana u okviru postrojenja"
+                      sx={{ mb: 1 }}
+                    />
+                    <FormControlLabel
+                      value="ppa"
+                      control={<Radio />}
+                      label="Poseban PPA (Power Purchase Agreement)"
+                    />
+                  </RadioGroup>
+                </FormControl>
+              </Grid>
+              <Grid size={12}>
+                <Box display="flex" justifyContent="space-between" sx={{ mt: 3 }}>
+                  <Button 
+                    variant="outlined" 
+                    size="large" 
+                    startIcon={<ArrowBack />}
+                    onClick={handleBack}
+                  >
+                    Back
+                  </Button>
+                  <Button 
+                    variant="contained" 
+                    size="large" 
+                    endIcon={<ArrowForward />}
+                    onClick={handleNext}
+                  >
+                    Next
+                  </Button>
+                </Box>
+              </Grid>
+            </Grid>
+          </>
+        )}
+
+        {step === 10 && location.pathname.endsWith('/grid') && (
+          <>
+            <Grid container spacing={3}>
+              <Grid size={12}>
+                <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                  Unos potrošnje: kWh/MWh
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Alat množi s default grid faktorom za državu
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, md: 8 }}>
+                    <TextField
+                      fullWidth
+                      label="Potrošnja"
+                      type="number"
+                      value={gridConsumption}
+                      onChange={(e) => setGridConsumption(e.target.value)}
+                      slotProps={{ htmlInput: { min: 0, step: 'any' } }}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <FormControl fullWidth>
+                      <InputLabel>Jedinica</InputLabel>
+                      <Select
+                        value={gridConsumptionUnit}
+                        label="Jedinica"
+                        onChange={(e) => setGridConsumptionUnit(e.target.value)}
+                      >
+                        <MenuItem value="kWh">kWh</MenuItem>
+                        <MenuItem value="MWh">MWh</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                </Grid>
+              </Grid>
+              {gridConsumption && (
+                <Grid size={12} sx={{ mt: 2 }}>
+                  <Paper elevation={1} sx={{ p: 2, backgroundColor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                      <strong>Izračunate emisije:</strong>{' '}
+                      {calculateGridEmissions().toFixed(2)} kg CO₂e
+                    </Typography>
+                  </Paper>
+                </Grid>
+              )}
+              <Grid size={12}>
+                <Box display="flex" justifyContent="space-between" sx={{ mt: 3 }}>
+                  <Button 
+                    variant="outlined" 
+                    size="large" 
+                    startIcon={<ArrowBack />}
+                    onClick={handleBack}
+                  >
+                    Back
+                  </Button>
+                  <Button 
+                    variant="contained" 
+                    size="large" 
+                    endIcon={<ArrowForward />}
+                    onClick={handleNext}
+                  >
+                    Next
+                  </Button>
+                </Box>
+              </Grid>
+            </Grid>
+          </>
+        )}
+
+        {step === 10 && location.pathname.endsWith('/self-power') && (
+          <>
+            <Grid container spacing={3}>
+              <Grid size={12}>
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  SOPSTVENA ELEKTRANA
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                  Dodatna pitanja:
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                  Tip goriva u elektrani
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Alat izračuna specifični faktor t CO₂/kWh za tu elektranu, pa množi s kWh potrošnje
+                </Typography>
+                <FormControl component="fieldset" fullWidth sx={{ mb: 3 }}>
+                  <RadioGroup
+                    value={selfPowerFuelType}
+                    onChange={(e) => setSelfPowerFuelType(e.target.value)}
+                  >
+                    <FormControlLabel
+                      value="ugalj"
+                      control={<Radio />}
+                      label="Ugalj"
+                      sx={{ mb: 1 }}
+                    />
+                    <FormControlLabel
+                      value="prirodni-gas"
+                      control={<Radio />}
+                      label="Prirodni gas"
+                      sx={{ mb: 1 }}
+                    />
+                    <FormControlLabel
+                      value="loz-ulje"
+                      control={<Radio />}
+                      label="Loz ulje"
+                      sx={{ mb: 1 }}
+                    />
+                    <FormControlLabel
+                      value="mazut"
+                      control={<Radio />}
+                      label="Mazut"
+                      sx={{ mb: 1 }}
+                    />
+                    <FormControlLabel
+                      value="biomasa"
+                      control={<Radio />}
+                      label="Biomasa"
+                      sx={{ mb: 1 }}
+                    />
+                    <FormControlLabel
+                      value="biogas"
+                      control={<Radio />}
+                      label="Biogas"
+                      sx={{ mb: 1 }}
+                    />
+                    <FormControlLabel
+                      value="obnovljivi"
+                      control={<Radio />}
+                      label="Obnovljivi izvori (solari, vjetroelektrana, hidroelektrana..)"
+                    />
+                  </RadioGroup>
+                </FormControl>
+                <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                  Potrošnja (kWh)
+                </Typography>
+                <TextField
+                  fullWidth
+                  label="Potrošnja"
+                  type="number"
+                  value={selfPowerConsumption}
+                  onChange={(e) => setSelfPowerConsumption(e.target.value)}
+                  slotProps={{ htmlInput: { min: 0, step: 'any' } }}
+                  helperText="Unesite potrošnju u kWh"
+                />
+              </Grid>
+              {selfPowerFuelType && selfPowerConsumption && (
+                <Grid size={12} sx={{ mt: 2 }}>
+                  <Paper elevation={1} sx={{ p: 2, backgroundColor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                      <strong>Izračunate emisije:</strong>{' '}
+                      {calculateSelfPowerEmissions().toFixed(2)} kg CO₂e
+                    </Typography>
+                  </Paper>
+                </Grid>
+              )}
+              <Grid size={12}>
+                <Box display="flex" justifyContent="space-between" sx={{ mt: 3 }}>
+                  <Button 
+                    variant="outlined" 
+                    size="large" 
+                    startIcon={<ArrowBack />}
+                    onClick={handleBack}
+                  >
+                    Back
+                  </Button>
+                  <Button 
+                    variant="contained" 
+                    size="large" 
+                    endIcon={<ArrowForward />}
+                    onClick={handleNext}
+                  >
+                    Next
+                  </Button>
+                </Box>
+              </Grid>
+            </Grid>
+          </>
+        )}
+
+        {step === 10 && (location.pathname.endsWith('/ppa') || location.pathname.endsWith('/ppa/yes') || location.pathname.endsWith('/ppa/no')) && (
+          <>
+            <Grid container spacing={3}>
+              {location.pathname.endsWith('/ppa') && !location.pathname.endsWith('/ppa/yes') && !location.pathname.endsWith('/ppa/no') ? (
+                // Show question first
+                <>
+                  <Grid size={12}>
+                    <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                      Pitanje: Da li imaš emisioni faktor iz tog PPA (verifikovan)?
+                    </Typography>
+                    <FormControl component="fieldset" fullWidth>
+                      <RadioGroup
+                        value={ppaHasEmissionFactor}
+                        onChange={(e) => setPpaHasEmissionFactor(e.target.value)}
+                      >
+                        <FormControlLabel
+                          value="yes"
+                          control={<Radio />}
+                          label="DA"
+                          sx={{ mb: 1 }}
+                        />
+                        <FormControlLabel
+                          value="no"
+                          control={<Radio />}
+                          label="NE"
+                        />
+                      </RadioGroup>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={12}>
+                    <Box display="flex" justifyContent="space-between" sx={{ mt: 3 }}>
+                      <Button 
+                        variant="outlined" 
+                        size="large" 
+                        startIcon={<ArrowBack />}
+                        onClick={handleBack}
+                      >
+                        Back
+                      </Button>
+                      <Button 
+                        variant="contained" 
+                        size="large" 
+                        endIcon={<ArrowForward />}
+                        onClick={handleNext}
+                        disabled={!ppaHasEmissionFactor}
+                      >
+                        Next
+                      </Button>
+                    </Box>
+                  </Grid>
+                </>
+              ) : ppaHasEmissionFactor === 'yes' ? (
+                // If YES: show emission factor input and consumption
+                <>
+                  <Grid size={12}>
+                    <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                      Unos emisionog faktora i potrošnje
+                    </Typography>
+                    <Grid container spacing={2} sx={{ mb: 3 }}>
+                      <Grid size={12}>
+                        <Typography variant="body1" sx={{ mb: 1, fontWeight: 500 }}>
+                          Emisioni faktor
+                        </Typography>
+                        <Grid container spacing={2}>
+                          <Grid size={{ xs: 12, md: 8 }}>
+                            <TextField
+                              fullWidth
+                              label="Emisioni faktor"
+                              type="number"
+                              value={ppaEmissionFactor}
+                              onChange={(e) => setPpaEmissionFactor(e.target.value)}
+                              slotProps={{ htmlInput: { min: 0, step: 'any' } }}
+                            />
+                          </Grid>
+                          <Grid size={{ xs: 12, md: 4 }}>
+                            <FormControl fullWidth>
+                              <InputLabel>Jedinica</InputLabel>
+                              <Select
+                                value="kgCO2/kWh"
+                                label="Jedinica"
+                                disabled
+                              >
+                                <MenuItem value="kgCO2/kWh">kgCO2/kWh</MenuItem>
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                        </Grid>
+                      </Grid>
+                      <Grid size={12}>
+                        <Typography variant="body1" sx={{ mb: 1, fontWeight: 500 }}>
+                          Potrošnja
+                        </Typography>
+                        <Grid container spacing={2}>
+                          <Grid size={{ xs: 12, md: 8 }}>
+                            <TextField
+                              fullWidth
+                              label="Potrošnja"
+                              type="number"
+                              value={ppaConsumption}
+                              onChange={(e) => setPpaConsumption(e.target.value)}
+                              slotProps={{ htmlInput: { min: 0, step: 'any' } }}
+                            />
+                          </Grid>
+                          <Grid size={{ xs: 12, md: 4 }}>
+                            <FormControl fullWidth>
+                              <InputLabel>Jedinica</InputLabel>
+                              <Select
+                                value={ppaConsumptionUnit}
+                                label="Jedinica"
+                                onChange={(e) => setPpaConsumptionUnit(e.target.value)}
+                              >
+                                <MenuItem value="kWh">kWh</MenuItem>
+                                <MenuItem value="MWh">MWh</MenuItem>
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                        </Grid>
+                      </Grid>
+                    </Grid>
+                  </Grid>
+                  {ppaEmissionFactor && ppaConsumption && (
+                    <Grid size={12} sx={{ mt: 2 }}>
+                      <Paper elevation={1} sx={{ p: 2, backgroundColor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          <strong>Izračunate emisije:</strong>{' '}
+                          {calculatePpaEmissions().toFixed(2)} kg CO₂e
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                  )}
+                  <Grid size={12}>
+                    <Box display="flex" justifyContent="space-between" sx={{ mt: 3 }}>
+                      <Button 
+                        variant="outlined" 
+                        size="large" 
+                        startIcon={<ArrowBack />}
+                        onClick={handleBack}
+                      >
+                        Back
+                      </Button>
+                      <Button 
+                        variant="contained" 
+                        size="large" 
+                        endIcon={<ArrowForward />}
+                        onClick={handleNext}
+                      >
+                        Next
+                      </Button>
+                    </Box>
+                  </Grid>
+                </>
+              ) : (
+                // If NO: show same form as /grid
+                <>
+                  <Grid size={12}>
+                    <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                      Unos potrošnje: kWh/MWh
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Alat množi s default grid faktorom za državu
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid size={{ xs: 12, md: 8 }}>
+                        <TextField
+                          fullWidth
+                          label="Potrošnja"
+                          type="number"
+                          value={ppaConsumption}
+                          onChange={(e) => setPpaConsumption(e.target.value)}
+                          slotProps={{ htmlInput: { min: 0, step: 'any' } }}
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 4 }}>
+                        <FormControl fullWidth>
+                          <InputLabel>Jedinica</InputLabel>
+                          <Select
+                            value={ppaConsumptionUnit}
+                            label="Jedinica"
+                            onChange={(e) => setPpaConsumptionUnit(e.target.value)}
+                          >
+                            <MenuItem value="kWh">kWh</MenuItem>
+                            <MenuItem value="MWh">MWh</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                    </Grid>
+                  </Grid>
+                  {ppaConsumption && (
+                    <Grid size={12} sx={{ mt: 2 }}>
+                      <Paper elevation={1} sx={{ p: 2, backgroundColor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          <strong>Izračunate emisije:</strong>{' '}
+                          {calculatePpaEmissions().toFixed(2)} kg CO₂e
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                  )}
+                  <Grid size={12}>
+                    <Box display="flex" justifyContent="space-between" sx={{ mt: 3 }}>
+                      <Button 
+                        variant="outlined" 
+                        size="large" 
+                        startIcon={<ArrowBack />}
+                        onClick={handleBack}
+                      >
+                        Back
+                      </Button>
+                      <Button 
+                        variant="contained" 
+                        size="large" 
+                        endIcon={<ArrowForward />}
+                        onClick={handleNext}
+                      >
+                        Next
+                      </Button>
+                    </Box>
+                  </Grid>
+                </>
+              )}
+            </Grid>
           </>
         )}
       </Paper>
