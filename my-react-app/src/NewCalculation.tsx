@@ -104,6 +104,12 @@ const NewCalculation: React.FC = () => {
   const [primaryAluminumQuantity, setPrimaryAluminumQuantity] = useState<string>('');
   const [cellTechnology, setCellTechnology] = useState<string>('');
 
+  // Overvoltage (PFC method b) input state
+  const [aeo, setAeo] = useState<string>('');
+  const [ce, setCe] = useState<string>('');
+  const [primaryAluminumQuantityOvervoltage, setPrimaryAluminumQuantityOvervoltage] = useState<string>('');
+  const [cellTechnologyOvervoltage, setCellTechnologyOvervoltage] = useState<string>('');
+
   // Get x1 coefficient based on cell technology
   const getX1Coefficient = (technology: string): number => {
     const coefficients: { [key: string]: number } = {
@@ -132,6 +138,24 @@ const NewCalculation: React.FC = () => {
     return coefficients[technology] || 0;
   };
 
+  // Get x1 coefficient for overvoltage method based on cell technology
+  const getX1CoefficientOvervoltage = (technology: string): number => {
+    const coefficients: { [key: string]: number } = {
+      'cwpb': 0.00116,
+      'swpb': 0.00365,
+    };
+    return coefficients[technology] || 0;
+  };
+
+  // Get x2 coefficient for overvoltage method based on cell technology
+  const getX2CoefficientOvervoltage = (technology: string): number => {
+    const coefficients: { [key: string]: number } = {
+      'cwpb': 0.000121,
+      'swpb': 0.000252,
+    };
+    return coefficients[technology] || 0;
+  };
+
   // Calculate PFC emissions using the slope method
   const calculatePfcEmissions = (): number => {
     if (!anodeEffectFrequency || !anodeEffectDuration || !primaryAluminumQuantity || !cellTechnology) {
@@ -151,6 +175,28 @@ const NewCalculation: React.FC = () => {
 
     // Formula: frequency * duration * quantity * x1 * 6630 * (1 + x2 * 11100)
     return frequency * duration * quantity * x1 * 6630 * (1 + x2 * 11100);
+  };
+
+  // Calculate PFC emissions using the overvoltage method
+  const calculatePfcEmissionsOvervoltage = (): number => {
+    if (!aeo || !ce || !primaryAluminumQuantityOvervoltage || !cellTechnologyOvervoltage) {
+      return 0;
+    }
+
+    const aeoValue = Number.parseFloat(aeo) || 0;
+    const ceValue = Number.parseFloat(ce) || 0;
+    const quantity = Number.parseFloat(primaryAluminumQuantityOvervoltage) || 0;
+    
+    // Prevent division by zero
+    if (ceValue === 0) {
+      return 0;
+    }
+
+    const x1 = getX1CoefficientOvervoltage(cellTechnologyOvervoltage);
+    const x2 = getX2CoefficientOvervoltage(cellTechnologyOvervoltage);
+
+    // Formula: (AEO / CE) * quantity * x1 * 6630 * (1 + x2 * 11100)
+    return (aeoValue / ceValue) * quantity * x1 * 6630 * (1 + x2 * 11100);
   };
 
   // Get the selected fuel's unit
@@ -319,44 +365,46 @@ const NewCalculation: React.FC = () => {
       if (validDataLevels.includes(dataLevelParam) && !dataQualityLevel) {
         setDataQualityLevel(slugToDataLevel(dataLevelParam));
       }
-      // Check route and set step accordingly
-      if (location.pathname.endsWith('/pfc')) {
-        setStep(7);
-      } else if (location.pathname.endsWith('/anode-elektrode')) {
-        setStep(6);
-      } else if (dataQualityLevel || validDataLevels.includes(dataLevelParam)) {
+    }
+    
+    // Check routes in order of specificity (most specific first)
+    // 1. Check for /slope or /overvoltage route first (most specific - both show step 8)
+    if (location.pathname.endsWith('/slope') || location.pathname.endsWith('/overvoltage')) {
+      setStep(8);
+      // Ensure dataQualityLevel is set if we have the param
+      if (dataLevelParam && productTypeParam === 'unwrought' && !dataQualityLevel) {
+        const validDataLevels = ['fuels', 'emissions', 'nothing'];
+        if (validDataLevels.includes(dataLevelParam)) {
+          setDataQualityLevel(slugToDataLevel(dataLevelParam));
+        }
+      }
+    }
+    // 2. Check for /pfc route (but not /slope or /overvoltage)
+    else if (location.pathname.endsWith('/pfc') && 
+             !location.pathname.endsWith('/slope') && 
+             !location.pathname.endsWith('/overvoltage')) {
+      setStep(7);
+      // Ensure dataQualityLevel is set if we have the param
+      if (dataLevelParam && productTypeParam === 'unwrought' && !dataQualityLevel) {
+        const validDataLevels = ['fuels', 'emissions', 'nothing'];
+        if (validDataLevels.includes(dataLevelParam)) {
+          setDataQualityLevel(slugToDataLevel(dataLevelParam));
+        }
+      }
+    }
+    // 3. Check for /anode-elektrode route (but not /pfc, /slope, or /overvoltage)
+    else if (location.pathname.endsWith('/anode-elektrode') && 
+             !location.pathname.endsWith('/pfc') && 
+             !location.pathname.endsWith('/slope') &&
+             !location.pathname.endsWith('/overvoltage')) {
+      setStep(6);
+    }
+    // 4. Default to step 5 if we have dataLevelParam but no specific route
+    else if (dataLevelParam && productTypeParam === 'unwrought') {
+      const validDataLevels = ['fuels', 'emissions', 'nothing'];
+      if (dataQualityLevel || validDataLevels.includes(dataLevelParam)) {
         setStep(5);
       }
-    }
-    // Check for /slope route first - always check this regardless of other conditions
-    if (location.pathname.endsWith('/slope')) {
-      if (step !== 8) {
-        setStep(8);
-      }
-      // Ensure dataQualityLevel is set if we have the param
-      if (dataLevelParam && productTypeParam === 'unwrought' && !dataQualityLevel) {
-        const validDataLevels = ['fuels', 'emissions', 'nothing'];
-        if (validDataLevels.includes(dataLevelParam)) {
-          setDataQualityLevel(slugToDataLevel(dataLevelParam));
-        }
-      }
-    }
-    // Check for /pfc route - always check this regardless of other conditions
-    else if (location.pathname.endsWith('/pfc') && !location.pathname.endsWith('/slope')) {
-      if (step !== 7) {
-        setStep(7);
-      }
-      // Ensure dataQualityLevel is set if we have the param
-      if (dataLevelParam && productTypeParam === 'unwrought' && !dataQualityLevel) {
-        const validDataLevels = ['fuels', 'emissions', 'nothing'];
-        if (validDataLevels.includes(dataLevelParam)) {
-          setDataQualityLevel(slugToDataLevel(dataLevelParam));
-        }
-      }
-    }
-    // Also check for /anodes if dataQualityLevel is already set
-    else if (location.pathname.endsWith('/anode-elektrode') && step !== 6) {
-      setStep(6);
     }
   }, [categoryParam, productTypeParam, processParam, dataLevelParam, location.pathname]);
 
@@ -473,17 +521,25 @@ const NewCalculation: React.FC = () => {
       if (!pfcMethod) {
         return; // Validation - method must be selected
       }
-      // Navigate to slope step if option "a" is selected
-      if (category === 'Aluminium' && aluminumProductType === 'unwrought' && dataQualityLevel === 'real-data' && pfcMethod === 'anode-effect') {
+      // Navigate based on selected PFC method
+      if (category === 'Aluminium' && aluminumProductType === 'unwrought' && dataQualityLevel === 'real-data') {
         const slug = categoryToSlug(category);
         const productTypeSlug = productTypeToSlug(aluminumProductType);
         const processSlug = processToSlug(productionProcess);
         const dataLevelSlug = dataLevelToSlug(dataQualityLevel);
-        navigate(`/dashboard/new-calculation/${slug}/${productTypeSlug}/${processSlug}/${dataLevelSlug}/anode-elektrode/pfc/slope`, { replace: true });
-        setStep(8); // Go to slope step
+        
+        if (pfcMethod === 'anode-effect') {
+          // Option "a" - navigate to slope step
+          navigate(`/dashboard/new-calculation/${slug}/${productTypeSlug}/${processSlug}/${dataLevelSlug}/anode-elektrode/pfc/slope`, { replace: true });
+          setStep(8); // Go to slope step
+        } else if (pfcMethod === 'aeo-ce') {
+          // Option "b" - navigate to overvoltage step
+          navigate(`/dashboard/new-calculation/${slug}/${productTypeSlug}/${processSlug}/${dataLevelSlug}/anode-elektrode/pfc/overvoltage`, { replace: true });
+          setStep(8); // Go to overvoltage step (same as slope)
+        } else {
+          setStep(8);
+        }
       } else {
-        // For option "b" or other cases, handle accordingly
-        // For now, just proceed (you can add navigation for option "b" later)
         setStep(8);
       }
     }
@@ -491,9 +547,9 @@ const NewCalculation: React.FC = () => {
 
   const handleBack = () => {
     if (step === 8) {
-      // Going back from step 8 (slope) to step 7 (PFC)
+      // Going back from step 8 (slope or overvoltage) to step 7 (PFC)
       if (category === 'Aluminium' && aluminumProductType === 'unwrought' && dataQualityLevel === 'real-data') {
-        // Remove /slope from URL
+        // Remove /slope or /overvoltage from URL
         const slug = categoryToSlug(category);
         const productTypeSlug = productTypeToSlug(aluminumProductType);
         const processSlug = processToSlug(productionProcess);
@@ -1355,157 +1411,307 @@ const NewCalculation: React.FC = () => {
 
         {step === 8 && (
           <>
-            <Grid container spacing={3}>
-              <Grid size={12}>
-                <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
-                  1) Koja je frekvencija anode effecta?
-                </Typography>
-                <TextField
-                  fullWidth
-                  label="Frekvencija anode effecta"
-                  type="number"
-                  value={anodeEffectFrequency}
-                  onChange={(e) => setAnodeEffectFrequency(e.target.value)}
-                  slotProps={{ htmlInput: { min: 0, step: 'any' } }}
-                  helperText="Jedinica: number anode effects / cell-day"
-                />
-              </Grid>
-              <Grid size={12}>
-                <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
-                  2) Koje je prosječno trajanje jednog anode effecta?
-                </Typography>
-                <TextField
-                  fullWidth
-                  label="Prosječno trajanje anode effecta"
-                  type="number"
-                  value={anodeEffectDuration}
-                  onChange={(e) => setAnodeEffectDuration(e.target.value)}
-                  slotProps={{ htmlInput: { min: 0, step: 'any' } }}
-                  helperText="Jedinica: anode effect minutes / occurrence"
-                />
-              </Grid>
-              <Grid size={12}>
-                <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
-                  3) Kolika je ukupna količina proizvedenog primarnog aluminija u posmatranom periodu?
-                </Typography>
-                <Grid container spacing={3}>
-                  <Grid size={{ xs: 12, md: 8 }}>
-                    <TextField
-                      fullWidth
-                      label="Količina primarnog aluminija"
-                      type="number"
-                      value={primaryAluminumQuantity}
-                      onChange={(e) => setPrimaryAluminumQuantity(e.target.value)}
-                      slotProps={{ htmlInput: { min: 0, step: 'any' } }}
-                      helperText="Unesite količinu u tonama (tonnes)"
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 4 }}>
-                    <FormControl fullWidth>
-                      <InputLabel>Jedinica</InputLabel>
-                      <Select
-                        value="tonnes"
-                        label="Jedinica"
-                        disabled
-                      >
-                        <MenuItem value="tonnes">tonnes</MenuItem>
-                      </Select>
-                    </FormControl>
+            {location.pathname.endsWith('/overvoltage') ? (
+              // Overvoltage method (option b) form
+              <Grid container spacing={3}>
+                <Grid size={12}>
+                  <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                    1) Kolika je vrijednost AEO – Anode Effect Overvoltage po ćeliji?
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    AEO se izražava u mV i predstavlja vremenski integrisani višak napona iznad ciljnog napona, izračunat kao integral [vrijeme × napon iznad ciljnog napona] podijeljen s ukupnim vremenom prikupljanja podataka.
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid size={{ xs: 12, md: 8 }}>
+                      <TextField
+                        fullWidth
+                        label="AEO – Anode Effect Overvoltage"
+                        type="number"
+                        value={aeo}
+                        onChange={(e) => setAeo(e.target.value)}
+                        slotProps={{ htmlInput: { min: 0, step: 'any' } }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <FormControl fullWidth>
+                        <InputLabel>Jedinica</InputLabel>
+                        <Select
+                          value="mV"
+                          label="Jedinica"
+                          disabled
+                        >
+                          <MenuItem value="mV">mV</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
                   </Grid>
                 </Grid>
-              </Grid>
-              <Grid size={12}>
-                <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
-                  4) Koju tehnologiju elektrolitičkih ćelija koristite?
-                </Typography>
-                <FormControl component="fieldset" fullWidth>
-                  <RadioGroup
-                    value={cellTechnology}
-                    onChange={(e) => setCellTechnology(e.target.value)}
-                  >
-                    <FormControlLabel
-                      value="pfpb-l"
-                      control={<Radio />}
-                      label="Legacy Point Feed Pre Bake (PFPB L)"
-                      sx={{ mb: 1 }}
-                    />
-                    <FormControlLabel
-                      value="pfpb-m"
-                      control={<Radio />}
-                      label="Modern Point Feed Pre Bake (PFPB M)"
-                      sx={{ mb: 1 }}
-                    />
-                    <FormControlLabel
-                      value="pfpb-mw"
-                      control={<Radio />}
-                      label="Modern Point-Fed Prebake without fully automated anode effect intervention strategies for PFC emissions (PFPB MW)"
-                      sx={{ mb: 1 }}
-                    />
-                    <FormControlLabel
-                      value="cwpb"
-                      control={<Radio />}
-                      label="Centre Worked Prebake (CWPB)"
-                      sx={{ mb: 1 }}
-                    />
-                    <FormControlLabel
-                      value="swpb"
-                      control={<Radio />}
-                      label="Side Worked Prebake (SWPB)"
-                      sx={{ mb: 1 }}
-                    />
-                    <FormControlLabel
-                      value="vss"
-                      control={<Radio />}
-                      label="Vertical Stud Søderberg (VSS)"
-                      sx={{ mb: 1 }}
-                    />
-                    <FormControlLabel
-                      value="hss"
-                      control={<Radio />}
-                      label="Horizontal Stud Søderberg (HSS)"
-                    />
-                  </RadioGroup>
-                </FormControl>
-              </Grid>
-              {anodeEffectFrequency && anodeEffectDuration && primaryAluminumQuantity && cellTechnology && (
-                <Grid size={12} sx={{ mt: 2 }}>
-                  {cellTechnology === 'pfpb-mw' ? (
-                    <Paper elevation={1} sx={{ p: 2, backgroundColor: 'warning.50', border: '1px solid', borderColor: 'warning.200' }}>
-                      <Typography variant="body1" sx={{ fontWeight: 600, color: 'warning.dark' }}>
-                        Izračun nije dozvoljen za Modern Point-Fed Prebake without fully automated anode effect intervention strategies for PFC emissions (PFPB MW).
-                      </Typography>
-                    </Paper>
-                  ) : (
+                <Grid size={12}>
+                  <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                    2) Kolika je prosječna strujna efikasnost (CE – Current Efficiency) proizvodnje aluminija?
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid size={{ xs: 12, md: 8 }}>
+                      <TextField
+                        fullWidth
+                        label="CE – Current Efficiency"
+                        type="number"
+                        value={ce}
+                        onChange={(e) => setCe(e.target.value)}
+                        slotProps={{ htmlInput: { min: 0, max: 100, step: 'any' } }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <FormControl fullWidth>
+                        <InputLabel>Jedinica</InputLabel>
+                        <Select
+                          value="%"
+                          label="Jedinica"
+                          disabled
+                        >
+                          <MenuItem value="%">%</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  </Grid>
+                </Grid>
+                <Grid size={12}>
+                  <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                    3) Kolika je ukupna količina proizvedenog primarnog aluminija u posmatranom periodu?
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid size={{ xs: 12, md: 8 }}>
+                      <TextField
+                        fullWidth
+                        label="Količina primarnog aluminija"
+                        type="number"
+                        value={primaryAluminumQuantityOvervoltage}
+                        onChange={(e) => setPrimaryAluminumQuantityOvervoltage(e.target.value)}
+                        slotProps={{ htmlInput: { min: 0, step: 'any' } }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <FormControl fullWidth>
+                        <InputLabel>Jedinica</InputLabel>
+                        <Select
+                          value="tonnes"
+                          label="Jedinica"
+                          disabled
+                        >
+                          <MenuItem value="tonnes">tonnes</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  </Grid>
+                </Grid>
+                <Grid size={12}>
+                  <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                    4) Koju tehnologiju elektrolitičkih ćelija koristite?
+                  </Typography>
+                  <FormControl component="fieldset" fullWidth>
+                    <RadioGroup
+                      value={cellTechnologyOvervoltage}
+                      onChange={(e) => setCellTechnologyOvervoltage(e.target.value)}
+                    >
+                      <FormControlLabel
+                        value="cwpb"
+                        control={<Radio />}
+                        label="Centre Worked Prebake (CWPB)"
+                        sx={{ mb: 1 }}
+                      />
+                      <FormControlLabel
+                        value="swpb"
+                        control={<Radio />}
+                        label="Side Worked Prebake (SWPB)"
+                      />
+                    </RadioGroup>
+                  </FormControl>
+                </Grid>
+                {aeo && ce && primaryAluminumQuantityOvervoltage && cellTechnologyOvervoltage && (
+                  <Grid size={12} sx={{ mt: 2 }}>
                     <Paper elevation={1} sx={{ p: 2, backgroundColor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
                       <Typography variant="body1" sx={{ fontWeight: 600 }}>
                         <strong>Izračunate PFC emisije:</strong>{' '}
-                        {calculatePfcEmissions().toFixed(2)} kg CO₂e
+                        {calculatePfcEmissionsOvervoltage().toFixed(2)} tonnes CO₂e
                       </Typography>
                     </Paper>
-                  )}
+                  </Grid>
+                )}
+                <Grid size={12}>
+                  <Box display="flex" justifyContent="space-between" sx={{ mt: 3 }}>
+                    <Button 
+                      variant="outlined" 
+                      size="large" 
+                      startIcon={<ArrowBack />}
+                      onClick={handleBack}
+                    >
+                      Back
+                    </Button>
+                    <Button 
+                      variant="contained" 
+                      size="large" 
+                      endIcon={<ArrowForward />}
+                      onClick={handleNext}
+                    >
+                      Next
+                    </Button>
+                  </Box>
                 </Grid>
-              )}
-              <Grid size={12}>
-                <Box display="flex" justifyContent="space-between" sx={{ mt: 3 }}>
-                  <Button 
-                    variant="outlined" 
-                    size="large" 
-                    startIcon={<ArrowBack />}
-                    onClick={handleBack}
-                  >
-                    Back
-                  </Button>
-                  <Button 
-                    variant="contained" 
-                    size="large" 
-                    endIcon={<ArrowForward />}
-                    onClick={handleNext}
-                  >
-                    Next
-                  </Button>
-                </Box>
               </Grid>
-            </Grid>
+            ) : (
+              // Slope method (option a) form
+              <Grid container spacing={3}>
+                <Grid size={12}>
+                  <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                    1) Koja je frekvencija anode effecta?
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    label="Frekvencija anode effecta"
+                    type="number"
+                    value={anodeEffectFrequency}
+                    onChange={(e) => setAnodeEffectFrequency(e.target.value)}
+                    slotProps={{ htmlInput: { min: 0, step: 'any' } }}
+                    helperText="Jedinica: number anode effects / cell-day"
+                  />
+                </Grid>
+                <Grid size={12}>
+                  <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                    2) Koje je prosječno trajanje jednog anode effecta?
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    label="Prosječno trajanje anode effecta"
+                    type="number"
+                    value={anodeEffectDuration}
+                    onChange={(e) => setAnodeEffectDuration(e.target.value)}
+                    slotProps={{ htmlInput: { min: 0, step: 'any' } }}
+                    helperText="Jedinica: anode effect minutes / occurrence"
+                  />
+                </Grid>
+                <Grid size={12}>
+                  <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                    3) Kolika je ukupna količina proizvedenog primarnog aluminija u posmatranom periodu?
+                  </Typography>
+                  <Grid container spacing={3}>
+                    <Grid size={{ xs: 12, md: 8 }}>
+                      <TextField
+                        fullWidth
+                        label="Količina primarnog aluminija"
+                        type="number"
+                        value={primaryAluminumQuantity}
+                        onChange={(e) => setPrimaryAluminumQuantity(e.target.value)}
+                        slotProps={{ htmlInput: { min: 0, step: 'any' } }}
+                        helperText="Unesite količinu u tonama (tonnes)"
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <FormControl fullWidth>
+                        <InputLabel>Jedinica</InputLabel>
+                        <Select
+                          value="tonnes"
+                          label="Jedinica"
+                          disabled
+                        >
+                          <MenuItem value="tonnes">tonnes</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  </Grid>
+                </Grid>
+                <Grid size={12}>
+                  <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                    4) Koju tehnologiju elektrolitičkih ćelija koristite?
+                  </Typography>
+                  <FormControl component="fieldset" fullWidth>
+                    <RadioGroup
+                      value={cellTechnology}
+                      onChange={(e) => setCellTechnology(e.target.value)}
+                    >
+                      <FormControlLabel
+                        value="pfpb-l"
+                        control={<Radio />}
+                        label="Legacy Point Feed Pre Bake (PFPB L)"
+                        sx={{ mb: 1 }}
+                      />
+                      <FormControlLabel
+                        value="pfpb-m"
+                        control={<Radio />}
+                        label="Modern Point Feed Pre Bake (PFPB M)"
+                        sx={{ mb: 1 }}
+                      />
+                      <FormControlLabel
+                        value="pfpb-mw"
+                        control={<Radio />}
+                        label="Modern Point-Fed Prebake without fully automated anode effect intervention strategies for PFC emissions (PFPB MW)"
+                        sx={{ mb: 1 }}
+                      />
+                      <FormControlLabel
+                        value="cwpb"
+                        control={<Radio />}
+                        label="Centre Worked Prebake (CWPB)"
+                        sx={{ mb: 1 }}
+                      />
+                      <FormControlLabel
+                        value="swpb"
+                        control={<Radio />}
+                        label="Side Worked Prebake (SWPB)"
+                        sx={{ mb: 1 }}
+                      />
+                      <FormControlLabel
+                        value="vss"
+                        control={<Radio />}
+                        label="Vertical Stud Søderberg (VSS)"
+                        sx={{ mb: 1 }}
+                      />
+                      <FormControlLabel
+                        value="hss"
+                        control={<Radio />}
+                        label="Horizontal Stud Søderberg (HSS)"
+                      />
+                    </RadioGroup>
+                  </FormControl>
+                </Grid>
+                {anodeEffectFrequency && anodeEffectDuration && primaryAluminumQuantity && cellTechnology && (
+                  <Grid size={12} sx={{ mt: 2 }}>
+                    {cellTechnology === 'pfpb-mw' ? (
+                      <Paper elevation={1} sx={{ p: 2, backgroundColor: 'warning.50', border: '1px solid', borderColor: 'warning.200' }}>
+                        <Typography variant="body1" sx={{ fontWeight: 600, color: 'warning.dark' }}>
+                          Izračun nije dozvoljen za Modern Point-Fed Prebake without fully automated anode effect intervention strategies for PFC emissions (PFPB MW).
+                        </Typography>
+                      </Paper>
+                    ) : (
+                      <Paper elevation={1} sx={{ p: 2, backgroundColor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          <strong>Izračunate PFC emisije:</strong>{' '}
+                          {calculatePfcEmissions().toFixed(2)} tonnes CO₂e
+                        </Typography>
+                      </Paper>
+                    )}
+                  </Grid>
+                )}
+                <Grid size={12}>
+                  <Box display="flex" justifyContent="space-between" sx={{ mt: 3 }}>
+                    <Button 
+                      variant="outlined" 
+                      size="large" 
+                      startIcon={<ArrowBack />}
+                      onClick={handleBack}
+                    >
+                      Back
+                    </Button>
+                    <Button 
+                      variant="contained" 
+                      size="large" 
+                      endIcon={<ArrowForward />}
+                      onClick={handleNext}
+                    >
+                      Next
+                    </Button>
+                  </Box>
+                </Grid>
+              </Grid>
+            )}
           </>
         )}
       </Paper>
