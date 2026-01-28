@@ -49,7 +49,8 @@ interface User {
   companyName: string;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://cbam-prod.wittydune-4f9c0a93.spaincentral.azurecontainerapps.io';
 
 const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
