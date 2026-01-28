@@ -2,6 +2,10 @@
 FROM node:20-alpine AS build
 WORKDIR /workspace
 
+# Accept build argument for API base URL
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 # Copy package files first to leverage Docker layer caching
 COPY my-react-app/package*.json ./
 RUN npm ci
