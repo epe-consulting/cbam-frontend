@@ -37,7 +37,7 @@ interface LoginResponse {
   message?: string;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { API_BASE_URL } from './utils/api';
 
 const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
   const [email, setEmail] = useState('');
