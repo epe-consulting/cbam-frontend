@@ -1,5 +1,6 @@
-// Backend API base URL. Must be set via VITE_API_BASE_URL during Docker build (via GitHub Actions build-args).
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// Backend API base URL. Set VITE_API_BASE_URL during Docker build (via GitHub Actions build-args).
+// Falls back to localhost:8080 for local development if not set.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 export { API_BASE_URL };
 
