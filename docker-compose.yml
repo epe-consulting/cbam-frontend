@@ -3,6 +3,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # For local development, point to backend on localhost
+        # Change this to your backend URL if different
+        VITE_API_BASE_URL: http://localhost:8080
     container_name: cbam-frontend
     ports:
       - "5173:5173"
