@@ -19,6 +19,8 @@ import {
   Lock,
 } from '@mui/icons-material';
 
+import { getApiBaseUrl } from './utils/config';
+
 interface LoginProps {
   onBack: () => void;
   onLoginSuccess: () => void;
@@ -37,8 +39,7 @@ interface LoginResponse {
   message?: string;
 }
 
-// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://cbam-prod.wittydune-4f9c0a93.spaincentral.azurecontainerapps.io';
+const API_BASE_URL = getApiBaseUrl();
 
 const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
   const [email, setEmail] = useState('');
