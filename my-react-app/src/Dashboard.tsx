@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import SessionExpired from './SessionExpired';
-import { isTokenExpired } from './utils/api';
+import { isTokenExpired, API_BASE_URL } from './utils/api';
 import {
   AppBar,
   Toolbar,
@@ -48,8 +48,6 @@ interface User {
   email: string;
   companyName: string;
 }
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
