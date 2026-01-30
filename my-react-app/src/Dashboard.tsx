@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import SessionExpired from './SessionExpired';
-import { isTokenExpired, API_BASE_URL } from './utils/api';
+import { isTokenExpired, API_BASE_URL, apiRequest } from './utils/api';
 import {
   AppBar,
   Toolbar,
@@ -56,6 +56,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [currentView, setCurrentView] = useState<'dashboard' | 'calculation' | 'report' | 'sharing'>('dashboard');
+  const [newCalcError, setNewCalcError] = useState<string | null>(null);
+  const [newCalcLoading, setNewCalcLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -166,8 +168,42 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     onLogout();
   };
 
-  const handleNewCalculation = () => {
-    navigate('/dashboard/new-calculation');
+  const handleNewCalculation = async () => {
+    setNewCalcError(null);
+    setNewCalcLoading(true);
+    try {
+      const meResult = await apiRequest<{ success: boolean; user?: { id: number; companyId?: number | null } }>('/users/me');
+      if (meResult === null || !meResult.data.success || !meResult.data.user) {
+        setNewCalcError('Session expired or not authenticated');
+        setNewCalcLoading(false);
+        return;
+      }
+      const user = meResult.data.user;
+      const companyId = user.companyId ?? 0;
+      if (!companyId) {
+        setNewCalcError('Your account has no company assigned. Please contact your administrator.');
+        setNewCalcLoading(false);
+        return;
+      }
+      const calcResult = await apiRequest<{ success: boolean; calculation?: { id: number } }>('/calculations/create', {
+        method: 'POST',
+        body: JSON.stringify({
+          company: { id: companyId },
+          createdByUser: { id: user.id },
+        }),
+      });
+      if (calcResult === null || !calcResult.data.success || !calcResult.data.calculation?.id) {
+        setNewCalcError((calcResult?.data as { message?: string })?.message ?? 'Failed to create calculation');
+        setNewCalcLoading(false);
+        return;
+      }
+      const calculationId = calcResult.data.calculation.id;
+      setNewCalcLoading(false);
+      navigate('/dashboard/new-calculation', { state: { calculationId } });
+    } catch (err) {
+      setNewCalcError(err instanceof Error ? err.message : 'Failed to create calculation');
+      setNewCalcLoading(false);
+    }
   };
 
   const handleGenerateReport = () => {
@@ -409,6 +445,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             </Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                {newCalcError && (
+                  <Typography variant="body2" color="error" sx={{ mb: 1 }}>
+                    {newCalcError}
+                  </Typography>
+                )}
                 <Button
                   variant="contained"
                   startIcon={<Calculate />}
@@ -416,8 +457,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                   size="large"
                   sx={{ py: 2 }}
                   onClick={handleNewCalculation}
+                  disabled={newCalcLoading}
                 >
-                  New Calculation
+                  {newCalcLoading ? 'Creating...' : 'New Calculation'}
                 </Button>
               </Grid>
               <Grid size={{ xs: 12, sm: 6, md: 4 }}>

@@ -16,12 +16,15 @@ import {
   RadioGroup,
   FormControlLabel,
   FormLabel,
+  CircularProgress,
 } from '@mui/material';
 import {
   ArrowBack,
   ArrowForward,
   Add,
 } from '@mui/icons-material';
+import { useProductCategories } from './hooks/useProductCategories';
+import { apiRequest } from './utils/api';
 
 // Fuel data with units and emission factors
 const fuelData = [
@@ -68,9 +71,14 @@ const NewCalculation: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { categoryParam, productTypeParam, processParam, dataLevelParam } = useParams<{ categoryParam?: string; productTypeParam?: string; processParam?: string; dataLevelParam?: string }>();
+  const { categoryNames, categories: productCategories, loading: categoriesLoading, error: categoriesError } = useProductCategories();
   const [category, setCategory] = useState('');
   const [productName, setProductName] = useState('');
   const [step, setStep] = useState(1);
+  const [calculationId, setCalculationId] = useState<number | null>(() => (location.state as { calculationId?: number } | null)?.calculationId ?? null);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [calculationLoading, setCalculationLoading] = useState(false);
   const [aluminumProductType, setAluminumProductType] = useState('');
   const [aluminumProductSubtype, setAluminumProductSubtype] = useState('');
   const [productionProcess, setProductionProcess] = useState('');
@@ -431,7 +439,7 @@ const NewCalculation: React.FC = () => {
   useEffect(() => {
     if (categoryParam && !category) {
       const categoryFromUrl = slugToCategory(categoryParam);
-      if (categories.includes(categoryFromUrl)) {
+      if (categoryNames.includes(categoryFromUrl)) {
         setCategory(categoryFromUrl);
         setStep(2);
       }
@@ -562,31 +570,85 @@ const NewCalculation: React.FC = () => {
         setStep(5);
       }
     }
-  }, [categoryParam, productTypeParam, processParam, dataLevelParam, location.pathname]);
+  }, [categoryParam, productTypeParam, processParam, dataLevelParam, location.pathname, productCategories]);
 
-
-  const categories = [
-    'Cement',
-    'Iron and Steel',
-    'Aluminium',
-    'Fertilizers',
-    'Electricity',
-    'Hydrogen'
-  ];
+  // If we landed without calculationId (e.g. refresh), create a calculation so the flow still works
+  useEffect(() => {
+    if (calculationId != null) return;
+    let cancelled = false;
+    setCalculationLoading(true);
+    (async () => {
+      const meResult = await apiRequest<{ success: boolean; user?: { id: number; companyId?: number | null } }>('/users/me');
+      if (cancelled) return;
+      if (meResult === null || !meResult.data.success || !meResult.data.user) {
+        setCalculationLoading(false);
+        return;
+      }
+      const user = meResult.data.user;
+      const companyId = user.companyId ?? 0;
+      if (!companyId) {
+        setCalculationLoading(false);
+        return;
+      }
+      const calcResult = await apiRequest<{ success: boolean; calculation?: { id: number } }>('/calculations/create', {
+        method: 'POST',
+        body: JSON.stringify({
+          company: { id: companyId },
+          createdByUser: { id: user.id },
+        }),
+      });
+      if (cancelled) return;
+      if (calcResult?.data?.success && calcResult.data.calculation?.id) {
+        setCalculationId(calcResult.data.calculation.id);
+      }
+      setCalculationLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [calculationId]);
 
   const handleBackToDashboard = () => {
     navigate('/dashboard');
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step === 1) {
       if (!category || !productName) {
         return;
       }
-      const slug = categoryToSlug(category);
-      // Navigate first, then update step
-      navigate(`/dashboard/new-calculation/${slug}`, { replace: true });
-      setStep(2);
+      const productCategoryId = productCategories.find((c) => c.name === category)?.id;
+      if (productCategoryId == null) {
+        setCreateError('Invalid product category');
+        return;
+      }
+      const currentCalcId = calculationId;
+      if (currentCalcId == null) {
+        setCreateError('Please wait for the calculation to be ready, or start from the dashboard.');
+        return;
+      }
+      setCreateError(null);
+      setCreateLoading(true);
+      try {
+        const cpResult = await apiRequest<{ success: boolean; calculationProduct?: unknown }>('/calculation-products/create', {
+          method: 'POST',
+          body: JSON.stringify({
+            calculation: { id: currentCalcId },
+            productName: productName.trim(),
+            productCategory: { id: productCategoryId },
+          }),
+        });
+        if (cpResult === null || !cpResult.data.success) {
+          setCreateError((cpResult?.data as { message?: string })?.message ?? 'Failed to save product');
+          setCreateLoading(false);
+          return;
+        }
+        setCreateLoading(false);
+        const slug = categoryToSlug(category);
+        navigate(`/dashboard/new-calculation/${slug}`, { replace: true });
+        setStep(2);
+      } catch (err) {
+        setCreateError(err instanceof Error ? err.message : 'Failed to save product');
+        setCreateLoading(false);
+      }
     } else if (step === 2) {
       // If Aluminium and no product type selected, don't proceed
       if (category === 'Aluminium' && !aluminumProductType) {
@@ -948,7 +1010,7 @@ const NewCalculation: React.FC = () => {
         </Typography>
       </Box>
 
-      <Paper elevation={2} sx={{ p: 4, borderRadius: 2 }}>
+      <Paper elevation={2} sx={{ p: 4, borderRadius: 2 }} data-calculation-id={calculationId ?? undefined}>
         {step === 1 && (
           <>
             <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
@@ -965,7 +1027,7 @@ const NewCalculation: React.FC = () => {
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <FormControl fullWidth>
+                <FormControl fullWidth disabled={categoriesLoading} error={!!categoriesError}>
                   <InputLabel>Product Category</InputLabel>
                   <Select
                     value={category}
@@ -973,25 +1035,45 @@ const NewCalculation: React.FC = () => {
                     onChange={(e) => {
                       setCategory(e.target.value);
                     }}
+                    renderValue={(v) => (categoriesLoading ? 'Loading...' : v)}
                   >
-                    {categories.map((cat) => (
-                      <MenuItem key={cat} value={cat}>
-                        {cat}
+                    {categoriesLoading ? (
+                      <MenuItem disabled>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <CircularProgress size={20} />
+                          Loading categories...
+                        </Box>
                       </MenuItem>
-                    ))}
+                    ) : (
+                      categoryNames.map((cat) => (
+                        <MenuItem key={cat} value={cat}>
+                          {cat}
+                        </MenuItem>
+                      ))
+                    )}
                   </Select>
+                  {categoriesError && (
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                      {categoriesError}
+                    </Typography>
+                  )}
                 </FormControl>
               </Grid>
               <Grid size={12}>
+                {createError && (
+                  <Typography variant="body2" color="error" sx={{ mb: 1 }}>
+                    {createError}
+                  </Typography>
+                )}
                 <Box display="flex" justifyContent="flex-end" sx={{ mt: 2 }}>
                   <Button 
                     variant="contained" 
                     size="large" 
                     endIcon={<ArrowForward />}
                     onClick={handleNext}
-                    disabled={!category || !productName}
+                    disabled={!category || !productName || categoriesLoading || createLoading || calculationId == null || calculationLoading}
                   >
-                    Next
+                    {createLoading ? 'Saving...' : calculationLoading ? 'Loading...' : 'Next'}
                   </Button>
                 </Box>
               </Grid>

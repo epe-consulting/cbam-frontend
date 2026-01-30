@@ -316,7 +316,7 @@ const Admin: React.FC = () => {
     setLoginError('');
     setLoginLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/auth/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

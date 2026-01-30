@@ -40,8 +40,8 @@ interface LoginResponse {
 import { API_BASE_URL } from './utils/api';
 
 const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('iv.pekaric96@gmail.com');
+  const [password, setPassword] = useState('Ivona056933*');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
