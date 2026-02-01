@@ -48,7 +48,7 @@ import {
 } from '@mui/icons-material';
 import { API_BASE_URL } from './utils/api';
 
-type Language = 'en' | 'hr';
+type Language = 'en' | 'ju' | 'tr';
 
 interface Translations {
   nav: {
@@ -260,7 +260,7 @@ const translations: Record<Language, Translations> = {
       copyright: '© 2025 EPE Consulting. All rights reserved.'
     }
   },
-  hr: {
+  ju: {
     nav: {
       features: 'Mogućnosti',
       howItWorks: 'Kako Funkcionira',
@@ -362,6 +362,110 @@ const translations: Record<Language, Translations> = {
         privacy: 'Privatnost'
       },
       copyright: '© 2025 EPE Consulting. Sva prava pridržana.'
+    }
+  },
+  tr: {
+    nav: {
+      features: 'Özellikler',
+      howItWorks: 'Nasıl Çalışır',
+      about: 'CBAM Hakkında',
+      login: 'Giriş'
+    },
+    hero: {
+      badge: 'AB CBAM Uyumlu',
+      title: 'CBAM ',
+      titleHighlight: 'Raporlamanızı',
+      subtitle: 'Ürün emisyonlarınızı hesaplayın, uyumlu raporlar oluşturun ve AB müşterilerinizle güvenle paylaşın. Hepsi tek platformda.',
+      scheduleDemo: 'Demo Planla',
+      learnMore: 'Daha Fazla Bilgi'
+    },
+    features: {
+      title: 'CBAM Uyumu İçin İhtiyacınız Olan Her Şey',
+      subtitle: 'Kapsamlı çözümümüzle karbon ayak izi raporlamasını kolaylaştırın',
+      cards: {
+        calculate: {
+          title: 'Hassas Hesaplamalar',
+          description: 'Tüm kapsanan sektörler için resmi CBAM metodolojileri ve emisyon faktörleri kullanarak gömülü emisyonları hesaplayın.'
+        },
+        reports: {
+          title: 'Uyumlu Raporlar',
+          description: 'AB gereksinimlerini karşılayan, müşterileriniz tarafından sunulmaya hazır standart raporlar oluşturun.'
+        },
+        sharing: {
+          title: 'Kolay Paylaşım',
+          description: 'Emisyon verilerini güvenli, izlenebilir teslimatla doğrudan AB müşterilerinize iletin.'
+        }
+      }
+    },
+    howItWorks: {
+      title: 'Nasıl Çalışır',
+      subtitle: 'CBAM uyumluluğuna üç basit adım',
+      steps: {
+        input: {
+          title: 'Ürün Verilerini Girin',
+          description: 'Ürün özelliklerini, üretim yöntemlerini ve enerji tüketim verilerini sezgisel hesap makinemize girin.'
+        },
+        calculate: {
+          title: 'Emisyonları Hesaplayın',
+          description: 'Sistemimiz doğrulanmış metodolojiler ve resmi emisyon faktörleri kullanarak gömülü emisyonları otomatik hesaplar.'
+        },
+        share: {
+          title: 'Müşterilerle Paylaşın',
+          description: 'Uyumlu raporlar oluşturun ve güvenli platformumuz aracılığıyla doğrudan AB müşterilerinize gönderin.'
+        }
+      }
+    },
+    benefits: {
+      title: 'Neden EPE Consulting?',
+      items: {
+        compliant: {
+          title: 'Uyumlu Kalın',
+          description: 'AB CBAM düzenlemelerindeki değişiklikleri otomatik takip edin'
+        },
+        saveTime: {
+          title: 'Zaman Kazanın',
+          description: 'Raporlama süresini günlerden dakikalara indirin'
+        },
+        reduceErrors: {
+          title: 'Hataları Azaltın',
+          description: 'Otomatik süreçlerle manuel hesaplama hatalarını ortadan kaldırın'
+        },
+        buildTrust: {
+          title: 'Güven Oluşturun',
+          description: 'Müşterilerinize şeffaf, doğrulanmış emisyon verileri sunun'
+        }
+      },
+      stats: {
+        companies: 'Zaten uyumlu şirket',
+        accuracy: 'Hesaplama doğruluğu'
+      }
+    },
+    cta: {
+      title: 'CBAM Raporlamanızı Kolaylaştırmaya Hazır mısınız?',
+      subtitle: 'Karbon raporlamasını basit ve doğru yapan binlerce şirkete katılın',
+      button: 'Demo Planla'
+    },
+    footer: {
+      tagline: 'CBAM uyumluluğunu dünya genelinde şirketler için basit hale getiriyoruz.',
+      product: {
+        title: 'Ürün',
+        features: 'Özellikler',
+        pricing: 'Fiyatlandırma',
+        documentation: 'Dokümantasyon'
+      },
+      resources: {
+        title: 'Kaynaklar',
+        guide: 'CBAM Rehberi',
+        blog: 'Blog',
+        support: 'Destek'
+      },
+      company: {
+        title: 'Şirket',
+        about: 'Hakkımızda',
+        contact: 'İletişim',
+        privacy: 'Gizlilik'
+      },
+      copyright: '© 2025 EPE Consulting. Tüm hakları saklıdır.'
     }
   }
 };
@@ -473,7 +577,8 @@ const CBAMLandingPage: React.FC = () => {
 
   const languageOptions = [
     { code: 'en' as Language, label: 'English', flag: '🇬🇧' },
-    { code: 'hr' as Language, label: 'Hrvatski', flag: '🇭🇷' }
+    { code: 'ju' as Language, label: 'Bosanski', flag: '🇧🇦' },
+    { code: 'tr' as Language, label: 'Türkçe', flag: '🇹🇷' }
   ];
 
   const currentLanguage = languageOptions.find(lang => lang.code === language);
