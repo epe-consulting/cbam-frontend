@@ -21,6 +21,13 @@ import {
   Stack,
   Avatar,
   Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import Login from './Login';
 import Dashboard from './Dashboard';
@@ -39,6 +46,7 @@ import {
   Send,
   CheckCircle,
 } from '@mui/icons-material';
+import { API_BASE_URL } from './utils/api';
 
 type Language = 'en' | 'hr';
 
@@ -450,6 +458,14 @@ const Benefit: React.FC<BenefitProps> = ({ title, description }) => {
 const CBAMLandingPage: React.FC = () => {
   const [language, setLanguage] = useState<Language>('en');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [demoDialogOpen, setDemoDialogOpen] = useState(false);
+  const [demoName, setDemoName] = useState('');
+  const [demoEmail, setDemoEmail] = useState('');
+  const [demoCompany, setDemoCompany] = useState('');
+  const [demoMessage, setDemoMessage] = useState('');
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoError, setDemoError] = useState<string | null>(null);
+  const [demoSuccess, setDemoSuccess] = useState(false);
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -477,6 +493,56 @@ const CBAMLandingPage: React.FC = () => {
 
   const handleLoginClick = () => {
     navigate('/login');
+  };
+
+  const handleOpenDemoDialog = () => setDemoDialogOpen(true);
+  const handleCloseDemoDialog = () => {
+    setDemoDialogOpen(false);
+    setDemoError(null);
+    if (demoSuccess) {
+      setDemoName('');
+      setDemoEmail('');
+      setDemoCompany('');
+      setDemoMessage('');
+      setDemoSuccess(false);
+    }
+  };
+
+  const handleDemoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDemoError(null);
+    setDemoLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/demo-request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: demoName.trim(),
+          email: demoEmail.trim(),
+          company: demoCompany.trim() || undefined,
+          message: demoMessage.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setDemoError(data?.message || 'Something went wrong. Please try again.');
+        setDemoLoading(false);
+        return;
+      }
+      setDemoSuccess(true);
+      setDemoLoading(false);
+      setTimeout(() => {
+        setDemoDialogOpen(false);
+        setDemoSuccess(false);
+        setDemoName('');
+        setDemoEmail('');
+        setDemoCompany('');
+        setDemoMessage('');
+      }, 2000);
+    } catch {
+      setDemoError('Unable to send request. Please try again.');
+      setDemoLoading(false);
+    }
   };
 
   return (
@@ -600,6 +666,7 @@ const CBAMLandingPage: React.FC = () => {
                 variant="contained"
                 size="large"
                 endIcon={<ArrowForward />}
+                onClick={handleOpenDemoDialog}
                 sx={{ 
                   px: 4, 
                   py: 1.5,
@@ -775,6 +842,7 @@ const CBAMLandingPage: React.FC = () => {
               variant="contained"
               size="large"
               endIcon={<ArrowForward />}
+              onClick={handleOpenDemoDialog}
               sx={{ 
                 bgcolor: 'white',
                 color: 'primary.main',
@@ -863,6 +931,66 @@ const CBAMLandingPage: React.FC = () => {
           </Box>
         </Container>
       </Box>
+
+      {/* Schedule Demo Dialog */}
+      <Dialog open={demoDialogOpen} onClose={handleCloseDemoDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Schedule a Demo</DialogTitle>
+        <form onSubmit={handleDemoSubmit}>
+          <DialogContent>
+            {demoError && (
+              <Alert severity="error" sx={{ mb: 2 }} onClose={() => setDemoError(null)}>
+                {demoError}
+              </Alert>
+            )}
+            {demoSuccess ? (
+              <Alert severity="success">Thank you! We&apos;ll be in touch soon.</Alert>
+            ) : (
+              <Stack spacing={2} sx={{ pt: 1 }}>
+                <TextField
+                  required
+                  label="Name"
+                  value={demoName}
+                  onChange={(e) => setDemoName(e.target.value)}
+                  fullWidth
+                  autoFocus
+                />
+                <TextField
+                  required
+                  label="Email"
+                  type="email"
+                  value={demoEmail}
+                  onChange={(e) => setDemoEmail(e.target.value)}
+                  fullWidth
+                />
+                <TextField
+                  label="Company"
+                  value={demoCompany}
+                  onChange={(e) => setDemoCompany(e.target.value)}
+                  fullWidth
+                />
+                <TextField
+                  label="Message"
+                  value={demoMessage}
+                  onChange={(e) => setDemoMessage(e.target.value)}
+                  fullWidth
+                  multiline
+                  rows={3}
+                />
+              </Stack>
+            )}
+          </DialogContent>
+          {!demoSuccess && (
+            <DialogActions sx={{ px: 3, pb: 2 }}>
+              <Button onClick={handleCloseDemoDialog} disabled={demoLoading}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="contained" disabled={demoLoading}>
+                {demoLoading ? <CircularProgress size={24} /> : 'Submit'}
+              </Button>
+            </DialogActions>
+          )}
+        </form>
+      </Dialog>
     </Box>
   );
 };
