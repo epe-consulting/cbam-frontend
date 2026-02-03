@@ -1,13 +1,14 @@
 /**
- * Maps frontend step + context to DB step_code for fetching questions.
- * step_code values come from SQL: ALU_DECLARATION, ALU_UNWROUGHT, ALU_PRODUCT_TYPE, ALU_DATA, FUEL_INPUT, ALU_ANODES, ALU_PFC_METHOD, ALU_PFC_METHOD_A, ALU_ELECTRICITY_SOURCE.
+ * Maps frontend step + context to DB step_code(s) for fetching questions.
+ * step_code values come from SQL: ALU_DECLARATION, ALU_UNWROUGHT, ALU_PRODUCT_TYPE, ALU_DATA, FUEL_INPUT, ALU_ANODES, ALU_ANODES_INPUT, ALU_PFC_METHOD, ALU_PFC_METHOD_A, ALU_ELECTRICITY_SOURCE.
+ * Returns string[] for step 6 (anode) so we fetch both ALU_ANODES_INPUT and ALU_ANODES and merge (no migration needed).
  */
 export function getStepCode(params: {
   step: number;
   category: string;
   aluminumProductType: string;
   pathname: string;
-}): string | null {
+}): string | string[] | null {
   const { step, category, aluminumProductType, pathname } = params;
   if (category !== 'Aluminium') return null;
 
@@ -21,7 +22,8 @@ export function getStepCode(params: {
     case 5:
       return 'FUEL_INPUT';
     case 6:
-      return 'ALU_ANODES';
+      // Anode page: questions live under ALU_ANODES_INPUT (QTY, UNIT, HAS_CARBON_PERCENT) and ALU_ANODES (ALU_ANODE_CARBON_PERCENT); fetch both and merge
+      return ['ALU_ANODES_INPUT', 'ALU_ANODES'];
     case 7:
       return 'ALU_PFC_METHOD';
     case 8:

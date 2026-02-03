@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   Container,
@@ -120,13 +120,18 @@ const NewCalculation: React.FC = () => {
   const [ppaConsumption, setPpaConsumption] = useState<string>('');
   const [ppaConsumptionUnit, setPpaConsumptionUnit] = useState<string>('kWh');
 
-  // Step code for dynamic questions from DB (null = use existing hardcoded UI)
-  const stepCode = getStepCode({
-    step,
-    category,
-    aluminumProductType,
-    pathname: location.pathname,
-  });
+  // Step code for dynamic questions from DB (null = use existing hardcoded UI).
+  // useMemo so array step codes (e.g. ['ALU_ANODES_INPUT', 'ALU_ANODES']) keep a stable reference and don't trigger infinite refetch.
+  const stepCode = useMemo(
+    () =>
+      getStepCode({
+        step,
+        category,
+        aluminumProductType,
+        pathname: location.pathname,
+      }),
+    [step, category, aluminumProductType, location.pathname]
+  );
   const { questions: questionsFromApi, loading: questionsLoading, error: questionsError } = useQuestionsByStep(stepCode);
   const { answers, getAnswer, setAnswer } = useCalculationAnswers(calculationId);
 
@@ -1788,7 +1793,7 @@ const NewCalculation: React.FC = () => {
         )}
 
         {step === 6 && (
-          stepCode ? (
+          (stepCode && questionsFromApi.length > 0) ? (
             <>
               <DynamicQuestionStep
                 questions={questionsFromApi}

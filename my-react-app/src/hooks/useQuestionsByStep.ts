@@ -10,18 +10,30 @@ export interface QuestionWithOptions extends Question {
   options: QuestionOption[];
 }
 
-export function useQuestionsByStep(stepCode: string | null) {
+function mergeAndSortQuestions(questions: Question[]): Question[] {
+  const byId = new Map<number, Question>();
+  questions.forEach((q) => byId.set(q.id, q));
+  return Array.from(byId.values()).sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+export function useQuestionsByStep(stepCode: string | string[] | null) {
   const [questions, setQuestions] = useState<QuestionWithOptions[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchQuestions = useCallback(async (code: string) => {
+  const fetchQuestions = useCallback(async (codeOrCodes: string | string[]) => {
+    const codes = Array.isArray(codeOrCodes) ? codeOrCodes : [codeOrCodes];
+    if (codes.length === 0) {
+      setQuestions([]);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const list = await getQuestionsByStep(code);
+      const lists = await Promise.all(codes.map((code) => getQuestionsByStep(code)));
+      const merged = mergeAndSortQuestions(lists.flat());
       const withOptions: QuestionWithOptions[] = await Promise.all(
-        list.map(async (q) => {
+        merged.map(async (q) => {
           const needsOptions =
             q.questionType === 'SINGLE_CHOICE' || q.questionType === 'MULTI_CHOICE';
           const options = needsOptions ? await getQuestionOptions(q.id) : [];
@@ -46,5 +58,10 @@ export function useQuestionsByStep(stepCode: string | null) {
     }
   }, [stepCode, fetchQuestions]);
 
-  return { questions, loading, error, refetch: () => stepCode && fetchQuestions(stepCode) };
+  return {
+    questions,
+    loading,
+    error,
+    refetch: () => stepCode && fetchQuestions(stepCode),
+  };
 }
