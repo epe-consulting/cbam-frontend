@@ -656,10 +656,14 @@ const NewCalculation: React.FC = () => {
     if (calculationId != null && questionsFromApi?.length && !(step === 5 && dataQualityLevel === 'real-data')) {
       const questionIds = questionsFromApi.map((q: QuestionWithOptions) => q.id);
       const valuesToSave: { questionId: number; value: string }[] = [];
+      const anodeTypeQuestion = questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_ANODE_TYPE');
+      const anodeTypeAnswer = anodeTypeQuestion != null ? getAnswer(anodeTypeQuestion.id) : '';
+      const isPreBaked = anodeTypeAnswer === 'PRE_BAKED' || anodeTypeAnswer === 'pre-baked';
       for (const q of questionsFromApi) {
         const value = getAnswer(q.id);
-        if (step === 6 && q.code === 'ALU_ANODES_UNIT') valuesToSave.push({ questionId: q.id, value: 'TONNES' });
-        else if (value != null && value !== '') valuesToSave.push({ questionId: q.id, value });
+        if (step === 6 && q.code === 'ALU_ANODES_UNIT') {
+          if (anodeTypeConfirmed && isPreBaked) valuesToSave.push({ questionId: q.id, value: 'TONNES' });
+        } else if (value != null && value !== '') valuesToSave.push({ questionId: q.id, value });
       }
       await deleteAnswersForQuestions(questionIds);
       for (const item of valuesToSave) {
