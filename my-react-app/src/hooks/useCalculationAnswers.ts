@@ -21,8 +21,9 @@ export function useCalculationAnswers(calculationId: number | null) {
       const map: AnswersMap = {};
       list.forEach((a) => {
         const qId = a.question?.id ?? (a as unknown as { questionId?: number }).questionId;
-        if (qId != null && a.valueText != null) {
-          map[qId] = a.valueText;
+        const value = a.valueText ?? (a as unknown as { selectedOption?: { code?: string } }).selectedOption?.code ?? '';
+        if (qId != null && value !== '') {
+          map[qId] = value;
         }
       });
       setAnswers(map);
@@ -48,7 +49,7 @@ export function useCalculationAnswers(calculationId: number | null) {
     setAnswers((prev) => ({ ...prev, [questionId]: valueText }));
   }, []);
 
-  /** Persist one answer to the API. Call only on Next (not on change). */
+  /** Persist one answer to the API. Call only on Next (not on change). Rethrows so caller can abort getNextStep on failure. */
   const saveAnswer = useCallback(
     async (questionId: number, valueText: string, emissionFactorId?: number | null) => {
       if (calculationId == null) return;
@@ -61,7 +62,9 @@ export function useCalculationAnswers(calculationId: number | null) {
           ...(emissionFactorId != null && { emissionFactorId }),
         });
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to save answer');
+        const message = e instanceof Error ? e.message : 'Failed to save answer';
+        setError(message);
+        throw e;
       }
     },
     [calculationId]

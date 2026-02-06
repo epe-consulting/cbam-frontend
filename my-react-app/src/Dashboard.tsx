@@ -254,7 +254,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       }
       const calculationId = calcResult.data.calculation.id;
       setNewCalcLoading(false);
-      navigate('/dashboard/new-calculation', { state: { calculationId } });
+      navigate(`/dashboard/new-calculation/${calculationId}`);
     } catch (err) {
       setNewCalcError(err instanceof Error ? err.message : 'Failed to create calculation');
       setNewCalcLoading(false);

@@ -21,6 +21,13 @@ export interface QuestionOption {
   question?: { id: number };
 }
 
+/** Question with options embedded (from GET /questions/with-options or /questions/next-step). */
+export interface QuestionWithOptionsDto extends Question {
+  isRouting?: boolean;
+  required?: boolean;
+  options: QuestionOption[];
+}
+
 interface QuestionsByStepResponse {
   success: boolean;
   questions?: Question[];
@@ -76,4 +83,52 @@ export async function getQuestionOptions(questionId: number): Promise<QuestionOp
     throw new Error(result?.data?.message ?? 'Failed to fetch question options');
   }
   return result.data.questionOptions ?? [];
+}
+
+interface QuestionsWithOptionsResponse {
+  success: boolean;
+  questions?: QuestionWithOptionsDto[];
+  count?: number;
+  message?: string;
+}
+
+/**
+ * GET /questions/with-options?stepCode=...
+ */
+export async function getQuestionsWithOptions(stepCode: string): Promise<QuestionWithOptionsDto[]> {
+  const encoded = encodeURIComponent(stepCode);
+  const result = await apiRequest<QuestionsWithOptionsResponse>(`/questions/with-options?stepCode=${encoded}`);
+  if (result === null || !result.data.success || !result.data.questions) {
+    throw new Error(result?.data?.message ?? 'Failed to fetch questions');
+  }
+  return result.data.questions;
+}
+
+interface NextStepResponse {
+  success: boolean;
+  fromStepCode?: string;
+  toStepCode?: string;
+  questions?: QuestionWithOptionsDto[];
+  count?: number;
+  message?: string;
+}
+
+/**
+ * GET /questions/next-step?calculationId=...&fromStepCode=...
+ * Returns next step code and questions for that step (empty if toStepCode is COMPLETE).
+ */
+export async function getNextStep(
+  calculationId: number,
+  fromStepCode: string
+): Promise<{ toStepCode: string; questions: QuestionWithOptionsDto[] }> {
+  const result = await apiRequest<NextStepResponse>(
+    `/questions/next-step?calculationId=${calculationId}&fromStepCode=${encodeURIComponent(fromStepCode)}`
+  );
+  if (result === null || !result.data.success) {
+    throw new Error(result?.data?.message ?? 'Failed to get next step');
+  }
+  return {
+    toStepCode: result.data.toStepCode ?? 'COMPLETE',
+    questions: result.data.questions ?? [],
+  };
 }

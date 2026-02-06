@@ -16,6 +16,11 @@ function mergeAndSortQuestions(questions: Question[]): Question[] {
   return Array.from(byId.values()).sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
+/** Dedupe by question code (first occurrence wins) so the same step never shows the same question twice. */
+function dedupeByCode<T extends { code: string }>(list: T[]): T[] {
+  return list.filter((q, i, arr) => arr.findIndex((x) => x.code === q.code) === i);
+}
+
 export function useQuestionsByStep(stepCode: string | string[] | null) {
   const [questions, setQuestions] = useState<QuestionWithOptions[]>([]);
   const [loading, setLoading] = useState(false);
@@ -40,7 +45,7 @@ export function useQuestionsByStep(stepCode: string | string[] | null) {
           return { ...q, options };
         })
       );
-      setQuestions(withOptions);
+      setQuestions(dedupeByCode(withOptions));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load questions');
       setQuestions([]);

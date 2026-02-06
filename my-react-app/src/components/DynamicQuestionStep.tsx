@@ -52,10 +52,14 @@ export function DynamicQuestionStep({
     }
     return true;
   });
+  // Dedupe by question code so the same question is never shown twice (avoids double declaration step etc.)
+  const uniqueVisibleQuestions = visibleQuestions.filter(
+    (q, i, arr) => arr.findIndex((x) => x.code === q.code) === i
+  );
 
   const canProceed =
     !nextDisabled &&
-    visibleQuestions.every((q) => {
+    uniqueVisibleQuestions.every((q) => {
       const val = getAnswer(q.id);
       if (q.questionType === 'VALUE') return val != null && String(val).trim() !== '';
       if (q.questionType === 'SINGLE_CHOICE' || q.questionType === 'MULTI_CHOICE')
@@ -86,7 +90,7 @@ export function DynamicQuestionStep({
   return (
     <>
       <Grid container spacing={3}>
-        {visibleQuestions.map((q) => (
+        {uniqueVisibleQuestions.map((q) => (
           <Grid size={12} key={q.id}>
             {q.questionType === 'VALUE' && (
               <>
