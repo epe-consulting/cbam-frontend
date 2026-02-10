@@ -17,6 +17,7 @@ import { optionCodeToFrontendState, frontendStateToOptionCode } from './utils/qu
 import { QuestionStepWrapper } from './components/QuestionStepWrapper';
 import { ProductInfoStep } from './components/ProductInfoStep';
 import { FuelInputStep, type FuelEntry } from './components/FuelInputStep';
+import { PrecursorInputStep, type PrecursorEntry } from './components/PrecursorInputStep';
 import { AnodeStep } from './components/AnodeStep';
 import { FlueGasStep } from './components/FlueGasStep';
 import { CalculationCompleteStep } from './components/CalculationCompleteStep';
@@ -75,6 +76,11 @@ const NewCalculation: React.FC = () => {
   // Step 6: show form (prebaked or Söderberg) only after user presses Next on anode type question
   const [anodeTypeConfirmed, setAnodeTypeConfirmed] = useState(false);
 
+  // Precursor input state (ALU_PRODUCTS_PRECURSORS)
+  const [precursorEntries, setPrecursorEntries] = useState<PrecursorEntry[]>([
+    { id: 1, vrsta: '', kolicina: '', ugradjeneEmisije: '' }
+  ]);
+
   // PFC input state
   const [_pfcQuantity, _setPfcQuantity] = useState<string>('');
   const [_hasPfcCarbonPercentage, _setHasPfcCarbonPercentage] = useState<string>('');
@@ -86,6 +92,9 @@ const NewCalculation: React.FC = () => {
   const [anodeEffectDuration, setAnodeEffectDuration] = useState<string>('');
   const [primaryAluminumQuantity, setPrimaryAluminumQuantity] = useState<string>('');
   const [cellTechnology, setCellTechnology] = useState<string>('');
+
+  // Own embedded emissions (products path: "Da li imate već izračunate ugrađene emisije?" DA/NE)
+  const [ownEmbeddedEmissions, setOwnEmbeddedEmissions] = useState<string>('');
 
   // Electricity source state
   const [electricitySource, setElectricitySource] = useState<string>('');
@@ -115,11 +124,21 @@ const NewCalculation: React.FC = () => {
       case 'ALU_SECONDARY_EMBEDDED_EMISSIONS':
       case 'ALU_SECONDARY_EMBEDDED_EMISSIONS_VALUE':
       case 'ALU_SECONDARY_ALLOYING_ELEMENTS':
-      case 'ALU_SECONDARY_ALLOYING_PERCENT': return 4;
+      case 'ALU_SECONDARY_ALLOYING_PERCENT':
+      case 'ALU_PRODUCTS_UNWROUGHT_INPUT':
+      case 'ALU_OWN_EMBEDDED_EMISSIONS':
+      case 'ALU_EXTERNAL_EMBEDDED_DATA':
+      case 'ALU_EXTERNAL_EMBEDDED_VALUE':
+      case 'ALU_EXTERNAL_PURCHASED_QTY':
+      case 'ALU_PRODUCTS_ALLOYING':
+      case 'ALU_PRODUCTS_ALLOYING_PERCENT':
+      case 'ALU_UNWROUGHT_ADDITIONAL': return 4;
       case 'FUEL_INPUT':
       case 'ALU_EMISSIONS_INPUT':
       case 'ALU_SECONDARY_FUEL_INPUT':
-      case 'ALU_SECONDARY_FUEL_RELATED': return 5;
+      case 'ALU_SECONDARY_FUEL_RELATED':
+      case 'ALU_PRODUCTS_FUEL_INPUT': return 5;
+      case 'ALU_PRODUCTS_PRECURSORS': return 13;
       case 'ALU_ANODE_TYPE':
       case 'ALU_ANODES_INPUT':
       case 'ALU_ANODES_SODERBERG': return 6;
@@ -134,6 +153,7 @@ const NewCalculation: React.FC = () => {
       case 'ALU_PPA_EMISSION_FACTOR':
       case 'ALU_PPA_EMISSION_FACTOR_AND_CONSUMPTION':
       case 'ALU_PPA_CONSUMPTION_ONLY': return 11;
+      case 'SABIRNA_TACKA': return 99; // pass-through routing step, no UI
       case 'COMPLETE': return 12;
       default: return 1;
     }
@@ -163,10 +183,41 @@ const NewCalculation: React.FC = () => {
     setStep(stepFromCurrentStepCode(currentStepCode));
   }, [currentStepCode]);
 
-  // When entering the "related activities" fuel step (skimmings, slag), clear fuel form so user enters fresh data
+  // Auto-navigate through pass-through steps (SABIRNA_TACKA: no UI, routing only)
   useEffect(() => {
-    if (currentStepCode === 'ALU_SECONDARY_FUEL_RELATED') {
+    if (currentStepCode !== 'SABIRNA_TACKA' || calculationId == null) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { toStepCode } = await getNextStep(calculationId, currentStepCode);
+        if (cancelled) return;
+        stepStackRef.current.push(currentStepCode);
+        if (toStepCode === 'COMPLETE') {
+          await patchCalculationWizard(calculationId, { status: 'COMPLETED' });
+        } else {
+          await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+        }
+        if (cancelled) return;
+        setCurrentStepCode(toStepCode);
+        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode, status: toStepCode === 'COMPLETE' ? 'COMPLETED' : c.status } : null));
+      } catch {
+        // routing error – stay on loading state
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [currentStepCode, calculationId]);
+
+  // When entering the "related activities" fuel step (skimmings, slag) or products fuel step, clear fuel form so user enters fresh data
+  useEffect(() => {
+    if (currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_FUEL_INPUT') {
       setFuelEntries([{ id: 1, sector: '', subsector: '', subsubsector: '', emissionFactorName: '', denominator: '', amount: '', emissionFactorId: null, emissionFactorValue: null }]);
+    }
+  }, [currentStepCode]);
+
+  // When entering the precursors step, clear precursor form so user enters fresh data
+  useEffect(() => {
+    if (currentStepCode === 'ALU_PRODUCTS_PRECURSORS') {
+      setPrecursorEntries([{ id: 1, vrsta: '', kolicina: '', ugradjeneEmisije: '' }]);
     }
   }, [currentStepCode]);
 
@@ -213,6 +264,9 @@ const NewCalculation: React.FC = () => {
         case 'ALU_DATA_AVAILABILITY':
           setDataQualityLevel(frontend);
           break;
+        case 'ALU_OWN_EMBEDDED_EMISSIONS':
+          setOwnEmbeddedEmissions(frontend);
+          break;
         case 'ALU_PFC_METHOD':
           setPfcMethod(frontend);
           break;
@@ -253,6 +307,7 @@ const NewCalculation: React.FC = () => {
       case 'ALU_UNWROUGHT_PRODUCTION_METHOD': return productionProcess;
       case 'ALU_PRODUCT_TYPE': return aluminumProductSubtype;
       case 'ALU_DATA_AVAILABILITY': return dataQualityLevel;
+      case 'ALU_OWN_EMBEDDED_EMISSIONS': return ownEmbeddedEmissions;
       case 'ALU_PFC_METHOD': return pfcMethod;
       case 'ALU_ELECTRICITY_SOURCE': return electricitySource;
       case 'ALU_HAS_CARBON_PERCENT': return hasCarbonPercentage;
@@ -283,6 +338,7 @@ const NewCalculation: React.FC = () => {
       case 'ALU_UNWROUGHT_PRODUCTION_METHOD': setProductionProcess(frontend); break;
       case 'ALU_PRODUCT_TYPE': setAluminumProductSubtype(frontend); break;
       case 'ALU_DATA_AVAILABILITY': setDataQualityLevel(frontend); break;
+      case 'ALU_OWN_EMBEDDED_EMISSIONS': setOwnEmbeddedEmissions(frontend); break;
       case 'ALU_PFC_METHOD': setPfcMethod(frontend); break;
       case 'ALU_ELECTRICITY_SOURCE': setElectricitySource(frontend); break;
       case 'ALU_CELL_TECHNOLOGY': setCellTechnology(frontend); break;
@@ -306,7 +362,8 @@ const NewCalculation: React.FC = () => {
     step === 5 &&
     ( (category === 'Aluminium' && aluminumProductType === 'unwrought' && dataQualityLevel === 'real-data') ||
       currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' ||
-      currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' );
+      currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' ||
+      currentStepCode === 'ALU_PRODUCTS_FUEL_INPUT' );
 
   // Load emission factor sectors when on fuel step (primary or secondary)
   useEffect(() => {
@@ -470,7 +527,7 @@ const NewCalculation: React.FC = () => {
     // Persist current step answers to API only when user presses Next (not on every change).
     // Step 5 (fuel, real-data) has its own delete-then-save-all logic below, so skip generic persist for that case.
     // For step 5 with calculated-emissions we use generic persist for ALU_EMISSIONS_INPUT questions.
-    if (calculationId != null && questionsFromApi?.length && !(step === 5 && dataQualityLevel === 'real-data')) {
+    if (calculationId != null && questionsFromApi?.length && !(step === 5 && (dataQualityLevel === 'real-data' || currentStepCode === 'ALU_PRODUCTS_FUEL_INPUT')) && step !== 13) {
       const questionIds = questionsFromApi.map((q: QuestionWithOptions) => q.id);
       const valuesToSave: { questionId: number; value: string }[] = [];
       const anodeTypeQuestion = questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_ANODE_TYPE');
@@ -546,8 +603,10 @@ const NewCalculation: React.FC = () => {
         // validation or API error
       }
     } else if (step === 3) {
-      if (category === 'Aluminium' && aluminumProductType === 'unwrought' && !productionProcess) return;
-      if (category === 'Aluminium' && aluminumProductType === 'products' && !aluminumProductSubtype) return;
+      // ALU_UNWROUGHT = "Kako je proizveden?" (Primarni/Sekundarni/Oba) → require productionProcess (unwrought + products)
+      // ALU_PRODUCT_TYPE = product subtype (wire/sheets/...) → require aluminumProductSubtype when products
+      if (currentStepCode === 'ALU_UNWROUGHT' && !productionProcess) return;
+      if (currentStepCode === 'ALU_PRODUCT_TYPE' && category === 'Aluminium' && aluminumProductType === 'products' && !aluminumProductSubtype) return;
       if (calculationId == null) return;
       try {
         const { toStepCode } = await getNextStep(calculationId, currentStepCode);
@@ -561,6 +620,8 @@ const NewCalculation: React.FC = () => {
     } else if (step === 4) {
       // Only require dataQualityLevel when on ALU_DATA (primary/both path); secondary path never sets it
       if (currentStepCode === 'ALU_DATA' && category === 'Aluminium' && aluminumProductType === 'unwrought' && !dataQualityLevel) return;
+      // Products path: require DA/NE on "Da li imate već izračunate ugrađene emisije?" before Next
+      if (currentStepCode === 'ALU_OWN_EMBEDDED_EMISSIONS' && !ownEmbeddedEmissions) return;
       if (calculationId == null) return;
       try {
         const { toStepCode } = await getNextStep(calculationId, currentStepCode);
@@ -575,12 +636,13 @@ const NewCalculation: React.FC = () => {
       const isPrimaryFuel = category === 'Aluminium' && aluminumProductType === 'unwrought' && dataQualityLevel === 'real-data';
       const isSecondaryFuel = currentStepCode === 'ALU_SECONDARY_FUEL_INPUT';
       const isSecondaryFuelRelated = currentStepCode === 'ALU_SECONDARY_FUEL_RELATED';
-      if (isPrimaryFuel || isSecondaryFuel || isSecondaryFuelRelated) {
+      const isProductsFuel = currentStepCode === 'ALU_PRODUCTS_FUEL_INPUT';
+      if (isPrimaryFuel || isSecondaryFuel || isSecondaryFuelRelated || isProductsFuel) {
         const allValid = fuelEntries.every((entry: FuelEntry) =>
           entry.sector && entry.subsector && entry.emissionFactorName && entry.denominator && entry.amount && entry.emissionFactorId != null
         );
         if (!allValid || fuelEntries.length === 0) return;
-        const fuelQtyCode = isSecondaryFuelRelated ? 'ALU_SECONDARY_FUEL_RELATED_QTY' : isSecondaryFuel ? 'ALU_SECONDARY_FUEL_QTY' : 'FUEL_QTY';
+        const fuelQtyCode = isProductsFuel ? 'ALU_PRODUCTS_FUEL_ENTRY' : isSecondaryFuelRelated ? 'ALU_SECONDARY_FUEL_RELATED_QTY' : isSecondaryFuel ? 'ALU_SECONDARY_FUEL_QTY' : 'FUEL_QTY';
         const fuelQtyQuestion = questionsFromApi?.find((q: { code: string }) => q.code === fuelQtyCode);
         if (calculationId != null && fuelQtyQuestion) {
           await deleteAnswersForQuestions([fuelQtyQuestion.id]);
@@ -727,6 +789,35 @@ const NewCalculation: React.FC = () => {
       } catch {
         // validation or API error
       }
+    } else if (step === 13) {
+      // Precursors: save each entry as JSON in calculation_answer, then navigate
+      const precursorQuestion = questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_PRECURSOR_ENTRY');
+      if (precursorQuestion && calculationId != null) {
+        await deleteAnswersForQuestions([precursorQuestion.id]);
+        for (const entry of precursorEntries) {
+          if (entry.vrsta.trim() || entry.kolicina.trim() || entry.ugradjeneEmisije.trim()) {
+            await saveAnswer(precursorQuestion.id, JSON.stringify({
+              vrsta: entry.vrsta,
+              kolicina: entry.kolicina,
+              ugradjene_emisije: entry.ugradjeneEmisije,
+            }));
+          }
+        }
+      }
+      if (calculationId == null) return;
+      try {
+        const { toStepCode } = await getNextStep(calculationId, currentStepCode);
+        stepStackRef.current.push(currentStepCode);
+        if (toStepCode === 'COMPLETE') {
+          await patchCalculationWizard(calculationId, { status: 'COMPLETED' });
+        } else {
+          await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+        }
+        setCurrentStepCode(toStepCode);
+        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode, status: toStepCode === 'COMPLETE' ? 'COMPLETED' : c.status } : null));
+      } catch {
+        // validation or API error
+      }
     }
   };
 
@@ -834,10 +925,10 @@ const NewCalculation: React.FC = () => {
           />
         )}
 
-        {step === 5 && ((category === 'Aluminium' && aluminumProductType === 'unwrought' && dataQualityLevel === 'real-data' || currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED') ? (
+        {step === 5 && ((category === 'Aluminium' && aluminumProductType === 'unwrought' && dataQualityLevel === 'real-data' || currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_FUEL_INPUT') ? (
           <FuelInputStep
-            title={currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' ? questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_SECONDARY_FUEL_RELATED_STEP_LABEL')?.label : currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' ? questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_SECONDARY_FUEL_STEP_LABEL')?.label : questionsFromApi?.find((q: { code: string }) => q.code === 'FUEL_STEP_LABEL')?.label}
-            addButtonLabel={currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' ? 'ADD ANOTHER FUEL' : undefined}
+            title={currentStepCode === 'ALU_PRODUCTS_FUEL_INPUT' ? questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_PRODUCTS_FUEL_ENTRY')?.label : currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' ? questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_SECONDARY_FUEL_RELATED_STEP_LABEL')?.label : currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' ? questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_SECONDARY_FUEL_STEP_LABEL')?.label : questionsFromApi?.find((q: { code: string }) => q.code === 'FUEL_STEP_LABEL')?.label}
+            addButtonLabel={currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_FUEL_INPUT' ? '+ ADD ANOTHER FUEL' : undefined}
             fuelEntries={fuelEntries}
             updateFuelEntry={updateFuelEntry}
             resolveEmissionFactorId={resolveEmissionFactorId}
@@ -993,7 +1084,39 @@ const NewCalculation: React.FC = () => {
           />
         )}
 
-        {step === 12 && dataQualityLevel === 'calculated-emissions' && (
+        {step === 99 && (
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight={120}>
+            <CircularProgress />
+          </Box>
+        )}
+
+        {step === 13 && (
+          <PrecursorInputStep
+            title={questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_PRECURSOR_ENTRY')?.label}
+            precursorEntries={precursorEntries}
+            updatePrecursorEntry={(index: number, updates: Partial<PrecursorEntry>) =>
+              setPrecursorEntries((prev: PrecursorEntry[]) => prev.map((e: PrecursorEntry, i: number) => (i === index ? { ...e, ...updates } : e)))
+            }
+            addPrecursorEntry={() =>
+              setPrecursorEntries((prev: PrecursorEntry[]) => [
+                ...prev,
+                {
+                  id: prev.length > 0 ? Math.max(...prev.map((e: PrecursorEntry) => e.id)) + 1 : 1,
+                  vrsta: '',
+                  kolicina: '',
+                  ugradjeneEmisije: '',
+                },
+              ])
+            }
+            removePrecursorEntry={(index: number) =>
+              setPrecursorEntries((prev: PrecursorEntry[]) => prev.filter((_: PrecursorEntry, i: number) => i !== index))
+            }
+            onBack={handleBack}
+            onNext={handleNext}
+          />
+        )}
+
+        {step === 12 && currentStepCode === 'COMPLETE' && (
           <CalculationCompleteStep
             questionsFromApi={questionsFromApi}
             getAnswer={getAnswer}

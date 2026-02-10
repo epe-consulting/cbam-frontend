@@ -65,6 +65,10 @@ export function optionCodeToFrontendState(questionCode: string, optionCode: stri
       if (optionCode === 'HAS_REAL_INPUTS') return 'real-data';
       if (optionCode === 'HAS_EMISSIONS_ONLY') return 'calculated-emissions';
       return lower;
+    case 'ALU_OWN_EMBEDDED_EMISSIONS':
+      if (optionCode === 'YES') return 'yes';
+      if (optionCode === 'NO') return 'no';
+      return lower;
     case 'ALU_PFC_METHOD':
       if (optionCode === 'METHOD_A_AE_FREQ_DURATION') return 'anode-effect';
       if (optionCode === 'METHOD_B_AEO_CE') return 'aeo-ce';
@@ -120,6 +124,10 @@ export function frontendStateToOptionCode(questionCode: string, frontendValue: s
     case 'ALU_DATA_AVAILABILITY':
       if (frontendValue === 'real-data') return 'HAS_REAL_INPUTS';
       if (frontendValue === 'calculated-emissions') return 'HAS_EMISSIONS_ONLY';
+      return frontendValue.toUpperCase();
+    case 'ALU_OWN_EMBEDDED_EMISSIONS':
+      if (frontendValue === 'yes') return 'YES';
+      if (frontendValue === 'no') return 'NO';
       return frontendValue.toUpperCase();
     case 'ALU_PFC_METHOD':
       if (frontendValue === 'anode-effect') return 'METHOD_A_AE_FREQ_DURATION';
