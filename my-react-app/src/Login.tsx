@@ -13,7 +13,6 @@ import {
   CircularProgress,
 } from '@mui/material';
 import {
-  TrendingDown,
   ArrowBack,
   Email,
   Lock,
@@ -117,9 +116,8 @@ const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
         <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
           <Box textAlign="center" mb={4}>
             <Box display="flex" alignItems="center" justifyContent="center" gap={1} mb={2}>
-              <TrendingDown color="primary" />
-              <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-                EPE Consulting
+              <Typography variant="h4" sx={{ fontWeight: 700 }}>
+                PANONIA
               </Typography>
             </Box>
             <Typography variant="h5" component="h2" gutterBottom>
@@ -251,7 +249,7 @@ const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
 
         <Box textAlign="center" mt={4}>
           <Typography variant="body2" color="text.secondary">
-            © 2025 EPE Consulting. All rights reserved.
+            © 2025 Panonia. All rights reserved.
           </Typography>
         </Box>
       </Container>

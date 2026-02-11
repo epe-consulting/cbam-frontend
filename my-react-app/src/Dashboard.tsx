@@ -48,7 +48,6 @@ import {
   TextField,
 } from '@mui/material';
 import {
-  TrendingDown,
   Menu as MenuIcon,
   AccountCircle,
   Logout,
@@ -410,9 +409,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       <AppBar position="fixed" sx={{ bgcolor: 'white', color: 'text.primary', boxShadow: 1 }}>
         <Toolbar>
           <Box display="flex" alignItems="center" gap={1} sx={{ flexGrow: 1 }}>
-            <TrendingDown color="primary" />
-            <Typography variant="h6" component="div" sx={{ fontWeight: 700 }}>
-              EPE Consulting
+            <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
+              PANONIA
             </Typography>
             <Chip label="Dashboard" color="primary" size="small" sx={{ ml: 2 }} />
           </Box>
