@@ -36,7 +36,6 @@ import CalculationsList from './CalculationsList';
 import Admin from './Admin';
 import ProtectedRoute from './ProtectedRoute';
 import {
-  TrendingDown,
   Shield,
   Language,
   KeyboardArrowDown,
@@ -208,7 +207,7 @@ const translations: Record<Language, Translations> = {
       }
     },
     benefits: {
-      title: 'Why Choose EPE Consulting?',
+      title: 'Why Choose Panonia?',
       items: {
         compliant: {
           title: 'Stay Compliant',
@@ -257,7 +256,7 @@ const translations: Record<Language, Translations> = {
         contact: 'Contact',
         privacy: 'Privacy'
       },
-      copyright: '© 2025 EPE Consulting. All rights reserved.'
+      copyright: '© 2025 Panonia. All rights reserved.'
     }
   },
   ju: {
@@ -312,7 +311,7 @@ const translations: Record<Language, Translations> = {
       }
     },
     benefits: {
-      title: 'Zašto Odabrati EPE Consulting?',
+      title: 'Zašto Odabrati Panonia?',
       items: {
         compliant: {
           title: 'Ostanite Usklađeni',
@@ -361,7 +360,7 @@ const translations: Record<Language, Translations> = {
         contact: 'Kontakt',
         privacy: 'Privatnost'
       },
-      copyright: '© 2025 EPE Consulting. Sva prava pridržana.'
+      copyright: '© 2025 Panonia. Sva prava pridržana.'
     }
   },
   tr: {
@@ -416,7 +415,7 @@ const translations: Record<Language, Translations> = {
       }
     },
     benefits: {
-      title: 'Neden EPE Consulting?',
+      title: 'Neden Panonia?',
       items: {
         compliant: {
           title: 'Uyumlu Kalın',
@@ -465,7 +464,7 @@ const translations: Record<Language, Translations> = {
         contact: 'İletişim',
         privacy: 'Gizlilik'
       },
-      copyright: '© 2025 EPE Consulting. Tüm hakları saklıdır.'
+      copyright: '© 2025 Panonia. Tüm hakları saklıdır.'
     }
   }
 };
@@ -665,9 +664,8 @@ const CBAMLandingPage: React.FC = () => {
       >
         <Toolbar>
           <Box display="flex" alignItems="center" gap={1} sx={{ flexGrow: 1 }}>
-            <TrendingDown color="primary" />
-            <Typography variant="h6" component="div" sx={{ fontWeight: 700, color: 'text.primary' }}>
-              EPE Consulting
+            <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
+              PANONIA
             </Typography>
           </Box>
           
@@ -971,9 +969,8 @@ const CBAMLandingPage: React.FC = () => {
           <Grid container spacing={4} sx={{ mb: 4 }}>
             <Grid size={{ xs: 12, md: 3 }}>
               <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
-                <TrendingDown color="primary" />
-                <Typography variant="h6" sx={{ color: 'white', fontWeight: 700 }}>
-                  EPE Consulting
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'white' }}>
+                  PANONIA
                 </Typography>
               </Box>
               <Typography variant="body2">
@@ -1135,27 +1132,9 @@ const App: React.FC = () => {
         }
       >
         <Route path="calculations" element={<CalculationsList />} />
+        {/* Single URL for wizard: new (no id) creates then redirects; edit has calculationId in path */}
         <Route path="new-calculation" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam/:productTypeParam" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam/:productTypeParam/:processParam" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam/:productTypeParam/:processParam/:dataLevelParam" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam/:productTypeParam/:processParam/:dataLevelParam/anode-elektrode" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam/:productTypeParam/:processParam/:dataLevelParam/anode-elektrode/pfc" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam/:productTypeParam/:processParam/:dataLevelParam/anode-elektrode/pfc/slope" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam/:productTypeParam/:processParam/:dataLevelParam/anode-elektrode/pfc/overvoltage" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam/:productTypeParam/:processParam/:dataLevelParam/anode-elektrode/pfc/slope/electricity" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam/:productTypeParam/:processParam/:dataLevelParam/anode-elektrode/pfc/overvoltage/electricity" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam/:productTypeParam/:processParam/:dataLevelParam/anode-elektrode/pfc/slope/electricity/grid" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam/:productTypeParam/:processParam/:dataLevelParam/anode-elektrode/pfc/slope/electricity/self-power" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam/:productTypeParam/:processParam/:dataLevelParam/anode-elektrode/pfc/slope/electricity/ppa" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam/:productTypeParam/:processParam/:dataLevelParam/anode-elektrode/pfc/slope/electricity/ppa/yes" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam/:productTypeParam/:processParam/:dataLevelParam/anode-elektrode/pfc/slope/electricity/ppa/no" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam/:productTypeParam/:processParam/:dataLevelParam/anode-elektrode/pfc/overvoltage/electricity/grid" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam/:productTypeParam/:processParam/:dataLevelParam/anode-elektrode/pfc/overvoltage/electricity/self-power" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam/:productTypeParam/:processParam/:dataLevelParam/anode-elektrode/pfc/overvoltage/electricity/ppa" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam/:productTypeParam/:processParam/:dataLevelParam/anode-elektrode/pfc/overvoltage/electricity/ppa/yes" element={<NewCalculation />} />
-        <Route path="new-calculation/:categoryParam/:productTypeParam/:processParam/:dataLevelParam/anode-elektrode/pfc/overvoltage/electricity/ppa/no" element={<NewCalculation />} />
+        <Route path="new-calculation/:calculationId" element={<NewCalculation />} />
       </Route>
     </Routes>
   );
