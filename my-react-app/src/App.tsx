@@ -35,6 +35,7 @@ import NewCalculation from './NewCalculation';
 import CalculationsList from './CalculationsList';
 import Admin from './Admin';
 import ProtectedRoute from './ProtectedRoute';
+import CBAMGuide from './CBAMGuide';
 import {
   Shield,
   Language,
@@ -677,7 +678,7 @@ const CBAMLandingPage: React.FC = () => {
               <Button color="inherit" href="#how-it-works">
                 {t.nav.howItWorks}
               </Button>
-              <Button color="inherit" href="#about">
+              <Button color="inherit" onClick={() => navigate('/cbam-guide')}>
                 {t.nav.about}
               </Button>
             </Box>
@@ -782,6 +783,7 @@ const CBAMLandingPage: React.FC = () => {
               <Button
                 variant="outlined"
                 size="large"
+                onClick={() => navigate('/cbam-guide')}
                 sx={{ 
                   px: 4, 
                   py: 1.5,
@@ -998,7 +1000,7 @@ const CBAMLandingPage: React.FC = () => {
                 {t.footer.resources.title}
               </Typography>
               <Stack spacing={1}>
-                <Button color="inherit" size="small">
+                <Button color="inherit" size="small" onClick={() => navigate('/cbam-guide')}>
                   {t.footer.resources.guide}
                 </Button>
                 <Button color="inherit" size="small">
@@ -1118,6 +1120,7 @@ const App: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<CBAMLandingPage />} />
+      <Route path="/cbam-guide" element={<CBAMGuide />} />
       <Route path="/admin" element={<Admin />} />
       <Route 
         path="/login" 
