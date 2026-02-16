@@ -438,7 +438,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             open={Boolean(anchorEl)}
             onClose={handleMenuClose}
           >
-            <MenuItem onClick={handleMenuClose}>
+            <MenuItem onClick={() => { handleMenuClose(); navigate('/dashboard/settings'); }}>
               <ListItemIcon>
                 <Settings />
               </ListItemIcon>

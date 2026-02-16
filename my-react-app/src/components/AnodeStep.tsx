@@ -50,7 +50,7 @@ export function AnodeStep({
     const percent = Number.parseFloat(String(carbonPercentVal)) || 0;
     const prebakedEmissions = showCarbonPercent
       ? amount * (percent / 100) * (44 / 12)
-      : amount * (44 / 12) * 0.85;
+      : amount * (44 / 12) * 0.99;
     return (
       <Grid container spacing={3}>
         <Grid size={12}>
@@ -84,7 +84,7 @@ export function AnodeStep({
                   <strong>Izračunate emisije:</strong> {prebakedEmissions.toFixed(2)} tonnes CO₂e
                   {showCarbonPercent
                     ? ' (formula: amount × (percent/100) × (44/12))'
-                    : ' (formula: amount × (44/12) × 85%)'}
+                    : ' (formula: amount × (44/12) × 99%)'}
                 </Typography>
               </Paper>
             </Grid>

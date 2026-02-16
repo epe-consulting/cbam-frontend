@@ -33,9 +33,11 @@ import Login from './Login';
 import Dashboard from './Dashboard';
 import NewCalculation from './NewCalculation';
 import CalculationsList from './CalculationsList';
+import Settings from './Settings';
 import Admin from './Admin';
 import ProtectedRoute from './ProtectedRoute';
 import CBAMGuide from './CBAMGuide';
+import Contact from './Contact';
 import {
   Shield,
   Language,
@@ -1019,7 +1021,7 @@ const CBAMLandingPage: React.FC = () => {
                 <Button color="inherit" size="small">
                   {t.footer.company.about}
                 </Button>
-                <Button color="inherit" size="small">
+                <Button color="inherit" size="small" onClick={() => navigate('/contact')}>
                   {t.footer.company.contact}
                 </Button>
                 <Button color="inherit" size="small">
@@ -1121,6 +1123,7 @@ const App: React.FC = () => {
     <Routes>
       <Route path="/" element={<CBAMLandingPage />} />
       <Route path="/cbam-guide" element={<CBAMGuide />} />
+      <Route path="/contact" element={<Contact />} />
       <Route path="/admin" element={<Admin />} />
       <Route 
         path="/login" 
@@ -1135,6 +1138,7 @@ const App: React.FC = () => {
         }
       >
         <Route path="calculations" element={<CalculationsList />} />
+        <Route path="settings" element={<Settings />} />
         {/* Single URL for wizard: new (no id) creates then redirects; edit has calculationId in path */}
         <Route path="new-calculation" element={<NewCalculation />} />
         <Route path="new-calculation/:calculationId" element={<NewCalculation />} />
