@@ -76,7 +76,7 @@ const Settings: React.FC = () => {
     try {
       const result = await apiRequest<{ success: boolean; message?: string; user?: UserData }>('/users/me', {
         method: 'PATCH',
-        body: JSON.stringify({ username: username.trim(), email: email.trim() }),
+        body: JSON.stringify({ username: username.trim() }),
       });
       if (!result) {
         setUserError('Session expired');
@@ -111,7 +111,7 @@ const Settings: React.FC = () => {
         `/companies/${userData.companyId}`,
         {
           method: 'PATCH',
-          body: JSON.stringify({ name: companyName.trim(), country: companyCountry.trim() }),
+          body: JSON.stringify({ name: companyName.trim() }),
         }
       );
       if (!result) {
@@ -134,8 +134,8 @@ const Settings: React.FC = () => {
     }
   };
 
-  const userChanged = userData && (username.trim() !== (userData.username || '') || email.trim() !== (userData.email || ''));
-  const companyChanged = userData && (companyName.trim() !== (userData.companyName || '') || companyCountry.trim() !== (userData.companyCountry || ''));
+  const userChanged = userData && username.trim() !== (userData.username || '');
+  const companyChanged = userData && companyName.trim() !== (userData.companyName || '');
 
   if (loading) {
     return (
@@ -213,9 +213,10 @@ const Settings: React.FC = () => {
               label="Email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
               variant="outlined"
+              disabled
               slotProps={{ inputLabel: { shrink: true } }}
+              helperText="Contact an administrator to change your email"
             />
           </Grid>
           <Grid size={12}>
@@ -276,11 +277,10 @@ const Settings: React.FC = () => {
                 fullWidth
                 label="Country"
                 value={companyCountry}
-                onChange={(e) => setCompanyCountry(e.target.value)}
                 variant="outlined"
-                placeholder="e.g. Austria, Germany, Bosnia and Herzegovina"
+                disabled
                 slotProps={{ inputLabel: { shrink: true } }}
-                helperText="Used for grid emission factor lookup"
+                helperText="Contact an administrator to change the country"
               />
             </Grid>
             <Grid size={12}>

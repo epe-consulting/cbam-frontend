@@ -138,9 +138,11 @@ const Admin: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [companiesLoading, setCompaniesLoading] = useState(false);
   const [createCompanyName, setCreateCompanyName] = useState('');
+  const [createCompanyCountry, setCreateCompanyCountry] = useState('');
   const [createCompanyLoading, setCreateCompanyLoading] = useState(false);
   const [createCompanyError, setCreateCompanyError] = useState('');
   const [createCompanySuccess, setCreateCompanySuccess] = useState('');
+  const [countries, setCountries] = useState<string[]>([]);
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');
@@ -172,6 +174,22 @@ const Admin: React.FC = () => {
       .catch(() => setAdmins([]))
       .finally(() => setAdminsLoading(false));
   }, [isAdmin, createSuccess]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch(`${API_BASE_URL}/emission-factors/lookup/subsubsectors?sector=Energy&subsector=Electricity`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.subsubsectors)) {
+          setCountries(data.subsubsectors.sort());
+        }
+      })
+      .catch(() => setCountries([]));
+  }, [isAdmin]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -257,7 +275,7 @@ const Admin: React.FC = () => {
     const defaults: Record<string, Record<string, string>> = {
       admins: { username: '', email: '', password: '' },
       users: { username: '', email: '', password: '', companyId: '' },
-      companies: { name: '' },
+      companies: { name: '', country: '' },
       'emission-factors': { sector: '', subsector: '', subsubsector: '', emissionFactorName: '', emissionFactorTypeId: '', nominatorId: '', denominatorId: '', emissionFactorValueId: '', createdByUserId: '' },
       'emission-factor-types': { emissionFactorType: '' },
       'emission-factor-values': { value: '', co2: '', ch4: '', n2o: '', hfcs: '', pfcs: '', sf6: '', nf3: '', description: '', year: '', location: '', sourceName: '', sourceUrl: '', sourceAuthor: '', tags: '' },
@@ -295,13 +313,14 @@ const Admin: React.FC = () => {
           setAddLoading(false);
           return;
         }
-        const res = await fetch(
-          `${API_BASE_URL}${config.createEndpoint}?name=${encodeURIComponent(name)}`,
-          {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        let companyUrl = `${API_BASE_URL}${config.createEndpoint}?name=${encodeURIComponent(name)}`;
+        if (addForm.country) {
+          companyUrl += `&country=${encodeURIComponent(addForm.country)}`;
+        }
+        const res = await fetch(companyUrl, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const data = await res.json();
         if (res.ok && data.success) {
           setAddDialogOpen(false);
@@ -470,17 +489,19 @@ const Admin: React.FC = () => {
     }
     setCreateCompanyLoading(true);
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/companies/create?name=${encodeURIComponent(name)}`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      let url = `${API_BASE_URL}/companies/create?name=${encodeURIComponent(name)}`;
+      if (createCompanyCountry) {
+        url += `&country=${encodeURIComponent(createCompanyCountry)}`;
+      }
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await response.json();
       if (response.ok && data.success) {
         setCreateCompanySuccess('Company created successfully.');
         setCreateCompanyName('');
+        setCreateCompanyCountry('');
       } else {
         setCreateCompanyError(data.message || 'Failed to create company.');
       }
@@ -729,6 +750,22 @@ const Admin: React.FC = () => {
                   size="small"
                   sx={{ minWidth: 240 }}
                 />
+                <FormControl size="small" sx={{ minWidth: 220 }} required>
+                  <InputLabel id="create-company-country-label">Country</InputLabel>
+                  <Select
+                    labelId="create-company-country-label"
+                    label="Country"
+                    value={createCompanyCountry}
+                    onChange={(e) => setCreateCompanyCountry(e.target.value)}
+                  >
+                    <MenuItem value="">
+                      <em>Select country</em>
+                    </MenuItem>
+                    {countries.map((c) => (
+                      <MenuItem key={c} value={c}>{c}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
                 <Button
                   type="submit"
                   variant="contained"
@@ -937,7 +974,25 @@ const Admin: React.FC = () => {
                           </>
                         )}
                         {dataTableId === 'companies' && (
-                          <TextField label="Company name" value={addForm.name ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))} required size="small" fullWidth />
+                          <>
+                            <TextField label="Company name" value={addForm.name ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))} required size="small" fullWidth />
+                            <FormControl size="small" fullWidth required>
+                              <InputLabel id="add-company-country-label">Country</InputLabel>
+                              <Select
+                                labelId="add-company-country-label"
+                                label="Country"
+                                value={addForm.country ?? ''}
+                                onChange={(e) => setAddForm((f) => ({ ...f, country: e.target.value }))}
+                              >
+                                <MenuItem value="">
+                                  <em>Select country</em>
+                                </MenuItem>
+                                {countries.map((c) => (
+                                  <MenuItem key={c} value={c}>{c}</MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          </>
                         )}
                         {dataTableId === 'emission-factor-types' && (
                           <TextField label="Emission factor type" value={addForm.emissionFactorType ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, emissionFactorType: e.target.value }))} required size="small" fullWidth />
