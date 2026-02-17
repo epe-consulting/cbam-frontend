@@ -598,9 +598,13 @@ const NewCalculation: React.FC = () => {
       try {
         const { toStepCode } = await getNextStep(calculationId, currentStepCode);
         stepStackRef.current.push(currentStepCode);
-        await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+        if (toStepCode === 'COMPLETE') {
+          await patchCalculationWizard(calculationId, { status: 'COMPLETED' });
+        } else {
+          await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+        }
         setCurrentStepCode(toStepCode);
-        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode } : null));
+        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode, status: toStepCode === 'COMPLETE' ? 'COMPLETED' : c.status } : null));
       } catch {
         // validation or API error
       }
@@ -613,9 +617,13 @@ const NewCalculation: React.FC = () => {
       try {
         const { toStepCode } = await getNextStep(calculationId, currentStepCode);
         stepStackRef.current.push(currentStepCode);
-        await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+        if (toStepCode === 'COMPLETE') {
+          await patchCalculationWizard(calculationId, { status: 'COMPLETED' });
+        } else {
+          await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+        }
         setCurrentStepCode(toStepCode);
-        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode } : null));
+        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode, status: toStepCode === 'COMPLETE' ? 'COMPLETED' : c.status } : null));
       } catch {
         // validation or API error
       }
@@ -628,9 +636,13 @@ const NewCalculation: React.FC = () => {
       try {
         const { toStepCode } = await getNextStep(calculationId, currentStepCode);
         stepStackRef.current.push(currentStepCode);
-        await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+        if (toStepCode === 'COMPLETE') {
+          await patchCalculationWizard(calculationId, { status: 'COMPLETED' });
+        } else {
+          await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+        }
         setCurrentStepCode(toStepCode);
-        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode } : null));
+        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode, status: toStepCode === 'COMPLETE' ? 'COMPLETED' : c.status } : null));
       } catch {
         // validation or API error
       }
@@ -689,9 +701,13 @@ const NewCalculation: React.FC = () => {
           try {
             const { toStepCode } = await getNextStep(calculationId, currentStepCode);
             stepStackRef.current.push(currentStepCode);
-            await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+            if (toStepCode === 'COMPLETE') {
+              await patchCalculationWizard(calculationId, { status: 'COMPLETED' });
+            } else {
+              await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+            }
             setCurrentStepCode(toStepCode);
-            setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode } : null));
+            setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode, status: toStepCode === 'COMPLETE' ? 'COMPLETED' : c.status } : null));
           } catch {
             // validation or API error
           }
@@ -706,9 +722,13 @@ const NewCalculation: React.FC = () => {
       try {
         const { toStepCode } = await getNextStep(calculationId, currentStepCode);
         stepStackRef.current.push(currentStepCode);
-        await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+        if (toStepCode === 'COMPLETE') {
+          await patchCalculationWizard(calculationId, { status: 'COMPLETED' });
+        } else {
+          await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+        }
         setCurrentStepCode(toStepCode);
-        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode } : null));
+        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode, status: toStepCode === 'COMPLETE' ? 'COMPLETED' : c.status } : null));
       } catch {
         // validation or API error
       }
@@ -718,9 +738,13 @@ const NewCalculation: React.FC = () => {
       try {
         const { toStepCode } = await getNextStep(calculationId, currentStepCode);
         stepStackRef.current.push(currentStepCode);
-        await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+        if (toStepCode === 'COMPLETE') {
+          await patchCalculationWizard(calculationId, { status: 'COMPLETED' });
+        } else {
+          await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+        }
         setCurrentStepCode(toStepCode);
-        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode } : null));
+        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode, status: toStepCode === 'COMPLETE' ? 'COMPLETED' : c.status } : null));
       } catch {
         // validation or API error
       }
@@ -737,9 +761,13 @@ const NewCalculation: React.FC = () => {
       try {
         const { toStepCode } = await getNextStep(calculationId, currentStepCode);
         stepStackRef.current.push(currentStepCode);
-        await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+        if (toStepCode === 'COMPLETE') {
+          await patchCalculationWizard(calculationId, { status: 'COMPLETED' });
+        } else {
+          await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+        }
         setCurrentStepCode(toStepCode);
-        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode } : null));
+        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode, status: toStepCode === 'COMPLETE' ? 'COMPLETED' : c.status } : null));
       } catch {
         // validation or API error
       }
@@ -754,9 +782,13 @@ const NewCalculation: React.FC = () => {
       try {
         const { toStepCode } = await getNextStep(calculationId, currentStepCode);
         stepStackRef.current.push(currentStepCode);
-        await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+        if (toStepCode === 'COMPLETE') {
+          await patchCalculationWizard(calculationId, { status: 'COMPLETED' });
+        } else {
+          await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+        }
         setCurrentStepCode(toStepCode);
-        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode } : null));
+        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode, status: toStepCode === 'COMPLETE' ? 'COMPLETED' : c.status } : null));
       } catch {
         // validation or API error
       }
@@ -1121,6 +1153,7 @@ const NewCalculation: React.FC = () => {
 
         {step === 12 && currentStepCode === 'COMPLETE' && (
           <CalculationCompleteStep
+            calculationId={calculationId}
             questionsFromApi={questionsFromApi}
             getAnswer={getAnswer}
             onBack={handleBack}
