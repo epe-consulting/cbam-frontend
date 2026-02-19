@@ -79,7 +79,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionExpired, setSessionExpired] = useState(false);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'calculation' | 'report' | 'sharing'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'calculation' | 'sharing'>('dashboard');
   const [newCalcError, setNewCalcError] = useState<string | null>(null);
   const [newCalcLoading, setNewCalcLoading] = useState(false);
   const [calculationsCount, setCalculationsCount] = useState<number | null>(null);
@@ -260,8 +260,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     }
   };
 
+  useEffect(() => {
+    setCurrentView('dashboard');
+  }, [location.pathname]);
+
   const handleGenerateReport = () => {
-    setCurrentView('report');
+    navigate('/dashboard/generate-report');
   };
 
   const handleShareWithClient = () => {
@@ -272,44 +276,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     setCurrentView('dashboard');
   };
 
-  // Report Generation Page Component
-  const ReportPage = () => (
-    <Container maxWidth="lg">
-      <Box mb={4}>
-        <Button startIcon={<ArrowBack />} onClick={handleBackToDashboard} sx={{ mb: 2 }}>
-          Back to Dashboard
-        </Button>
-        <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
-          Generate Report
-        </Typography>
-        <Typography variant="h6" color="text.secondary">
-          Create compliant CBAM reports for your calculations
-        </Typography>
-      </Box>
-
-      <Paper elevation={2} sx={{ p: 4, borderRadius: 2 }}>
-        <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
-          Report Configuration
-        </Typography>
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <TextField fullWidth label="Report Period" variant="outlined" />
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <TextField fullWidth label="Report Type" variant="outlined" />
-          </Grid>
-          <Grid size={12}>
-            <TextField fullWidth multiline rows={4} label="Additional Notes" variant="outlined" />
-          </Grid>
-          <Grid size={12}>
-            <Button variant="contained" size="large" startIcon={<Description />} sx={{ mt: 2 }}>
-              Generate Report
-            </Button>
-          </Grid>
-        </Grid>
-      </Paper>
-    </Container>
-  );
 
   // Client Sharing Page Component
   const SharingPage = () => (
@@ -620,7 +586,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         </Container>
         )}
 
-        {currentView === 'report' && <ReportPage />}
         {currentView === 'sharing' && <SharingPage />}
         <Outlet />
       </Box>
