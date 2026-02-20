@@ -361,7 +361,7 @@ const NewCalculation: React.FC = () => {
   // When we show the fuel form (primary real-data or secondary fuel steps), load emission factors from API
   const isFuelStepWithLookup =
     step === 5 &&
-    ( (category === 'Aluminium' && currentStepCode === 'FUEL_INPUT') ||
+    ( currentStepCode === 'FUEL_INPUT' ||
       currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' ||
       currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' ||
       currentStepCode === 'ALU_PRODUCTS_FUEL_INPUT' ||
@@ -647,7 +647,7 @@ const NewCalculation: React.FC = () => {
         // validation or API error
       }
     } else if (step === 5) {
-      const isPrimaryFuel = category === 'Aluminium' && currentStepCode === 'FUEL_INPUT';
+      const isPrimaryFuel = currentStepCode === 'FUEL_INPUT';
       const isSecondaryFuel = currentStepCode === 'ALU_SECONDARY_FUEL_INPUT';
       const isSecondaryFuelRelated = currentStepCode === 'ALU_SECONDARY_FUEL_RELATED';
       const isProductsFuel = currentStepCode === 'ALU_PRODUCTS_FUEL_INPUT';
@@ -960,7 +960,7 @@ const NewCalculation: React.FC = () => {
           />
         )}
 
-        {step === 5 && ((category === 'Aluminium' && currentStepCode === 'FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_FUEL_INPUT' || currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT') ? (
+        {step === 5 && ((currentStepCode === 'FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_FUEL_INPUT' || currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT') ? (
           <FuelInputStep
             title={currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT' ? questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_PRODUCTS_REMAINING_FUEL_ENTRY')?.label : currentStepCode === 'ALU_PRODUCTS_FUEL_INPUT' ? questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_PRODUCTS_FUEL_ENTRY')?.label : currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' ? questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_SECONDARY_FUEL_RELATED_STEP_LABEL')?.label : currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' ? questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_SECONDARY_FUEL_STEP_LABEL')?.label : questionsFromApi?.find((q: { code: string }) => q.code === 'FUEL_STEP_LABEL')?.label}
             addButtonLabel={currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_FUEL_INPUT' || currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT' ? '+ ADD ANOTHER FUEL' : undefined}

@@ -22,7 +22,7 @@ import {
   IconButton,
   Divider,
 } from '@mui/material';
-import { ArrowBack, Edit, Close, Visibility, Delete } from '@mui/icons-material';
+import { ArrowBack, Edit, Close, Visibility, Delete, ListAlt, PlayArrow } from '@mui/icons-material';
 import { useDashboardCalculations, type DashboardCalculationItem } from './Dashboard';
 import { apiRequest } from './utils/api';
 
@@ -309,15 +309,26 @@ const CalculationsList: React.FC = () => {
                     <TableCell>{formatDate(calc.createdAt)}</TableCell>
                     <TableCell>{formatDate(calc.modifiedAt)}</TableCell>
                     <TableCell align="center">
-                      <Box display="flex" gap={1} justifyContent="center">
+                      <Box display="flex" gap={1} justifyContent="center" flexWrap="wrap">
                         <Button
                           variant="outlined"
                           size="small"
-                          startIcon={<Edit />}
+                          startIcon={<ListAlt />}
                           onClick={() => handleEdit(calc.id)}
                         >
-                          Edit
+                          View Steps
                         </Button>
+                        {calc.status !== 'COMPLETED' && (
+                          <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={calc.status === 'DRAFT' ? <PlayArrow /> : <Edit />}
+                            onClick={() => navigate(`/dashboard/new-calculation/${calc.id}`)}
+                            color="primary"
+                          >
+                            {calc.status === 'DRAFT' ? 'Start' : 'Continue'}
+                          </Button>
+                        )}
                         {calc.status === 'COMPLETED' && (
                           <Button
                             variant="contained"
