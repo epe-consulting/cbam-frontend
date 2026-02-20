@@ -22,7 +22,7 @@ import {
   IconButton,
   Divider,
 } from '@mui/material';
-import { ArrowBack, Edit, Close, Visibility } from '@mui/icons-material';
+import { ArrowBack, Edit, Close, Visibility, Delete } from '@mui/icons-material';
 import { useDashboardCalculations, type DashboardCalculationItem } from './Dashboard';
 import { apiRequest } from './utils/api';
 
@@ -108,6 +108,12 @@ const CalculationsList: React.FC = () => {
   const [viewResult, setViewResult] = useState<CalcResult | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
   const [viewError, setViewError] = useState<string | null>(null);
+
+  // Delete dialog state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteCalcId, setDeleteCalcId] = useState<number | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Emissions totals cache: calcId -> totalEmissions
   const [emissionsMap, setEmissionsMap] = useState<Record<number, number | null>>({});
@@ -199,6 +205,30 @@ const CalculationsList: React.FC = () => {
       setViewError(e instanceof Error ? e.message : 'Failed to load results');
     } finally {
       setViewLoading(false);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deleteCalcId == null) return;
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      const res = await apiRequest<{ success: boolean; message?: string }>(
+        `/calculations/${deleteCalcId}`,
+        { method: 'DELETE' }
+      );
+      if (res === null || !res.data.success) {
+        setDeleteError(res?.data?.message ?? 'Failed to delete calculation');
+        setDeleteLoading(false);
+        return;
+      }
+      setDeleteOpen(false);
+      setDeleteCalcId(null);
+      setDeleteLoading(false);
+      dashboardCalculations?.refetchCalculations();
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : 'Failed to delete calculation');
+      setDeleteLoading(false);
     }
   };
 
@@ -299,6 +329,19 @@ const CalculationsList: React.FC = () => {
                             View
                           </Button>
                         )}
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<Delete />}
+                          color="error"
+                          onClick={() => {
+                            setDeleteCalcId(calc.id);
+                            setDeleteError(null);
+                            setDeleteOpen(true);
+                          }}
+                        >
+                          Delete
+                        </Button>
                       </Box>
                     </TableCell>
                   </TableRow>
@@ -401,6 +444,43 @@ const CalculationsList: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteOpen} onClose={() => !deleteLoading && setDeleteOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Delete Calculation #{deleteCalcId}?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mb: 1 }}>
+            This will permanently delete the calculation and all associated data:
+          </Typography>
+          <Typography variant="body2" color="text.secondary" component="ul" sx={{ pl: 2 }}>
+            <li>All answers given</li>
+            <li>Computed emission results</li>
+            <li>Product associations</li>
+          </Typography>
+          <Typography variant="body2" color="error" sx={{ mt: 2, fontWeight: 600 }}>
+            This action cannot be undone.
+          </Typography>
+          {deleteError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {deleteError}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteOpen(false)} disabled={deleteLoading}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteConfirm}
+            color="error"
+            variant="contained"
+            disabled={deleteLoading}
+            startIcon={deleteLoading ? <CircularProgress size={18} color="inherit" /> : <Delete />}
+          >
+            {deleteLoading ? 'Deleting...' : 'Delete'}
+          </Button>
         </DialogActions>
       </Dialog>
 
