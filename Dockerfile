@@ -2,9 +2,13 @@
 FROM node:20-alpine AS build
 WORKDIR /workspace
 
-# Accept build argument for API base URL
+# Accept build arguments
 ARG VITE_API_BASE_URL
+ARG VITE_BLOB_CONTAINER_URL
+ARG VITE_BLOB_SAS_TOKEN
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_BLOB_CONTAINER_URL=$VITE_BLOB_CONTAINER_URL
+ENV VITE_BLOB_SAS_TOKEN=$VITE_BLOB_SAS_TOKEN
 
 # Copy package files first to leverage Docker layer caching
 COPY my-react-app/package*.json ./

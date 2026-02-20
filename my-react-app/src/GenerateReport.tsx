@@ -31,7 +31,9 @@ import {
   ArrowBack,
   ExpandMore,
   PictureAsPdf,
+  CloudUpload,
 } from '@mui/icons-material';
+import { uploadReportToBlob } from './utils/blobStorage';
 
 interface UserData {
   id: number;
@@ -164,6 +166,7 @@ const GenerateReport: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [companyId, setCompanyId] = useState<number | null>(null);
 
   const [selectedCalcId, setSelectedCalcId] = useState<number | ''>('');
   const [calcResult, setCalcResult] = useState<CalcResult | null>(null);
@@ -171,6 +174,9 @@ const GenerateReport: React.FC = () => {
 
   const [installations, setInstallations] = useState<InstallationData[]>([]);
   const [selectedInstId, setSelectedInstId] = useState<number | ''>('');
+
+  const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const [data, setData] = useState<ReportData>({
     reportingYear: new Date().getFullYear().toString(),
@@ -190,6 +196,7 @@ const GenerateReport: React.FC = () => {
       const result = await apiRequest<{ success: boolean; user?: UserData }>('/users/me');
       if (result?.data?.success && result.data.user) {
         const u = result.data.user;
+        setCompanyId(u.companyId);
         setData(prev => ({
           ...prev,
           producer: {
@@ -310,10 +317,7 @@ const GenerateReport: React.FC = () => {
 
   const missingFields = getMissingFields();
 
-  const handleDownloadPdf = () => {
-    const w = window.open('', '_blank');
-    if (!w) return;
-
+  const buildReportHtml = (): string => {
     const productRows = data.products
       .filter(p => p.description || p.cnCode || p.quantity)
       .map(p => `<tr><td>${esc(p.description)}</td><td>${esc(p.cnCode)}</td><td>${esc(p.productionRoute)}</td><td>${esc(p.quantity)}</td><td>${esc(p.countryOfOrigin)}</td></tr>`)
@@ -333,7 +337,7 @@ const GenerateReport: React.FC = () => {
       ? `<p style="margin-top:8px;color:#666;font-size:12px;">Calculation #${calcResult.calculationId} &mdash; Total Emissions: ${calcResult.totalEmissions != null ? Number(calcResult.totalEmissions).toFixed(4) : 'N/A'} t CO₂e &mdash; Report Year: ${calcResult.reportYear}</p>`
       : '';
 
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>CBAM Aluminium Disclosure</title>
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>CBAM Aluminium Disclosure</title>
 <style>
   @page { margin: 20mm 15mm; size: A4; }
   body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #222; line-height: 1.6; margin: 0; padding: 20px; }
@@ -413,10 +417,37 @@ ${data.carbonPrice.pricePaid ? `
 </div>
 
 </body></html>`;
+  };
 
+  const handleDownloadPdf = () => {
+    const w = window.open('', '_blank');
+    if (!w) return;
+    const html = buildReportHtml();
     w.document.write(html);
     w.document.close();
     setTimeout(() => { w.print(); }, 400);
+  };
+
+  const handleUploadReport = async () => {
+    if (!companyId) {
+      setUploadResult({ success: false, message: 'No company ID found for your account.' });
+      return;
+    }
+    setUploading(true);
+    setUploadResult(null);
+
+    const html = buildReportHtml();
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileName = `CBAM-Report-${data.reportingYear}-${timestamp}.html`;
+
+    const result = await uploadReportToBlob(companyId, fileName, html);
+
+    if (result.success) {
+      setUploadResult({ success: true, message: `Report uploaded to cloud storage.` });
+    } else {
+      setUploadResult({ success: false, message: result.error || 'Upload failed.' });
+    }
+    setUploading(false);
   };
 
   if (loading) {
@@ -855,8 +886,8 @@ ${data.carbonPrice.pricePaid ? `
         </Grid>
       </Paper>
 
-      {/* Download button */}
-      <Box sx={{ mt: 3, mb: 4, display: 'flex', justifyContent: 'center' }}>
+      {/* Action buttons */}
+      <Box sx={{ mt: 3, mb: 1, display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
         <Button
           variant="contained"
           size="large"
@@ -872,7 +903,37 @@ ${data.carbonPrice.pricePaid ? `
         >
           Download PDF
         </Button>
+        <Button
+          variant="contained"
+          size="large"
+          startIcon={<CloudUpload />}
+          onClick={handleUploadReport}
+          disabled={uploading || !companyId}
+          sx={{
+            py: 1.5,
+            px: 5,
+            fontSize: '1.1rem',
+            bgcolor: '#2563eb',
+            '&:hover': { bgcolor: '#1d4ed8' },
+          }}
+        >
+          {uploading ? 'Uploading...' : 'Upload Report'}
+        </Button>
       </Box>
+      {uploadResult && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+          <Alert severity={uploadResult.success ? 'success' : 'error'} sx={{ mt: 1 }}>
+            {uploadResult.message}
+          </Alert>
+        </Box>
+      )}
+      {!companyId && !loading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+          <Alert severity="info" sx={{ mt: 1 }}>
+            Upload is unavailable — no company is associated with your account.
+          </Alert>
+        </Box>
+      )}
     </Container>
   );
 };

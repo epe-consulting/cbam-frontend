@@ -35,6 +35,7 @@ import NewCalculation from './NewCalculation';
 import CalculationsList from './CalculationsList';
 import Settings from './Settings';
 import GenerateReport from './GenerateReport';
+import ReportsList from './ReportsList';
 import Admin from './Admin';
 import ProtectedRoute from './ProtectedRoute';
 import CBAMGuide from './CBAMGuide';
@@ -1139,6 +1140,7 @@ const App: React.FC = () => {
         }
       >
         <Route path="calculations" element={<CalculationsList />} />
+        <Route path="reports" element={<ReportsList />} />
         <Route path="settings" element={<Settings />} />
         <Route path="generate-report" element={<GenerateReport />} />
         {/* Single URL for wizard: new (no id) creates then redirects; edit has calculationId in path */}

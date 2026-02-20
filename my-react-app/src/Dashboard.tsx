@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext, useCallback } from 'rea
 import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import SessionExpired from './SessionExpired';
 import { isTokenExpired, API_BASE_URL, apiRequest } from './utils/api';
+import { listCompanyReports } from './utils/blobStorage';
 
 export interface DashboardCalculationItem {
   id: number;
@@ -86,6 +87,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [calculationsList, setCalculationsList] = useState<DashboardCalculationItem[]>([]);
   const [calculationsLoading, setCalculationsLoading] = useState(false);
   const [calculationsError, setCalculationsError] = useState<string | null>(null);
+  const [reportsCount, setReportsCount] = useState<number | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -134,12 +136,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             setSessionExpired(false);
             const companyId = data.user.companyId;
             if (companyId != null) {
-              const calcResult = await apiRequest<{ success: boolean; calculations?: DashboardCalculationItem[] }>(
-                `/calculations/company/${companyId}`
-              );
+              const [calcResult, blobResult] = await Promise.all([
+                apiRequest<{ success: boolean; calculations?: DashboardCalculationItem[] }>(
+                  `/calculations/company/${companyId}`
+                ),
+                listCompanyReports(companyId),
+              ]);
               if (calcResult !== null && calcResult.data.success && Array.isArray(calcResult.data.calculations)) {
                 setCalculationsList(calcResult.data.calculations);
                 setCalculationsCount(calcResult.data.calculations.length);
+              }
+              if (blobResult.success) {
+                setReportsCount(blobResult.reports.length);
               }
             }
           }
@@ -342,8 +350,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       description: 'View and manage your reports',
       icon: <Description />,
       color: '#2563eb',
-      count: '8',
-      label: 'This Month'
+      count: reportsCount !== null ? String(reportsCount) : '—',
+      label: 'Total Reports',
+      seeAllHref: '/dashboard/reports',
     },
     {
       title: 'Client Sharing',

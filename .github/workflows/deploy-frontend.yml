@@ -32,6 +32,8 @@ jobs:
           push: true
           build-args: |
             VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}
+            VITE_BLOB_CONTAINER_URL=${{ secrets.VITE_BLOB_CONTAINER_URL }}
+            VITE_BLOB_SAS_TOKEN=${{ secrets.VITE_BLOB_SAS_TOKEN }}
           tags: |
             cbaregistry.azurecr.io/cbam-front-prod:${{ github.sha }}
             cbaregistry.azurecr.io/cbam-front-prod:latest
