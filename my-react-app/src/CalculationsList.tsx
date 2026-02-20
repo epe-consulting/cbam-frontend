@@ -91,7 +91,7 @@ function parseSnapshot(raw: string): Record<string, string> {
 const CalculationsList: React.FC = () => {
   const navigate = useNavigate();
   const dashboardCalculations = useDashboardCalculations();
-  const calculations = dashboardCalculations?.calculations ?? [];
+  const calculations = [...(dashboardCalculations?.calculations ?? [])].sort((a, b) => a.id - b.id);
   const loading = dashboardCalculations?.calculationsLoading ?? true;
   const error = dashboardCalculations?.calculationsError ?? null;
 
