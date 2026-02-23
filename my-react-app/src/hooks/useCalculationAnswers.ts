@@ -74,19 +74,37 @@ export function useCalculationAnswers(calculationId: number | null) {
     [answers]
   );
 
-  /** Deletes all answers for the given question IDs (e.g. when user presses Back from a step). Then refetches. */
+  /** Deletes all answers for the given question IDs (e.g. when user presses Back from a step). */
   const deleteAnswersForQuestions = useCallback(
     async (questionIds: number[]) => {
       if (calculationId == null || questionIds.length === 0) return;
       try {
         await deleteCalculationAnswersByCalculationAndQuestions(calculationId, questionIds);
-        await fetchAnswers(calculationId);
+        setAnswers((prev: AnswersMap) => {
+          const next = { ...prev };
+          for (const qId of questionIds) delete next[qId];
+          return next;
+        });
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to delete answers');
       }
     },
-    [calculationId, fetchAnswers]
+    [calculationId]
   );
+
+  /** Remove entries from the local answers map (no DB delete). Useful for clearing pre-filled values on multi-visit steps. */
+  const clearLocalAnswers = useCallback((questionIds: number[]) => {
+    setAnswers((prev: AnswersMap) => {
+      const next = { ...prev };
+      for (const qId of questionIds) delete next[qId];
+      return next;
+    });
+  }, []);
+
+  /** Clear the entire local answers map (no DB delete). Used when starting a new pass after SABIRNA_TACKA. */
+  const clearAllLocalAnswers = useCallback(() => {
+    setAnswers({});
+  }, []);
 
   return {
     answers,
@@ -95,6 +113,8 @@ export function useCalculationAnswers(calculationId: number | null) {
     setAnswer,
     saveAnswer,
     getAnswer,
+    clearLocalAnswers,
+    clearAllLocalAnswers,
     deleteAnswersForQuestions,
     refetch: () => calculationId != null && fetchAnswers(calculationId),
   };
