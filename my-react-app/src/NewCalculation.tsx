@@ -137,7 +137,6 @@ const NewCalculation: React.FC = () => {
       case 'ALU_EMISSIONS_INPUT':
       case 'ALU_SECONDARY_FUEL_INPUT':
       case 'ALU_SECONDARY_FUEL_RELATED':
-      case 'ALU_PRODUCTS_FUEL_INPUT':
       case 'ALU_PRODUCTS_REMAINING_FUEL_INPUT': return 5;
       case 'ALU_PRODUCTS_PRECURSORS': return 13;
       case 'ALU_ANODE_TYPE':
@@ -230,7 +229,7 @@ const NewCalculation: React.FC = () => {
   // (covers direct step transitions within the same pass, e.g. ALU_SECONDARY_FUEL_INPUT → ALU_SECONDARY_FUEL_RELATED)
   const FUEL_STEP_CODES = useMemo(() => new Set([
     'FUEL_INPUT', 'ALU_SECONDARY_FUEL_INPUT', 'ALU_SECONDARY_FUEL_RELATED',
-    'ALU_PRODUCTS_FUEL_INPUT', 'ALU_PRODUCTS_REMAINING_FUEL_INPUT',
+    'ALU_PRODUCTS_REMAINING_FUEL_INPUT',
   ]), []);
   useEffect(() => {
     if (FUEL_STEP_CODES.has(currentStepCode)) {
@@ -387,7 +386,6 @@ const NewCalculation: React.FC = () => {
     ( currentStepCode === 'FUEL_INPUT' ||
       currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' ||
       currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' ||
-      currentStepCode === 'ALU_PRODUCTS_FUEL_INPUT' ||
       currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT' );
 
   // Load emission factor sectors when on fuel step (primary or secondary)
@@ -397,7 +395,7 @@ const NewCalculation: React.FC = () => {
     setFuelLookupLoading(true);
     setFuelLookupError(null);
     getLookupSectors()
-      .then((list) => { if (!cancelled) setFuelSectors(list); })
+      .then((list) => { if (!cancelled) setFuelSectors(list.filter((s: string) => s !== 'Energy')); })
       .catch((e) => { if (!cancelled) setFuelLookupError(e instanceof Error ? e.message : 'Failed to load sectors'); setFuelSectors([]); })
       .finally(() => { if (!cancelled) setFuelLookupLoading(false); });
     return () => { cancelled = true; };
@@ -552,7 +550,7 @@ const NewCalculation: React.FC = () => {
     // Persist current step answers to API only when user presses Next (not on every change).
     // Step 5 (fuel, real-data) has its own delete-then-save-all logic below, so skip generic persist for that case.
     // For step 5 with calculated-emissions we use generic persist for ALU_EMISSIONS_INPUT questions.
-    if (calculationId != null && questionsFromApi?.length && !(step === 5 && (currentStepCode === 'FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_FUEL_INPUT' || currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT')) && step !== 13) {
+    if (calculationId != null && questionsFromApi?.length && !(step === 5 && (currentStepCode === 'FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT')) && step !== 13) {
       const questionIds = questionsFromApi.map((q: QuestionWithOptions) => q.id);
       const valuesToSave: { questionId: number; value: string }[] = [];
       const anodeTypeQuestion = questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_ANODE_TYPE');
@@ -673,14 +671,13 @@ const NewCalculation: React.FC = () => {
       const isPrimaryFuel = currentStepCode === 'FUEL_INPUT';
       const isSecondaryFuel = currentStepCode === 'ALU_SECONDARY_FUEL_INPUT';
       const isSecondaryFuelRelated = currentStepCode === 'ALU_SECONDARY_FUEL_RELATED';
-      const isProductsFuel = currentStepCode === 'ALU_PRODUCTS_FUEL_INPUT';
       const isProductsRemainingFuel = currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT';
-      if (isPrimaryFuel || isSecondaryFuel || isSecondaryFuelRelated || isProductsFuel || isProductsRemainingFuel) {
+      if (isPrimaryFuel || isSecondaryFuel || isSecondaryFuelRelated || isProductsRemainingFuel) {
         const allValid = fuelEntries.every((entry: FuelEntry) =>
           entry.sector && entry.subsector && entry.emissionFactorName && entry.denominator && entry.amount && entry.emissionFactorId != null
         );
         if (!allValid || fuelEntries.length === 0) return;
-        const fuelQtyCode = isProductsRemainingFuel ? 'ALU_PRODUCTS_REMAINING_FUEL_ENTRY' : isProductsFuel ? 'ALU_PRODUCTS_FUEL_ENTRY' : isSecondaryFuelRelated ? 'ALU_SECONDARY_FUEL_RELATED_QTY' : isSecondaryFuel ? 'ALU_SECONDARY_FUEL_QTY' : 'FUEL_QTY';
+        const fuelQtyCode = isProductsRemainingFuel ? 'ALU_PRODUCTS_REMAINING_FUEL_ENTRY' : isSecondaryFuelRelated ? 'ALU_SECONDARY_FUEL_RELATED_QTY' : isSecondaryFuel ? 'ALU_SECONDARY_FUEL_QTY' : 'FUEL_QTY';
         const fuelQtyQuestion = questionsFromApi?.find((q: { code: string }) => q.code === fuelQtyCode);
         if (calculationId != null && fuelQtyQuestion) {
           await deleteAnswersForQuestions([fuelQtyQuestion.id]);
@@ -983,10 +980,10 @@ const NewCalculation: React.FC = () => {
           />
         )}
 
-        {step === 5 && ((currentStepCode === 'FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_FUEL_INPUT' || currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT') ? (
+        {step === 5 && ((currentStepCode === 'FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT') ? (
           <FuelInputStep
-            title={currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT' ? questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_PRODUCTS_REMAINING_FUEL_ENTRY')?.label : currentStepCode === 'ALU_PRODUCTS_FUEL_INPUT' ? questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_PRODUCTS_FUEL_ENTRY')?.label : currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' ? questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_SECONDARY_FUEL_RELATED_STEP_LABEL')?.label : currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' ? questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_SECONDARY_FUEL_STEP_LABEL')?.label : questionsFromApi?.find((q: { code: string }) => q.code === 'FUEL_STEP_LABEL')?.label}
-            addButtonLabel={currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_FUEL_INPUT' || currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT' ? '+ ADD ANOTHER FUEL' : undefined}
+            title={currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT' ? questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_PRODUCTS_REMAINING_FUEL_ENTRY')?.label : currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' ? questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_SECONDARY_FUEL_RELATED_STEP_LABEL')?.label : currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' ? questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_SECONDARY_FUEL_STEP_LABEL')?.label : questionsFromApi?.find((q: { code: string }) => q.code === 'FUEL_STEP_LABEL')?.label}
+            addButtonLabel={currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT' ? '+ ADD ANOTHER FUEL' : undefined}
             fuelEntries={fuelEntries}
             updateFuelEntry={updateFuelEntry}
             resolveEmissionFactorId={resolveEmissionFactorId}
