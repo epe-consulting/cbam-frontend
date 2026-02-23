@@ -564,11 +564,9 @@ const NewCalculation: React.FC = () => {
           if (anodeTypeConfirmed && isPreBaked) valuesToSave.push({ questionId: q.id, value: 'TONNES' });
         } else if (value != null && value !== '') valuesToSave.push({ questionId: q.id, value });
       }
-      // Save first so routing answer exists before getNextStep; then delete only answers we did not re-save (e.g. cleared options).
+      // Save all answers in parallel, then delete any we did not re-save.
       const savedIds = new Set(valuesToSave.map((v) => v.questionId));
-      for (const item of valuesToSave) {
-        await saveAnswer(item.questionId, item.value);
-      }
+      await Promise.all(valuesToSave.map((item) => saveAnswer(item.questionId, item.value)));
       const toDelete = questionIds.filter((id: number) => !savedIds.has(id));
       if (toDelete.length > 0) {
         await deleteAnswersForQuestions(toDelete);
@@ -684,11 +682,11 @@ const NewCalculation: React.FC = () => {
         const fuelQtyQuestion = questionsFromApi?.find((q: { code: string }) => q.code === fuelQtyCode);
         if (calculationId != null && fuelQtyQuestion) {
           await deleteAnswersForQuestions([fuelQtyQuestion.id]);
-          for (const entry of fuelEntries) {
-            if (entry.amount && entry.emissionFactorId != null) {
-              await saveAnswer(fuelQtyQuestion.id, entry.amount, entry.emissionFactorId);
-            }
-          }
+          await Promise.all(
+            fuelEntries
+              .filter((entry: FuelEntry) => entry.amount && entry.emissionFactorId != null)
+              .map((entry: FuelEntry) => saveAnswer(fuelQtyQuestion.id, entry.amount, entry.emissionFactorId))
+          );
         }
       }
       if (calculationId == null) return;
@@ -852,15 +850,15 @@ const NewCalculation: React.FC = () => {
       const precursorQuestion = questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_PRECURSOR_ENTRY');
       if (precursorQuestion && calculationId != null) {
         await deleteAnswersForQuestions([precursorQuestion.id]);
-        for (const entry of precursorEntries) {
-          if (entry.vrsta.trim() || entry.kolicina.trim() || entry.ugradjeneEmisije.trim()) {
-            await saveAnswer(precursorQuestion.id, JSON.stringify({
+        await Promise.all(
+          precursorEntries
+            .filter((entry: PrecursorEntry) => entry.vrsta.trim() || entry.kolicina.trim() || entry.ugradjeneEmisije.trim())
+            .map((entry: PrecursorEntry) => saveAnswer(precursorQuestion.id, JSON.stringify({
               vrsta: entry.vrsta,
               kolicina: entry.kolicina,
               ugradjene_emisije: entry.ugradjeneEmisije,
-            }));
-          }
-        }
+            })))
+        );
       }
       if (calculationId == null) return;
       try {
