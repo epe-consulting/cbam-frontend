@@ -26,13 +26,99 @@ import { ArrowBack, Edit, Close, Visibility, Delete, ListAlt, PlayArrow } from '
 import { useDashboardCalculations, type DashboardCalculationItem } from './Dashboard';
 import { apiRequest } from './utils/api';
 
+/* ─── Design tokens (shared across Panonia) ─── */
+const T = {
+  font: {
+    display: "'Fraunces', Georgia, serif",
+    body: "'DM Sans', system-ui, sans-serif",
+  },
+  color: {
+    forest: '#0B4F3E',
+    forestLight: '#14785E',
+    sage: '#3A7D6A',
+    mint: '#E8F5EF',
+    mintDark: '#C3E6D5',
+    cream: '#FAFAF7',
+    warmWhite: '#FFFEF9',
+    ink: '#1A2B25',
+    inkSoft: '#3D5A50',
+    muted: '#6B8F82',
+    accent: '#D4A853',
+    accentLight: '#F4E8C9',
+    line: '#D6E5DD',
+    lineFaint: '#EAF0EC',
+    ctaHover: '#0A3F32',
+    error: '#C0392B',
+    errorLight: '#FDEDEC',
+    success: '#0B4F3E',
+    successLight: '#E8F5EF',
+  },
+  radius: {
+    sm: '8px',
+    md: '14px',
+    lg: '20px',
+    xl: '28px',
+    pill: '999px',
+  },
+};
+
+const tableHeadCellSx = {
+  fontFamily: T.font.body,
+  fontWeight: 600,
+  fontSize: '0.8rem',
+  letterSpacing: '0.03em',
+  color: T.color.inkSoft,
+  bgcolor: T.color.cream,
+  borderBottom: `1px solid ${T.color.line}`,
+  whiteSpace: 'nowrap' as const,
+};
+
+const tableCellSx = {
+  fontFamily: T.font.body,
+  fontSize: '0.88rem',
+  color: T.color.ink,
+  borderBottom: `1px solid ${T.color.lineFaint}`,
+};
+
+const sectionPaperSx = {
+  borderRadius: T.radius.lg,
+  border: `1px solid ${T.color.lineFaint}`,
+  bgcolor: T.color.warmWhite,
+  overflow: 'hidden' as const,
+};
+
+const dialogPaperSx = {
+  borderRadius: T.radius.lg,
+  overflow: 'hidden' as const,
+};
+
+const dialogAccentBar = {
+  height: 4,
+  background: `linear-gradient(90deg, ${T.color.forest}, ${T.color.sage}, ${T.color.accent})`,
+};
+
+const pillBtnSx = (variant: 'forest' | 'outline' | 'error' | 'success') => {
+  const base = {
+    fontFamily: T.font.body,
+    fontWeight: 600,
+    fontSize: '0.82rem',
+    textTransform: 'none' as const,
+    borderRadius: T.radius.pill,
+    px: 2,
+  };
+  if (variant === 'forest') return { ...base, bgcolor: T.color.forest, color: '#fff', '&:hover': { bgcolor: T.color.ctaHover } };
+  if (variant === 'success') return { ...base, bgcolor: T.color.forest, color: '#fff', '&:hover': { bgcolor: T.color.ctaHover } };
+  if (variant === 'error') return { ...base, borderColor: T.color.error, color: T.color.error, '&:hover': { bgcolor: T.color.errorLight, borderColor: T.color.error } };
+  return { ...base, borderColor: T.color.line, color: T.color.inkSoft, '&:hover': { borderColor: T.color.forest, bgcolor: T.color.mint, color: T.color.forest } };
+};
+
 type CalculationStatus = 'DRAFT' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 
-const statusColor: Record<CalculationStatus, 'default' | 'primary' | 'success' | 'warning' | 'error'> = {
-  DRAFT: 'default',
-  IN_PROGRESS: 'primary',
-  COMPLETED: 'success',
-  CANCELLED: 'error',
+const statusChipSx: Record<CalculationStatus, { bgcolor: string; color: string; borderColor: string }> = {
+  DRAFT: { bgcolor: T.color.lineFaint, color: T.color.muted, borderColor: T.color.line },
+  IN_PROGRESS: { bgcolor: T.color.accentLight, color: '#8B6914', borderColor: '#E0C97A' },
+  COMPLETED: { bgcolor: T.color.mint, color: T.color.forest, borderColor: T.color.mintDark },
+  CANCELLED: { bgcolor: T.color.errorLight, color: T.color.error, borderColor: '#F5C6CB' },
 };
 
 interface AnswerDetail {
@@ -95,30 +181,25 @@ const CalculationsList: React.FC = () => {
   const loading = dashboardCalculations?.calculationsLoading ?? true;
   const error = dashboardCalculations?.calculationsError ?? null;
 
-  // Answers dialog state (Edit)
   const [editOpen, setEditOpen] = useState(false);
   const [editCalcId, setEditCalcId] = useState<number | null>(null);
   const [answers, setAnswers] = useState<AnswerDetail[]>([]);
   const [answersLoading, setAnswersLoading] = useState(false);
   const [answersError, setAnswersError] = useState<string | null>(null);
 
-  // Emissions dialog state (View)
   const [viewOpen, setViewOpen] = useState(false);
   const [viewCalcId, setViewCalcId] = useState<number | null>(null);
   const [viewResult, setViewResult] = useState<CalcResult | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
   const [viewError, setViewError] = useState<string | null>(null);
 
-  // Delete dialog state
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteCalcId, setDeleteCalcId] = useState<number | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // Emissions totals cache: calcId -> totalEmissions
   const [emissionsMap, setEmissionsMap] = useState<Record<number, number | null>>({});
 
-  // Fetch emissions totals for all COMPLETED calculations
   useEffect(() => {
     const completedCalcs = calculations.filter((c) => c.status === 'COMPLETED');
     if (completedCalcs.length === 0) return;
@@ -233,157 +314,156 @@ const CalculationsList: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 4, fontFamily: T.font.body }}>
+      {/* Back button */}
       <Box mb={3} display="flex" alignItems="center" gap={2}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate('/dashboard')}>
+        <Button
+          startIcon={<ArrowBack sx={{ fontSize: '18px !important' }} />}
+          onClick={() => navigate('/dashboard')}
+          sx={{
+            fontFamily: T.font.body, fontWeight: 500, fontSize: '0.9rem',
+            color: T.color.muted, textTransform: 'none', borderRadius: T.radius.pill,
+            '&:hover': { bgcolor: T.color.mint, color: T.color.forest },
+          }}
+        >
           Back to Dashboard
         </Button>
       </Box>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
-        All calculations
+
+      {/* Page header */}
+      <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: { xs: '1.6rem', md: '2rem' }, color: T.color.ink, letterSpacing: '-0.02em', mb: 1 }}>
+        All Calculations
       </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+      <Typography sx={{ fontFamily: T.font.body, color: T.color.muted, mb: 3, lineHeight: 1.6 }}>
         Calculations for your company and their current status.
       </Typography>
 
       {loading && (
-        <Box display="flex" justifyContent="center" py={4}>
-          <CircularProgress />
+        <Box display="flex" justifyContent="center" py={6}>
+          <CircularProgress sx={{ color: T.color.forest }} />
         </Box>
       )}
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>
           {error}
         </Alert>
       )}
 
       {!loading && !error && (
-        <TableContainer component={Paper} elevation={2}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>ID</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Current step</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Emissions (t CO₂e)</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Created</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Modified</TableCell>
-                <TableCell sx={{ fontWeight: 600 }} align="center">
-                  Actions
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {calculations.length === 0 ? (
+        <Paper elevation={0} sx={sectionPaperSx}>
+          <TableContainer>
+            <Table>
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                    No calculations yet. Start one from the dashboard.
-                  </TableCell>
+                  <TableCell sx={tableHeadCellSx}>ID</TableCell>
+                  <TableCell sx={tableHeadCellSx}>Status</TableCell>
+                  <TableCell sx={tableHeadCellSx}>Current Step</TableCell>
+                  <TableCell sx={tableHeadCellSx}>Emissions (t CO₂e)</TableCell>
+                  <TableCell sx={tableHeadCellSx}>Created</TableCell>
+                  <TableCell sx={tableHeadCellSx}>Modified</TableCell>
+                  <TableCell sx={tableHeadCellSx} align="center">Actions</TableCell>
                 </TableRow>
-              ) : (
-                calculations.map((calc: DashboardCalculationItem) => (
-                  <TableRow key={calc.id} hover>
-                    <TableCell>{calc.id}</TableCell>
-                    <TableCell>
-                      <Chip label={calc.status} color={statusColor[calc.status]} size="small" />
-                    </TableCell>
-                    <TableCell>{calc.currentStep ?? '—'}</TableCell>
-                    <TableCell>
-                      {calc.status === 'COMPLETED' ? (
-                        emissionsMap[calc.id] != null ? (
-                          <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: 'monospace' }}>
-                            {Number(emissionsMap[calc.id]).toFixed(4)}
-                          </Typography>
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">
-                            Loading...
-                          </Typography>
-                        )
-                      ) : (
-                        <Typography variant="body2" color="text.secondary">
-                          —
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>{formatDate(calc.createdAt)}</TableCell>
-                    <TableCell>{formatDate(calc.modifiedAt)}</TableCell>
-                    <TableCell align="center">
-                      <Box display="flex" gap={1} justifyContent="center" flexWrap="wrap">
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<ListAlt />}
-                          onClick={() => handleEdit(calc.id)}
-                        >
-                          View Steps
-                        </Button>
-                        {calc.status !== 'COMPLETED' && (
-                          <Button
-                            variant="contained"
-                            size="small"
-                            startIcon={calc.status === 'DRAFT' ? <PlayArrow /> : <Edit />}
-                            onClick={() => navigate(`/dashboard/new-calculation/${calc.id}`)}
-                            color="primary"
-                          >
-                            {calc.status === 'DRAFT' ? 'Start' : 'Continue'}
-                          </Button>
-                        )}
-                        {calc.status === 'COMPLETED' && (
-                          <Button
-                            variant="contained"
-                            size="small"
-                            startIcon={<Visibility />}
-                            onClick={() => handleView(calc.id)}
-                            color="success"
-                          >
-                            View
-                          </Button>
-                        )}
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<Delete />}
-                          color="error"
-                          onClick={() => {
-                            setDeleteCalcId(calc.id);
-                            setDeleteError(null);
-                            setDeleteOpen(true);
-                          }}
-                        >
-                          Delete
-                        </Button>
-                      </Box>
+              </TableHead>
+              <TableBody>
+                {calculations.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center" sx={{ ...tableCellSx, py: 5, color: T.color.muted }}>
+                      No calculations yet. Start one from the dashboard.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                ) : (
+                  calculations.map((calc: DashboardCalculationItem) => {
+                    const chipStyle = statusChipSx[calc.status] ?? statusChipSx.DRAFT;
+                    return (
+                      <TableRow key={calc.id} sx={{ '&:hover': { bgcolor: T.color.mint } }}>
+                        <TableCell sx={tableCellSx}>{calc.id}</TableCell>
+                        <TableCell sx={tableCellSx}>
+                          <Chip
+                            label={calc.status}
+                            size="small"
+                            sx={{
+                              fontFamily: T.font.body, fontWeight: 600, fontSize: '0.72rem',
+                              bgcolor: chipStyle.bgcolor, color: chipStyle.color,
+                              border: `1px solid ${chipStyle.borderColor}`,
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell sx={tableCellSx}>{calc.currentStep ?? '—'}</TableCell>
+                        <TableCell sx={tableCellSx}>
+                          {calc.status === 'COMPLETED' ? (
+                            emissionsMap[calc.id] != null ? (
+                              <Typography sx={{ fontWeight: 600, fontFamily: "'DM Sans', monospace", fontSize: '0.88rem', color: T.color.ink }}>
+                                {Number(emissionsMap[calc.id]).toFixed(4)}
+                              </Typography>
+                            ) : (
+                              <Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem', color: T.color.muted }}>
+                                Loading…
+                              </Typography>
+                            )
+                          ) : (
+                            <Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem', color: T.color.muted }}>
+                              —
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell sx={tableCellSx}>{formatDate(calc.createdAt)}</TableCell>
+                        <TableCell sx={tableCellSx}>{formatDate(calc.modifiedAt)}</TableCell>
+                        <TableCell align="center" sx={tableCellSx}>
+                          <Box display="flex" gap={1} justifyContent="center" flexWrap="wrap">
+                            <Button variant="outlined" size="small" disableElevation startIcon={<ListAlt />} onClick={() => handleEdit(calc.id)} sx={pillBtnSx('outline')}>
+                              View Steps
+                            </Button>
+                            {calc.status !== 'COMPLETED' && (
+                              <Button
+                                variant="contained" size="small" disableElevation
+                                startIcon={calc.status === 'DRAFT' ? <PlayArrow /> : <Edit />}
+                                onClick={() => navigate(`/dashboard/new-calculation/${calc.id}`)}
+                                sx={pillBtnSx('forest')}
+                              >
+                                {calc.status === 'DRAFT' ? 'Start' : 'Continue'}
+                              </Button>
+                            )}
+                            {calc.status === 'COMPLETED' && (
+                              <Button variant="contained" size="small" disableElevation startIcon={<Visibility />} onClick={() => handleView(calc.id)} sx={pillBtnSx('success')}>
+                                View
+                              </Button>
+                            )}
+                            <Button variant="outlined" size="small" disableElevation startIcon={<Delete />} onClick={() => { setDeleteCalcId(calc.id); setDeleteError(null); setDeleteOpen(true); }} sx={pillBtnSx('error')}>
+                              Delete
+                            </Button>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
       )}
 
-      {/* Edit Dialog — shows all calculation answers */}
-      <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="lg" fullWidth>
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* ── Edit Dialog — Answers ── */}
+      <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="lg" fullWidth PaperProps={{ sx: dialogPaperSx }}>
+        <Box sx={dialogAccentBar} />
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: T.font.display, fontWeight: 700, fontSize: '1.3rem', color: T.color.ink, pt: 3 }}>
           <span>Calculation #{editCalcId} — Answers</span>
-          <IconButton onClick={() => setEditOpen(false)} size="small">
+          <IconButton onClick={() => setEditOpen(false)} size="small" sx={{ color: T.color.muted, '&:hover': { bgcolor: T.color.mint } }}>
             <Close />
           </IconButton>
         </DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ borderColor: T.color.lineFaint }}>
           {answersLoading && (
-            <Box display="flex" justifyContent="center" py={4}>
-              <CircularProgress />
+            <Box display="flex" justifyContent="center" py={5}>
+              <CircularProgress sx={{ color: T.color.forest }} />
             </Box>
           )}
           {answersError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {answersError}
-            </Alert>
+            <Alert severity="error" sx={{ mb: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>{answersError}</Alert>
           )}
           {!answersLoading && !answersError && answers.length === 0 && (
-            <Typography color="text.secondary" align="center" py={4}>
+            <Typography sx={{ fontFamily: T.font.body, color: T.color.muted, textAlign: 'center', py: 5 }}>
               No answers recorded yet.
             </Typography>
           )}
@@ -392,58 +472,63 @@ const CalculationsList: React.FC = () => {
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 600 }}>#</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Question</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Answer</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Emission Factor</TableCell>
+                    <TableCell sx={tableHeadCellSx}>#</TableCell>
+                    <TableCell sx={tableHeadCellSx}>Question</TableCell>
+                    <TableCell sx={tableHeadCellSx}>Answer</TableCell>
+                    <TableCell sx={tableHeadCellSx}>Type</TableCell>
+                    <TableCell sx={tableHeadCellSx}>Emission Factor</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {answers.map((a, idx) => (
-                    <TableRow key={a.id} hover>
-                      <TableCell>{idx + 1}</TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    <TableRow key={a.id} sx={{ '&:hover': { bgcolor: T.color.mint } }}>
+                      <TableCell sx={tableCellSx}>{idx + 1}</TableCell>
+                      <TableCell sx={tableCellSx}>
+                        <Typography sx={{ fontFamily: T.font.body, fontWeight: 500, fontSize: '0.88rem', color: T.color.ink }}>
                           {a.questionLabel ?? '—'}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography sx={{ fontFamily: T.font.body, fontSize: '0.75rem', color: T.color.muted }}>
                           {a.questionCode}
                         </Typography>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={tableCellSx}>
                         {a.answerType === 'OPTION' ? (
-                          <Chip label={a.answerValue ?? '—'} size="small" color="primary" variant="outlined" />
+                          <Chip
+                            label={a.answerValue ?? '—'} size="small"
+                            sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.72rem', bgcolor: T.color.mint, color: T.color.forest, border: `1px solid ${T.color.mintDark}` }}
+                          />
                         ) : (
-                          <Typography variant="body2">{a.answerValue ?? '—'}</Typography>
+                          <Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem', color: T.color.ink }}>{a.answerValue ?? '—'}</Typography>
                         )}
                         {a.answerCode && (
-                          <Typography variant="caption" color="text.secondary" display="block">
+                          <Typography sx={{ fontFamily: T.font.body, fontSize: '0.72rem', color: T.color.muted, display: 'block' }}>
                             {a.answerCode}
                           </Typography>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={tableCellSx}>
                         <Chip
-                          label={a.answerType}
-                          size="small"
-                          color={a.answerType === 'OPTION' ? 'info' : 'default'}
+                          label={a.answerType} size="small"
+                          sx={{
+                            fontFamily: T.font.body, fontWeight: 600, fontSize: '0.72rem',
+                            ...(a.answerType === 'OPTION'
+                              ? { bgcolor: T.color.accentLight, color: '#8B6914', border: '1px solid #E0C97A' }
+                              : { bgcolor: T.color.lineFaint, color: T.color.muted, border: `1px solid ${T.color.line}` }),
+                          }}
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={tableCellSx}>
                         {a.emissionFactorName ? (
                           <>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            <Typography sx={{ fontFamily: T.font.body, fontWeight: 500, fontSize: '0.88rem', color: T.color.ink }}>
                               {a.emissionFactorName}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography sx={{ fontFamily: T.font.body, fontSize: '0.72rem', color: T.color.muted }}>
                               {[a.emissionFactorSector, a.emissionFactorSubsector].filter(Boolean).join(' > ')}
                             </Typography>
                           </>
                         ) : (
-                          <Typography variant="body2" color="text.secondary">
-                            —
-                          </Typography>
+                          <Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem', color: T.color.muted }}>—</Typography>
                         )}
                       </TableCell>
                     </TableRow>
@@ -453,66 +538,73 @@ const CalculationsList: React.FC = () => {
             </TableContainer>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditOpen(false)}>Close</Button>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={() => setEditOpen(false)} sx={{ fontFamily: T.font.body, textTransform: 'none', borderRadius: T.radius.pill, px: 3, color: T.color.muted }}>
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteOpen} onClose={() => !deleteLoading && setDeleteOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>Delete Calculation #{deleteCalcId}?</DialogTitle>
+      {/* ── Delete Confirmation Dialog ── */}
+      <Dialog open={deleteOpen} onClose={() => !deleteLoading && setDeleteOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: dialogPaperSx }}>
+        <Box sx={{ height: 4, background: `linear-gradient(90deg, ${T.color.error}, #E74C3C, ${T.color.error})` }} />
+        <DialogTitle sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: '1.25rem', color: T.color.ink, pt: 3 }}>
+          Delete Calculation #{deleteCalcId}?
+        </DialogTitle>
         <DialogContent>
-          <Typography variant="body1" sx={{ mb: 1 }}>
+          <Typography sx={{ fontFamily: T.font.body, color: T.color.inkSoft, mb: 1.5, lineHeight: 1.6 }}>
             This will permanently delete the calculation and all associated data:
           </Typography>
-          <Typography variant="body2" color="text.secondary" component="ul" sx={{ pl: 2 }}>
+          <Box component="ul" sx={{ fontFamily: T.font.body, fontSize: '0.9rem', color: T.color.muted, pl: 2.5, mb: 2, '& li': { mb: 0.5 } }}>
             <li>All answers given</li>
             <li>Computed emission results</li>
             <li>Product associations</li>
-          </Typography>
-          <Typography variant="body2" color="error" sx={{ mt: 2, fontWeight: 600 }}>
+          </Box>
+          <Typography sx={{ fontFamily: T.font.body, fontSize: '0.9rem', color: T.color.error, fontWeight: 600 }}>
             This action cannot be undone.
           </Typography>
           {deleteError && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {deleteError}
-            </Alert>
+            <Alert severity="error" sx={{ mt: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>{deleteError}</Alert>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteOpen(false)} disabled={deleteLoading}>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => setDeleteOpen(false)} disabled={deleteLoading}
+            sx={{ fontFamily: T.font.body, textTransform: 'none', borderRadius: T.radius.pill, px: 3, color: T.color.muted }}
+          >
             Cancel
           </Button>
           <Button
-            onClick={handleDeleteConfirm}
-            color="error"
-            variant="contained"
-            disabled={deleteLoading}
-            startIcon={deleteLoading ? <CircularProgress size={18} color="inherit" /> : <Delete />}
+            onClick={handleDeleteConfirm} variant="contained" disableElevation disabled={deleteLoading}
+            startIcon={deleteLoading ? <CircularProgress size={18} sx={{ color: '#fff' }} /> : <Delete />}
+            sx={{
+              fontFamily: T.font.body, fontWeight: 600, textTransform: 'none',
+              bgcolor: T.color.error, borderRadius: T.radius.pill, px: 3,
+              '&:hover': { bgcolor: '#A93226' },
+            }}
           >
-            {deleteLoading ? 'Deleting...' : 'Delete'}
+            {deleteLoading ? 'Deleting…' : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* View Dialog — shows emission results */}
-      <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="lg" fullWidth>
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* ── View Dialog — Emissions ── */}
+      <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="lg" fullWidth PaperProps={{ sx: dialogPaperSx }}>
+        <Box sx={dialogAccentBar} />
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: T.font.display, fontWeight: 700, fontSize: '1.3rem', color: T.color.ink, pt: 3 }}>
           <span>Calculation #{viewCalcId} — Emissions</span>
-          <IconButton onClick={() => setViewOpen(false)} size="small">
+          <IconButton onClick={() => setViewOpen(false)} size="small" sx={{ color: T.color.muted, '&:hover': { bgcolor: T.color.mint } }}>
             <Close />
           </IconButton>
         </DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ borderColor: T.color.lineFaint }}>
           {viewLoading && (
-            <Box display="flex" justifyContent="center" py={4}>
-              <CircularProgress />
+            <Box display="flex" justifyContent="center" py={5}>
+              <CircularProgress sx={{ color: T.color.forest }} />
             </Box>
           )}
           {viewError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {viewError}
-            </Alert>
+            <Alert severity="error" sx={{ mb: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>{viewError}</Alert>
           )}
           {!viewLoading && !viewError && viewResult && (
             <>
@@ -520,65 +612,67 @@ const CalculationsList: React.FC = () => {
               <Paper
                 elevation={0}
                 sx={{
-                  p: 3,
-                  mb: 3,
-                  background: 'linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%)',
-                  border: '1px solid',
-                  borderColor: 'success.light',
-                  borderRadius: 2,
+                  p: { xs: 3, md: 4 }, mb: 3, borderRadius: T.radius.lg,
+                  bgcolor: T.color.mint, border: `1px solid ${T.color.mintDark}`,
+                  position: 'relative', overflow: 'hidden',
+                  '&::before': {
+                    content: '""', position: 'absolute', top: -40, right: -40, width: 140, height: 140,
+                    borderRadius: '50%', background: `radial-gradient(circle, ${T.color.mintDark} 0%, transparent 70%)`,
+                  },
                 }}
               >
-                <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2} position="relative" zIndex={1}>
                   <Box>
-                    <Typography variant="overline" color="text.secondary">
+                    <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.75rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: T.color.muted, mb: 0.5 }}>
                       Total Emissions
                     </Typography>
-                    <Typography variant="h4" sx={{ fontWeight: 700, color: 'success.dark' }}>
+                    <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: { xs: '2rem', md: '2.5rem' }, color: T.color.forest, lineHeight: 1 }}>
                       {viewResult.totalEmissions != null
                         ? Number(viewResult.totalEmissions).toFixed(4)
                         : '—'}{' '}
-                      <Typography component="span" variant="h6" color="text.secondary">
+                      <Typography component="span" sx={{ fontFamily: T.font.body, fontSize: '1rem', color: T.color.muted }}>
                         tonnes CO₂e
                       </Typography>
                     </Typography>
                   </Box>
                   <Box textAlign="right">
-                    <Chip label={viewResult.status} color="success" size="small" sx={{ mb: 0.5 }} />
-                    <Typography variant="caption" display="block" color="text.secondary">
+                    <Chip
+                      label={viewResult.status} size="small"
+                      sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.72rem', bgcolor: T.color.warmWhite, color: T.color.forest, border: `1px solid ${T.color.mintDark}`, mb: 0.5 }}
+                    />
+                    <Typography sx={{ fontFamily: T.font.body, fontSize: '0.78rem', color: T.color.muted, display: 'block' }}>
                       Report year: {viewResult.reportYear}
                     </Typography>
-                    <Typography variant="caption" display="block" color="text.secondary">
+                    <Typography sx={{ fontFamily: T.font.body, fontSize: '0.78rem', color: T.color.muted, display: 'block' }}>
                       Computed: {formatDate(viewResult.computedAt)}
                     </Typography>
                   </Box>
                 </Box>
               </Paper>
 
-              <Divider sx={{ mb: 2 }} />
+              <Divider sx={{ borderColor: T.color.lineFaint, mb: 3 }} />
 
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+              <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.1rem', color: T.color.ink, mb: 2 }}>
                 Emission Breakdown
               </Typography>
 
               <TableContainer>
                 <Table size="small">
                   <TableHead>
-                    <TableRow sx={{ bgcolor: 'grey.50' }}>
-                      <TableCell sx={{ fontWeight: 600 }}>#</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Formula</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Pass</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Entry</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Expression</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Inputs</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }} align="right">
-                        Result (t CO₂e)
-                      </TableCell>
+                    <TableRow>
+                      <TableCell sx={tableHeadCellSx}>#</TableCell>
+                      <TableCell sx={tableHeadCellSx}>Formula</TableCell>
+                      <TableCell sx={tableHeadCellSx}>Pass</TableCell>
+                      <TableCell sx={tableHeadCellSx}>Entry</TableCell>
+                      <TableCell sx={tableHeadCellSx}>Expression</TableCell>
+                      <TableCell sx={tableHeadCellSx}>Inputs</TableCell>
+                      <TableCell sx={tableHeadCellSx} align="right">Result (t CO₂e)</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {viewResult.items.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                        <TableCell colSpan={7} align="center" sx={{ ...tableCellSx, py: 4, color: T.color.muted }}>
                           No computed items.
                         </TableCell>
                       </TableRow>
@@ -586,61 +680,52 @@ const CalculationsList: React.FC = () => {
                       viewResult.items.map((item, idx) => {
                         const snapshot = parseSnapshot(item.inputSnapshot);
                         return (
-                          <TableRow key={item.id} hover>
-                            <TableCell>{idx + 1}</TableCell>
-                            <TableCell>
-                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          <TableRow key={item.id} sx={{ '&:hover': { bgcolor: T.color.mint } }}>
+                            <TableCell sx={tableCellSx}>{idx + 1}</TableCell>
+                            <TableCell sx={tableCellSx}>
+                              <Typography sx={{ fontFamily: T.font.body, fontWeight: 500, fontSize: '0.88rem', color: T.color.ink }}>
                                 {humanizeFormulaCode(item.formulaCode)}
                               </Typography>
                               {item.outputCode && (
-                                <Typography variant="caption" color="text.secondary">
+                                <Typography sx={{ fontFamily: T.font.body, fontSize: '0.72rem', color: T.color.muted }}>
                                   {item.outputCode}
                                 </Typography>
                               )}
                             </TableCell>
-                            <TableCell>
+                            <TableCell sx={tableCellSx}>
                               {item.passCode ? (
-                                <Chip label={item.passCode} size="small" variant="outlined" />
-                              ) : (
-                                '—'
-                              )}
+                                <Chip label={item.passCode} size="small" sx={{ fontFamily: T.font.body, fontSize: '0.72rem', bgcolor: T.color.lineFaint, color: T.color.muted, border: `1px solid ${T.color.line}` }} />
+                              ) : '—'}
                             </TableCell>
-                            <TableCell>
+                            <TableCell sx={tableCellSx}>
                               {item.entryIndex != null ? item.entryIndex + 1 : '—'}
                             </TableCell>
-                            <TableCell>
+                            <TableCell sx={tableCellSx}>
                               <Typography
-                                variant="body2"
                                 sx={{
-                                  fontFamily: 'monospace',
-                                  fontSize: '0.8rem',
-                                  maxWidth: 260,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
+                                  fontFamily: "'DM Sans', monospace", fontSize: '0.78rem', color: T.color.inkSoft,
+                                  maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                 }}
                                 title={item.expression}
                               >
                                 {item.expression}
                               </Typography>
                             </TableCell>
-                            <TableCell>
+                            <TableCell sx={tableCellSx}>
                               {Object.keys(snapshot).length > 0 ? (
                                 <Box>
                                   {Object.entries(snapshot).map(([k, v]) => (
-                                    <Typography key={k} variant="caption" display="block" color="text.secondary">
-                                      <strong>{k}</strong>: {String(v)}
+                                    <Typography key={k} sx={{ fontFamily: T.font.body, fontSize: '0.72rem', color: T.color.muted, display: 'block' }}>
+                                      <strong style={{ color: T.color.inkSoft }}>{k}</strong>: {String(v)}
                                     </Typography>
                                   ))}
                                 </Box>
                               ) : (
-                                <Typography variant="body2" color="text.secondary">
-                                  —
-                                </Typography>
+                                <Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem', color: T.color.muted }}>—</Typography>
                               )}
                             </TableCell>
-                            <TableCell align="right">
-                              <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: 'monospace' }}>
+                            <TableCell align="right" sx={tableCellSx}>
+                              <Typography sx={{ fontWeight: 600, fontFamily: "'DM Sans', monospace", fontSize: '0.88rem', color: T.color.ink }}>
                                 {Number(item.resultValue).toFixed(4)}
                               </Typography>
                             </TableCell>
@@ -654,8 +739,10 @@ const CalculationsList: React.FC = () => {
             </>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setViewOpen(false)}>Close</Button>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={() => setViewOpen(false)} sx={{ fontFamily: T.font.body, textTransform: 'none', borderRadius: T.radius.pill, px: 3, color: T.color.muted }}>
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
     </Container>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import {
   AppBar,
@@ -19,7 +19,6 @@ import {
   useTheme,
   useMediaQuery,
   Stack,
-  Avatar,
   Divider,
   Dialog,
   DialogTitle,
@@ -44,11 +43,15 @@ import {
   Shield,
   Language,
   KeyboardArrowDown,
-  ArrowForward,
   Calculate,
   Description,
   Send,
   CheckCircle,
+  TrendingUp,
+  Speed,
+  VerifiedUser,
+  Handshake,
+  East,
 } from '@mui/icons-material';
 import { API_BASE_URL } from './utils/api';
 
@@ -165,33 +168,38 @@ const translations: Record<Language, Translations> = {
       features: 'Features',
       howItWorks: 'How It Works',
       about: 'About CBAM',
-      login: 'Login'
+      login: 'Login',
     },
     hero: {
       badge: 'EU CBAM Compliant',
       title: 'Simplify Your ',
       titleHighlight: 'CBAM Emissions',
-      subtitle: 'Calculate product emissions accurately, generate compliant reports, and seamlessly share them with your EU clients. All in one platform.',
+      subtitle:
+        'Calculate product emissions accurately, generate compliant reports, and seamlessly share them with your EU clients. All in one platform.',
       scheduleDemo: 'Schedule a Demo',
-      learnMore: 'Learn More'
+      learnMore: 'Learn More',
     },
     features: {
       title: 'Everything You Need for CBAM Compliance',
-      subtitle: 'Streamline your carbon reporting workflow with our comprehensive solution',
+      subtitle:
+        'Streamline your carbon reporting workflow with our comprehensive solution',
       cards: {
         calculate: {
           title: 'Accurate Calculations',
-          description: 'Calculate embedded emissions using official CBAM methodologies and emission factors for all covered sectors.'
+          description:
+            'Calculate embedded emissions using official CBAM methodologies and emission factors for all covered sectors.',
         },
         reports: {
           title: 'Compliant Reports',
-          description: 'Generate standardized reports that meet EU requirements, ready for submission by your clients.'
+          description:
+            'Generate standardized reports that meet EU requirements, ready for submission by your clients.',
         },
         sharing: {
           title: 'Easy Sharing',
-          description: 'Send emissions data directly to your EU clients with secure, trackable delivery.'
-        }
-      }
+          description:
+            'Send emissions data directly to your EU clients with secure, trackable delivery.',
+        },
+      },
     },
     howItWorks: {
       title: 'How It Works',
@@ -199,47 +207,54 @@ const translations: Record<Language, Translations> = {
       steps: {
         input: {
           title: 'Input Product Data',
-          description: 'Enter your product specifications, production methods, and energy consumption data into our intuitive calculator.'
+          description:
+            'Enter your product specifications, production methods, and energy consumption data into our intuitive calculator.',
         },
         calculate: {
           title: 'Calculate Emissions',
-          description: 'Our system automatically calculates embedded emissions using verified methodologies and official emission factors.'
+          description:
+            'Our system automatically calculates embedded emissions using verified methodologies and official emission factors.',
         },
         share: {
           title: 'Share with Clients',
-          description: 'Generate compliant reports and send them directly to your EU clients through our secure platform.'
-        }
-      }
+          description:
+            'Generate compliant reports and send them directly to your EU clients through our secure platform.',
+        },
+      },
     },
     benefits: {
       title: 'Why Choose Panonia?',
       items: {
         compliant: {
           title: 'Stay Compliant',
-          description: 'Keep up with evolving EU CBAM regulations automatically'
+          description:
+            'Keep up with evolving EU CBAM regulations automatically',
         },
         saveTime: {
           title: 'Save Time',
-          description: 'Reduce reporting time from days to minutes'
+          description: 'Reduce reporting time from days to minutes',
         },
         reduceErrors: {
           title: 'Reduce Errors',
-          description: 'Eliminate manual calculation mistakes with automated processes'
+          description:
+            'Eliminate manual calculation mistakes with automated processes',
         },
         buildTrust: {
           title: 'Build Trust',
-          description: 'Provide transparent, verified emissions data to your clients'
-        }
+          description:
+            'Provide transparent, verified emissions data to your clients',
+        },
       },
       stats: {
         companies: 'Companies already compliant',
-        accuracy: 'Calculation accuracy rate'
-      }
+        accuracy: 'Calculation accuracy rate',
+      },
     },
     cta: {
       title: 'Ready to Streamline Your CBAM Reporting?',
-      subtitle: 'Join thousands of companies making carbon reporting simple and accurate',
-      button: 'Schedule a Demo'
+      subtitle:
+        'Join thousands of companies making carbon reporting simple and accurate',
+      button: 'Schedule a Demo',
     },
     footer: {
       tagline: 'Making CBAM compliance simple for businesses worldwide.',
@@ -247,55 +262,60 @@ const translations: Record<Language, Translations> = {
         title: 'Product',
         features: 'Features',
         pricing: 'Pricing',
-        documentation: 'Documentation'
+        documentation: 'Documentation',
       },
       resources: {
         title: 'Resources',
         guide: 'CBAM Guide',
         blog: 'Blog',
-        support: 'Support'
+        support: 'Support',
       },
       company: {
         title: 'Company',
         about: 'About',
         contact: 'Contact',
-        privacy: 'Privacy'
+        privacy: 'Privacy',
       },
-      copyright: '© 2025 Panonia. All rights reserved.'
-    }
+      copyright: '© 2025 Panonia. All rights reserved.',
+    },
   },
   ju: {
     nav: {
       features: 'Mogućnosti',
       howItWorks: 'Kako Funkcionira',
       about: 'O CBAM-u',
-      login: 'Prijava'
+      login: 'Prijava',
     },
     hero: {
       badge: 'EU CBAM Usklađeno',
       title: 'Pojednostavite Vaše ',
       titleHighlight: 'CBAM Izvješćivanje',
-      subtitle: 'Precizno izračunajte emisije proizvoda, generirajte usklađena izvješća i jednostavno ih podijelite sa svojim EU klijentima. Sve na jednoj platformi.',
+      subtitle:
+        'Precizno izračunajte emisije proizvoda, generirajte usklađena izvješća i jednostavno ih podijelite sa svojim EU klijentima. Sve na jednoj platformi.',
       scheduleDemo: 'Zakažite Demo',
-      learnMore: 'Saznajte Više'
+      learnMore: 'Saznajte Više',
     },
     features: {
       title: 'Sve Što Vam Treba za CBAM Usklađenost',
-      subtitle: 'Pojednostavite proces izvješćivanja o ugljičnom otisku našim sveobuhvatnim rješenjem',
+      subtitle:
+        'Pojednostavite proces izvješćivanja o ugljičnom otisku našim sveobuhvatnim rješenjem',
       cards: {
         calculate: {
           title: 'Precizni Izračuni',
-          description: 'Izračunajte ugrađene emisije koristeći službene CBAM metodologije i faktore emisija za sve pokrivene sektore.'
+          description:
+            'Izračunajte ugrađene emisije koristeći službene CBAM metodologije i faktore emisija za sve pokrivene sektore.',
         },
         reports: {
           title: 'Usklađena Izvješća',
-          description: 'Generirajte standardizirana izvješća koja ispunjavaju EU zahtjeve, spremna za podnošenje od strane vaših klijenata.'
+          description:
+            'Generirajte standardizirana izvješća koja ispunjavaju EU zahtjeve, spremna za podnošenje od strane vaših klijenata.',
         },
         sharing: {
           title: 'Jednostavno Dijeljenje',
-          description: 'Pošaljite podatke o emisijama izravno vašim EU klijentima sa sigurnom, pratljivom dostavom.'
-        }
-      }
+          description:
+            'Pošaljite podatke o emisijama izravno vašim EU klijentima sa sigurnom, pratljivom dostavom.',
+        },
+      },
     },
     howItWorks: {
       title: 'Kako Funkcionira',
@@ -303,103 +323,116 @@ const translations: Record<Language, Translations> = {
       steps: {
         input: {
           title: 'Unesite Podatke o Proizvodu',
-          description: 'Unesite specifikacije proizvoda, metode proizvodnje i podatke o potrošnji energije u naš intuitivni kalkulator.'
+          description:
+            'Unesite specifikacije proizvoda, metode proizvodnje i podatke o potrošnji energije u naš intuitivni kalkulator.',
         },
         calculate: {
           title: 'Izračunajte Emisije',
-          description: 'Naš sustav automatski izračunava ugrađene emisije koristeći verificirane metodologije i službene faktore emisija.'
+          description:
+            'Naš sustav automatski izračunava ugrađene emisije koristeći verificirane metodologije i službene faktore emisija.',
         },
         share: {
           title: 'Podijelite s Klijentima',
-          description: 'Generirajte usklađena izvješća i pošaljite ih izravno vašim EU klijentima kroz našu sigurnu platformu.'
-        }
-      }
+          description:
+            'Generirajte usklađena izvješća i pošaljite ih izravno vašim EU klijentima kroz našu sigurnu platformu.',
+        },
+      },
     },
     benefits: {
       title: 'Zašto Odabrati Panonia?',
       items: {
         compliant: {
           title: 'Ostanite Usklađeni',
-          description: 'Pratite promjene EU CBAM regulativa automatski'
+          description:
+            'Pratite promjene EU CBAM regulativa automatski',
         },
         saveTime: {
           title: 'Uštedite Vrijeme',
-          description: 'Smanjite vrijeme izvješćivanja s dana na minute'
+          description: 'Smanjite vrijeme izvješćivanja s dana na minute',
         },
         reduceErrors: {
           title: 'Smanjite Greške',
-          description: 'Eliminirajte greške u ručnim izračunima automatiziranim procesima'
+          description:
+            'Eliminirajte greške u ručnim izračunima automatiziranim procesima',
         },
         buildTrust: {
           title: 'Izgradite Povjerenje',
-          description: 'Pružite transparentne, verificirane podatke o emisijama vašim klijentima'
-        }
+          description:
+            'Pružite transparentne, verificirane podatke o emisijama vašim klijentima',
+        },
       },
       stats: {
         companies: 'Tvrtki već usklađeno',
-        accuracy: 'Stopa točnosti izračuna'
-      }
+        accuracy: 'Stopa točnosti izračuna',
+      },
     },
     cta: {
       title: 'Spremni Pojednostaviti Vaše CBAM Izvješćivanje?',
-      subtitle: 'Pridružite se tisućama tvrtki koje čine izvješćivanje o ugljiku jednostavnim i točnim',
-      button: 'Zakažite Demo'
+      subtitle:
+        'Pridružite se tisućama tvrtki koje čine izvješćivanje o ugljiku jednostavnim i točnim',
+      button: 'Zakažite Demo',
     },
     footer: {
-      tagline: 'Činimo CBAM usklađenost jednostavnom za tvrtke širom svijeta.',
+      tagline:
+        'Činimo CBAM usklađenost jednostavnom za tvrtke širom svijeta.',
       product: {
         title: 'Proizvod',
         features: 'Mogućnosti',
         pricing: 'Cijene',
-        documentation: 'Dokumentacija'
+        documentation: 'Dokumentacija',
       },
       resources: {
         title: 'Resursi',
         guide: 'CBAM Vodič',
         blog: 'Blog',
-        support: 'Podrška'
+        support: 'Podrška',
       },
       company: {
         title: 'Tvrtka',
         about: 'O Nama',
         contact: 'Kontakt',
-        privacy: 'Privatnost'
+        privacy: 'Privatnost',
       },
-      copyright: '© 2025 Panonia. Sva prava pridržana.'
-    }
+      copyright: '© 2025 Panonia. Sva prava pridržana.',
+    },
   },
   tr: {
     nav: {
       features: 'Özellikler',
       howItWorks: 'Nasıl Çalışır',
       about: 'CBAM Hakkında',
-      login: 'Giriş'
+      login: 'Giriş',
     },
     hero: {
       badge: 'AB CBAM Uyumlu',
       title: 'CBAM ',
       titleHighlight: 'Raporlamanızı',
-      subtitle: 'Ürün emisyonlarınızı hesaplayın, uyumlu raporlar oluşturun ve AB müşterilerinizle güvenle paylaşın. Hepsi tek platformda.',
+      subtitle:
+        'Ürün emisyonlarınızı hesaplayın, uyumlu raporlar oluşturun ve AB müşterilerinizle güvenle paylaşın. Hepsi tek platformda.',
       scheduleDemo: 'Demo Planla',
-      learnMore: 'Daha Fazla Bilgi'
+      learnMore: 'Daha Fazla Bilgi',
     },
     features: {
       title: 'CBAM Uyumu İçin İhtiyacınız Olan Her Şey',
-      subtitle: 'Kapsamlı çözümümüzle karbon ayak izi raporlamasını kolaylaştırın',
+      subtitle:
+        'Kapsamlı çözümümüzle karbon ayak izi raporlamasını kolaylaştırın',
       cards: {
         calculate: {
           title: 'Hassas Hesaplamalar',
-          description: 'Tüm kapsanan sektörler için resmi CBAM metodolojileri ve emisyon faktörleri kullanarak gömülü emisyonları hesaplayın.'
+          description:
+            'Tüm kapsanan sektörler için resmi CBAM metodolojileri ve emisyon faktörleri kullanarak gömülü emisyonları hesaplayın.',
         },
         reports: {
           title: 'Uyumlu Raporlar',
-          description: 'AB gereksinimlerini karşılayan, müşterileriniz tarafından sunulmaya hazır standart raporlar oluşturun.'
+          description:
+            'AB gereksinimlerini karşılayan, müşterileriniz tarafından sunulmaya hazır standart raporlar oluşturun.',
         },
         sharing: {
           title: 'Kolay Paylaşım',
-          description: 'Emisyon verilerini güvenli, izlenebilir teslimatla doğrudan AB müşterilerinize iletin.'
-        }
-      }
+          description:
+            'Emisyon verilerini güvenli, izlenebilir teslimatla doğrudan AB müşterilerinize iletin.',
+        },
+      },
     },
     howItWorks: {
       title: 'Nasıl Çalışır',
@@ -407,161 +440,459 @@ const translations: Record<Language, Translations> = {
       steps: {
         input: {
           title: 'Ürün Verilerini Girin',
-          description: 'Ürün özelliklerini, üretim yöntemlerini ve enerji tüketim verilerini sezgisel hesap makinemize girin.'
+          description:
+            'Ürün özelliklerini, üretim yöntemlerini ve enerji tüketim verilerini sezgisel hesap makinemize girin.',
         },
         calculate: {
           title: 'Emisyonları Hesaplayın',
-          description: 'Sistemimiz doğrulanmış metodolojiler ve resmi emisyon faktörleri kullanarak gömülü emisyonları otomatik hesaplar.'
+          description:
+            'Sistemimiz doğrulanmış metodolojiler ve resmi emisyon faktörleri kullanarak gömülü emisyonları otomatik hesaplar.',
         },
         share: {
           title: 'Müşterilerle Paylaşın',
-          description: 'Uyumlu raporlar oluşturun ve güvenli platformumuz aracılığıyla doğrudan AB müşterilerinize gönderin.'
-        }
-      }
+          description:
+            'Uyumlu raporlar oluşturun ve güvenli platformumuz aracılığıyla doğrudan AB müşterilerinize gönderin.',
+        },
+      },
     },
     benefits: {
       title: 'Neden Panonia?',
       items: {
         compliant: {
           title: 'Uyumlu Kalın',
-          description: 'AB CBAM düzenlemelerindeki değişiklikleri otomatik takip edin'
+          description:
+            'AB CBAM düzenlemelerindeki değişiklikleri otomatik takip edin',
         },
         saveTime: {
           title: 'Zaman Kazanın',
-          description: 'Raporlama süresini günlerden dakikalara indirin'
+          description: 'Raporlama süresini günlerden dakikalara indirin',
         },
         reduceErrors: {
           title: 'Hataları Azaltın',
-          description: 'Otomatik süreçlerle manuel hesaplama hatalarını ortadan kaldırın'
+          description:
+            'Otomatik süreçlerle manuel hesaplama hatalarını ortadan kaldırın',
         },
         buildTrust: {
           title: 'Güven Oluşturun',
-          description: 'Müşterilerinize şeffaf, doğrulanmış emisyon verileri sunun'
-        }
+          description:
+            'Müşterilerinize şeffaf, doğrulanmış emisyon verileri sunun',
+        },
       },
       stats: {
         companies: 'Zaten uyumlu şirket',
-        accuracy: 'Hesaplama doğruluğu'
-      }
+        accuracy: 'Hesaplama doğruluğu',
+      },
     },
     cta: {
       title: 'CBAM Raporlamanızı Kolaylaştırmaya Hazır mısınız?',
-      subtitle: 'Karbon raporlamasını basit ve doğru yapan binlerce şirkete katılın',
-      button: 'Demo Planla'
+      subtitle:
+        'Karbon raporlamasını basit ve doğru yapan binlerce şirkete katılın',
+      button: 'Demo Planla',
     },
     footer: {
-      tagline: 'CBAM uyumluluğunu dünya genelinde şirketler için basit hale getiriyoruz.',
+      tagline:
+        'CBAM uyumluluğunu dünya genelinde şirketler için basit hale getiriyoruz.',
       product: {
         title: 'Ürün',
         features: 'Özellikler',
         pricing: 'Fiyatlandırma',
-        documentation: 'Dokümantasyon'
+        documentation: 'Dokümantasyon',
       },
       resources: {
         title: 'Kaynaklar',
         guide: 'CBAM Rehberi',
         blog: 'Blog',
-        support: 'Destek'
+        support: 'Destek',
       },
       company: {
         title: 'Şirket',
         about: 'Hakkımızda',
         contact: 'İletişim',
-        privacy: 'Gizlilik'
+        privacy: 'Gizlilik',
       },
-      copyright: '© 2025 Panonia. Tüm hakları saklıdır.'
-    }
-  }
+      copyright: '© 2025 Panonia. Tüm hakları saklıdır.',
+    },
+  },
 };
+
+/* ─── Inline keyframes via a <style> tag injected once ─── */
+const GLOBAL_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&display=swap');
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-8px); }
+  }
+  @keyframes gradientShift {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .anim-fade-up {
+    opacity: 0;
+    animation: fadeInUp 0.7s cubic-bezier(.22,1,.36,1) forwards;
+  }
+  .anim-fade-in {
+    opacity: 0;
+    animation: fadeIn 0.6s ease forwards;
+  }
+  .anim-scale-in {
+    opacity: 0;
+    animation: scaleIn 0.6s cubic-bezier(.22,1,.36,1) forwards;
+  }
+
+  /* stagger helper classes */
+  .delay-1 { animation-delay: 0.08s; }
+  .delay-2 { animation-delay: 0.16s; }
+  .delay-3 { animation-delay: 0.24s; }
+  .delay-4 { animation-delay: 0.36s; }
+  .delay-5 { animation-delay: 0.48s; }
+  .delay-6 { animation-delay: 0.60s; }
+`;
+
+/* ─── Design tokens ─── */
+const T = {
+  font: {
+    display: "'Fraunces', Georgia, serif",
+    body: "'DM Sans', system-ui, sans-serif",
+  },
+  color: {
+    forest: '#0B4F3E',
+    forestLight: '#14785E',
+    sage: '#3A7D6A',
+    mint: '#E8F5EF',
+    mintDark: '#C3E6D5',
+    cream: '#FAFAF7',
+    warmWhite: '#FFFEF9',
+    ink: '#1A2B25',
+    inkSoft: '#3D5A50',
+    muted: '#6B8F82',
+    accent: '#D4A853',
+    accentLight: '#F4E8C9',
+    line: '#D6E5DD',
+    lineFaint: '#EAF0EC',
+    cta: '#0B4F3E',
+    ctaHover: '#0A3F32',
+  },
+  radius: {
+    sm: '8px',
+    md: '14px',
+    lg: '20px',
+    xl: '28px',
+    pill: '999px',
+  },
+};
+
+/* ─── Utility: scroll-triggered animation via IntersectionObserver ─── */
+function useReveal<E extends HTMLElement = HTMLElement>() {
+  const ref = useRef<E>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.15 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return { ref, visible };
+}
+
+/* ─── Sub-components ─── */
 
 interface FeatureCardProps {
   icon: React.ReactNode;
   title: string;
   description: string;
-  color: string;
+  index: number;
 }
 
-interface StepProps {
-  number: number;
-  title: string;
-  description: string;
-}
+const FeatureCard: React.FC<FeatureCardProps> = ({
+  icon,
+  title,
+  description,
+  index,
+}) => {
+  const { ref, visible } = useReveal<HTMLDivElement>();
 
-interface BenefitProps {
-  title: string;
-  description: string;
-}
-
-const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description, color }) => {
   return (
-    <Card 
-      sx={{ 
-        height: '100%',
-        background: `linear-gradient(135deg, ${color}15, white)`,
-        border: `1px solid ${color}30`,
-        '&:hover': {
-          boxShadow: 3,
-          transform: 'translateY(-2px)',
-        },
-        transition: 'all 0.3s ease',
-      }}
+    <Box
+      ref={ref}
+      className={visible ? `anim-scale-in delay-${index + 1}` : ''}
+      sx={{ opacity: visible ? undefined : 0 }}
     >
-      <CardContent sx={{ p: 4 }}>
-        <Avatar sx={{ bgcolor: color, mb: 2, width: 48, height: 48 }}>
-          {icon}
-        </Avatar>
-        <Typography variant="h5" component="h3" gutterBottom sx={{ fontWeight: 600 }}>
-          {title}
-        </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.6 }}>
-          {description}
-        </Typography>
-      </CardContent>
-    </Card>
-  );
-};
-
-const Step: React.FC<StepProps> = ({ number, title, description }) => {
-  return (
-    <Box textAlign="center">
-      <Avatar 
-        sx={{ 
-          bgcolor: 'primary.main', 
-          width: 64, 
-          height: 64, 
-          mx: 'auto', 
-          mb: 2,
-          fontSize: '1.5rem',
-          fontWeight: 'bold'
+      <Card
+        elevation={0}
+        sx={{
+          height: '100%',
+          bgcolor: T.color.warmWhite,
+          border: `1px solid ${T.color.lineFaint}`,
+          borderRadius: T.radius.lg,
+          overflow: 'hidden',
+          position: 'relative',
+          transition: 'all 0.35s cubic-bezier(.22,1,.36,1)',
+          '&:hover': {
+            transform: 'translateY(-6px)',
+            boxShadow: `0 20px 48px -12px rgba(11,79,62,0.12)`,
+            borderColor: T.color.mintDark,
+            '& .feature-icon': {
+              transform: 'scale(1.08) rotate(-3deg)',
+            },
+          },
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '3px',
+            background: `linear-gradient(90deg, ${T.color.forest}, ${T.color.sage}, ${T.color.accent})`,
+            opacity: 0,
+            transition: 'opacity 0.35s ease',
+          },
+          '&:hover::before': {
+            opacity: 1,
+          },
         }}
       >
-        {number}
-      </Avatar>
-      <Typography variant="h5" component="h3" gutterBottom sx={{ fontWeight: 600 }}>
-        {title}
-      </Typography>
-      <Typography variant="body1" color="text.secondary">
-        {description}
-      </Typography>
+        <CardContent sx={{ p: { xs: 3.5, md: 4.5 } }}>
+          <Box
+            className="feature-icon"
+            sx={{
+              width: 56,
+              height: 56,
+              borderRadius: T.radius.md,
+              bgcolor: T.color.mint,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mb: 3,
+              transition: 'transform 0.35s cubic-bezier(.22,1,.36,1)',
+              color: T.color.forest,
+            }}
+          >
+            {icon}
+          </Box>
+          <Typography
+            variant="h5"
+            component="h3"
+            gutterBottom
+            sx={{
+              fontFamily: T.font.display,
+              fontWeight: 600,
+              fontSize: '1.35rem',
+              color: T.color.ink,
+              letterSpacing: '-0.01em',
+            }}
+          >
+            {title}
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{
+              fontFamily: T.font.body,
+              color: T.color.muted,
+              lineHeight: 1.7,
+              fontSize: '0.95rem',
+            }}
+          >
+            {description}
+          </Typography>
+        </CardContent>
+      </Card>
     </Box>
   );
 };
 
-const Benefit: React.FC<BenefitProps> = ({ title, description }) => {
+interface StepCardProps {
+  number: number;
+  title: string;
+  description: string;
+  index: number;
+}
+
+const StepCard: React.FC<StepCardProps> = ({
+  number,
+  title,
+  description,
+  index,
+}) => {
+  const { ref, visible } = useReveal<HTMLDivElement>();
+
   return (
-    <Box display="flex" alignItems="flex-start" gap={2}>
-      <CheckCircle color="primary" sx={{ mt: 0.5, flexShrink: 0 }} />
-      <Box>
-        <Typography variant="h6" component="h4" gutterBottom sx={{ fontWeight: 600 }}>
+    <Box
+      ref={ref}
+      className={visible ? `anim-fade-up delay-${index + 2}` : ''}
+      sx={{ opacity: visible ? undefined : 0, position: 'relative' }}
+    >
+      <Box
+        sx={{
+          textAlign: 'center',
+          p: { xs: 3, md: 4 },
+          position: 'relative',
+        }}
+      >
+        {/* Step number */}
+        <Box
+          sx={{
+            width: 72,
+            height: 72,
+            borderRadius: '50%',
+            mx: 'auto',
+            mb: 3,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: T.color.forest,
+            color: '#fff',
+            fontFamily: T.font.display,
+            fontSize: '1.6rem',
+            fontWeight: 700,
+            position: 'relative',
+            boxShadow: `0 8px 24px -4px rgba(11,79,62,0.3)`,
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              inset: '-6px',
+              borderRadius: '50%',
+              border: `2px dashed ${T.color.mintDark}`,
+            },
+          }}
+        >
+          {number}
+        </Box>
+        <Typography
+          variant="h5"
+          component="h3"
+          gutterBottom
+          sx={{
+            fontFamily: T.font.display,
+            fontWeight: 600,
+            fontSize: '1.3rem',
+            color: T.color.ink,
+          }}
+        >
           {title}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body1"
+          sx={{
+            fontFamily: T.font.body,
+            color: T.color.muted,
+            lineHeight: 1.7,
+            maxWidth: 340,
+            mx: 'auto',
+          }}
+        >
           {description}
         </Typography>
       </Box>
     </Box>
   );
 };
+
+interface BenefitRowProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  index: number;
+}
+
+const BenefitRow: React.FC<BenefitRowProps> = ({
+  icon,
+  title,
+  description,
+  index,
+}) => {
+  const { ref, visible } = useReveal<HTMLDivElement>();
+
+  return (
+    <Box
+      ref={ref}
+      className={visible ? `anim-fade-up delay-${index + 1}` : ''}
+      sx={{
+        opacity: visible ? undefined : 0,
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 2.5,
+        p: 2.5,
+        borderRadius: T.radius.md,
+        transition: 'background 0.25s ease',
+        '&:hover': { bgcolor: T.color.mint },
+      }}
+    >
+      <Box
+        sx={{
+          width: 44,
+          height: 44,
+          borderRadius: T.radius.sm,
+          bgcolor: T.color.mint,
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: T.color.forest,
+          mt: 0.25,
+        }}
+      >
+        {icon}
+      </Box>
+      <Box>
+        <Typography
+          variant="h6"
+          component="h4"
+          sx={{
+            fontFamily: T.font.display,
+            fontWeight: 600,
+            fontSize: '1.05rem',
+            color: T.color.ink,
+            mb: 0.5,
+          }}
+        >
+          {title}
+        </Typography>
+        <Typography
+          variant="body2"
+          sx={{
+            fontFamily: T.font.body,
+            color: T.color.muted,
+            lineHeight: 1.65,
+          }}
+        >
+          {description}
+        </Typography>
+      </Box>
+    </Box>
+  );
+};
+
+/* ─── Main Landing Page ─── */
 
 const CBAMLandingPage: React.FC = () => {
   const [language, setLanguage] = useState<Language>('en');
@@ -574,36 +905,46 @@ const CBAMLandingPage: React.FC = () => {
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoError, setDemoError] = useState<string | null>(null);
   const [demoSuccess, setDemoSuccess] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const t = translations[language];
 
+  /* Inject global keyframes once */
+  useEffect(() => {
+    if (document.getElementById('panonia-global-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'panonia-global-styles';
+    style.textContent = GLOBAL_STYLES;
+    document.head.appendChild(style);
+  }, []);
+
+  /* Navbar scroll shadow */
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   const languageOptions = [
     { code: 'en' as Language, label: 'English', flag: '🇬🇧' },
     { code: 'ju' as Language, label: 'Bosanski', flag: '🇧🇦' },
-    { code: 'tr' as Language, label: 'Türkçe', flag: '🇹🇷' }
+    { code: 'tr' as Language, label: 'Türkçe', flag: '🇹🇷' },
   ];
 
-  const currentLanguage = languageOptions.find(lang => lang.code === language);
+  const currentLanguage = languageOptions.find(
+    (lang) => lang.code === language,
+  );
 
-  const handleLanguageClick = (event: React.MouseEvent<HTMLElement>) => {
+  const handleLanguageClick = (event: React.MouseEvent<HTMLElement>) =>
     setAnchorEl(event.currentTarget);
-  };
-
-  const handleLanguageClose = () => {
-    setAnchorEl(null);
-  };
-
+  const handleLanguageClose = () => setAnchorEl(null);
   const handleLanguageChange = (lang: Language) => {
     setLanguage(lang);
     setAnchorEl(null);
   };
-
-  const handleLoginClick = () => {
-    navigate('/login');
-  };
-
+  const handleLoginClick = () => navigate('/login');
   const handleOpenDemoDialog = () => setDemoDialogOpen(true);
   const handleCloseDemoDialog = () => {
     setDemoDialogOpen(false);
@@ -634,7 +975,9 @@ const CBAMLandingPage: React.FC = () => {
       });
       const data = await res.json();
       if (!res.ok) {
-        setDemoError(data?.message || 'Something went wrong. Please try again.');
+        setDemoError(
+          data?.message || 'Something went wrong. Please try again.',
+        );
         setDemoLoading(false);
         return;
       }
@@ -654,132 +997,345 @@ const CBAMLandingPage: React.FC = () => {
     }
   };
 
+  /* Shared sx for section label chips */
+  const sectionLabelSx = {
+    fontFamily: T.font.body,
+    fontWeight: 600,
+    fontSize: '0.75rem',
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase' as const,
+    bgcolor: T.color.mint,
+    color: T.color.forest,
+    border: `1px solid ${T.color.mintDark}`,
+    mb: 2,
+  };
+
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      {/* Navigation */}
-      <AppBar 
-        position="fixed" 
-        sx={{ 
-          bgcolor: 'rgba(255, 255, 255, 0.8)', 
-          backdropFilter: 'blur(10px)',
+    <Box
+      sx={{
+        minHeight: '100vh',
+        bgcolor: T.color.cream,
+        fontFamily: T.font.body,
+        overflowX: 'hidden',
+      }}
+    >
+      {/* ── Navigation ── */}
+      <AppBar
+        position="fixed"
+        elevation={0}
+        sx={{
+          bgcolor: scrolled
+            ? 'rgba(250,250,247,0.88)'
+            : 'rgba(250,250,247,0.6)',
+          backdropFilter: 'blur(16px)',
           borderBottom: '1px solid',
-          borderColor: 'divider',
-          boxShadow: 'none'
+          borderColor: scrolled ? T.color.line : 'transparent',
+          transition: 'all 0.3s ease',
         }}
       >
-        <Toolbar>
-          <Box display="flex" alignItems="center" gap={1} sx={{ flexGrow: 1 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
-              PANONIA
+        <Toolbar
+          sx={{
+            maxWidth: 1200,
+            mx: 'auto',
+            width: '100%',
+            px: { xs: 2, md: 4 },
+          }}
+        >
+          {/* Logo */}
+          <Box
+            display="flex"
+            alignItems="center"
+            gap={1.2}
+            sx={{ flexGrow: 1, cursor: 'pointer' }}
+            onClick={() => navigate('/')}
+          >
+            {/* Leaf / shield mark */}
+            <Box
+              sx={{
+                width: 34,
+                height: 34,
+                borderRadius: '10px',
+                bgcolor: T.color.forest,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Shield sx={{ color: '#fff', fontSize: 20 }} />
+            </Box>
+            <Typography
+              sx={{
+                fontFamily: T.font.display,
+                fontWeight: 700,
+                fontSize: '1.25rem',
+                color: T.color.ink,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Panonia
             </Typography>
           </Box>
-          
+
+          {/* Desktop nav links */}
           {!isMobile && (
-            <Box display="flex" gap={4} sx={{ mr: 4 }}>
-              <Button color="inherit" href="#features">
-                {t.nav.features}
-              </Button>
-              <Button color="inherit" href="#how-it-works">
-                {t.nav.howItWorks}
-              </Button>
-              <Button color="inherit" onClick={() => navigate('/cbam-guide')}>
-                {t.nav.about}
-              </Button>
+            <Box display="flex" gap={1} sx={{ mr: 3 }}>
+              {[
+                { label: t.nav.features, href: '#features' },
+                { label: t.nav.howItWorks, href: '#how-it-works' },
+                {
+                  label: t.nav.about,
+                  onClick: () => navigate('/cbam-guide'),
+                },
+              ].map((item) => (
+                <Button
+                  key={item.label}
+                  {...(item.href
+                    ? { href: item.href }
+                    : { onClick: item.onClick })}
+                  sx={{
+                    fontFamily: T.font.body,
+                    fontWeight: 500,
+                    fontSize: '0.9rem',
+                    color: T.color.inkSoft,
+                    textTransform: 'none',
+                    borderRadius: T.radius.pill,
+                    px: 2,
+                    '&:hover': {
+                      bgcolor: T.color.mint,
+                      color: T.color.forest,
+                    },
+                  }}
+                >
+                  {item.label}
+                </Button>
+              ))}
             </Box>
           )}
 
-          <Box display="flex" alignItems="center" gap={2}>
+          {/* Right actions */}
+          <Box display="flex" alignItems="center" gap={1.5}>
             <Button
               onClick={handleLanguageClick}
-              startIcon={<Language />}
-              endIcon={<KeyboardArrowDown />}
-              sx={{ color: 'text.secondary' }}
+              endIcon={
+                <KeyboardArrowDown sx={{ fontSize: '18px !important' }} />
+              }
+              sx={{
+                fontFamily: T.font.body,
+                fontWeight: 500,
+                fontSize: '0.85rem',
+                color: T.color.muted,
+                textTransform: 'none',
+                minWidth: 'auto',
+                px: 1.5,
+                borderRadius: T.radius.pill,
+                '&:hover': { bgcolor: T.color.mint },
+              }}
             >
-              {currentLanguage?.label}
+              {currentLanguage?.flag}&nbsp;
+              {!isMobile && currentLanguage?.label}
             </Button>
             <Menu
               anchorEl={anchorEl}
               open={Boolean(anchorEl)}
               onClose={handleLanguageClose}
+              PaperProps={{
+                sx: {
+                  borderRadius: T.radius.md,
+                  border: `1px solid ${T.color.line}`,
+                  boxShadow: '0 12px 32px -8px rgba(0,0,0,0.12)',
+                  mt: 1,
+                },
+              }}
             >
               {languageOptions.map((lang) => (
                 <MenuItem
                   key={lang.code}
                   onClick={() => handleLanguageChange(lang.code)}
                   selected={language === lang.code}
+                  sx={{
+                    fontFamily: T.font.body,
+                    borderRadius: '8px',
+                    mx: 0.5,
+                    '&.Mui-selected': {
+                      bgcolor: T.color.mint,
+                    },
+                  }}
                 >
                   <ListItemIcon>
                     <Typography>{lang.flag}</Typography>
                   </ListItemIcon>
-                  <ListItemText>{lang.label}</ListItemText>
-                  {language === lang.code && <CheckCircle color="primary" />}
+                  <ListItemText
+                    primaryTypographyProps={{
+                      fontFamily: T.font.body,
+                      fontWeight: language === lang.code ? 600 : 400,
+                    }}
+                  >
+                    {lang.label}
+                  </ListItemText>
                 </MenuItem>
               ))}
             </Menu>
-            <Button variant="contained" color="primary" onClick={handleLoginClick}>
+            <Button
+              variant="contained"
+              disableElevation
+              onClick={handleLoginClick}
+              sx={{
+                fontFamily: T.font.body,
+                fontWeight: 600,
+                fontSize: '0.88rem',
+                textTransform: 'none',
+                bgcolor: T.color.forest,
+                color: '#fff',
+                borderRadius: T.radius.pill,
+                px: 3,
+                py: 0.9,
+                '&:hover': {
+                  bgcolor: T.color.ctaHover,
+                },
+              }}
+            >
               {t.nav.login}
             </Button>
           </Box>
         </Toolbar>
       </AppBar>
 
-      {/* Hero Section */}
-      <Box sx={{ pt: 16, pb: 10, px: { xs: 2, sm: 4 } }}>
-        <Container maxWidth="lg">
-          <Box textAlign="center" maxWidth="md" mx="auto">
-            <Chip
-              icon={<Shield />}
-              label={t.hero.badge}
-              color="primary"
-              variant="outlined"
-              sx={{ mb: 3, bgcolor: 'primary.50', color: 'primary.main' }}
-            />
-            <Typography 
-              variant="h1" 
-              component="h1" 
-              gutterBottom
-              sx={{ 
-                fontSize: { xs: '2.5rem', md: '3.75rem' },
+      {/* ── Hero Section ── */}
+      <Box
+        sx={{
+          pt: { xs: 16, md: 20 },
+          pb: { xs: 10, md: 14 },
+          px: { xs: 2, sm: 4 },
+          position: 'relative',
+          overflow: 'hidden',
+          /* Subtle radial background glow */
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: '-30%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '140%',
+            height: '80%',
+            background: `radial-gradient(ellipse at center, ${T.color.mint} 0%, transparent 70%)`,
+            pointerEvents: 'none',
+            opacity: 0.7,
+          },
+          /* Decorative dots grid */
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundImage: `radial-gradient(${T.color.mintDark} 1px, transparent 1px)`,
+            backgroundSize: '28px 28px',
+            opacity: 0.25,
+            pointerEvents: 'none',
+          },
+        }}
+      >
+        <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
+          <Box textAlign="center">
+            {/* Badge */}
+            <Box className="anim-fade-in delay-1">
+              <Chip
+                icon={<Shield sx={{ fontSize: 16 }} />}
+                label={t.hero.badge}
+                variant="outlined"
+                sx={{
+                  ...sectionLabelSx,
+                  py: 0.3,
+                  px: 0.5,
+                }}
+              />
+            </Box>
+
+            {/* Title */}
+            <Typography
+              component="h1"
+              className="anim-fade-up delay-2"
+              sx={{
+                fontFamily: T.font.display,
+                fontSize: { xs: '2.6rem', sm: '3.4rem', md: '4.2rem' },
                 fontWeight: 700,
-                lineHeight: 1.2
+                lineHeight: 1.12,
+                color: T.color.ink,
+                letterSpacing: '-0.025em',
+                mb: 3,
               }}
             >
               {t.hero.title}
-              <Typography 
-                component="span" 
-                color="primary" 
-                sx={{ 
-                  fontSize: 'inherit',
-                  fontWeight: 'inherit'
+              <Box
+                component="span"
+                sx={{
+                  color: T.color.forest,
+                  position: 'relative',
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    left: 0,
+                    bottom: '0.06em',
+                    width: '100%',
+                    height: '0.12em',
+                    bgcolor: T.color.accentLight,
+                    borderRadius: '4px',
+                    zIndex: -1,
+                  },
                 }}
               >
                 {t.hero.titleHighlight}
-              </Typography>
+              </Box>
               {' '}Reporting
             </Typography>
-            <Typography 
-              variant="h5" 
-              color="text.secondary" 
-              sx={{ mb: 4, lineHeight: 1.6 }}
+
+            {/* Subtitle */}
+            <Typography
+              className="anim-fade-up delay-3"
+              sx={{
+                fontFamily: T.font.body,
+                fontSize: { xs: '1.05rem', md: '1.2rem' },
+                color: T.color.muted,
+                lineHeight: 1.7,
+                maxWidth: 620,
+                mx: 'auto',
+                mb: 5,
+              }}
             >
               {t.hero.subtitle}
             </Typography>
-            <Stack 
-              direction={{ xs: 'column', sm: 'row' }} 
-              spacing={2} 
+
+            {/* CTA Buttons */}
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={2}
               justifyContent="center"
-              sx={{ mt: 4 }}
+              className="anim-fade-up delay-4"
             >
               <Button
                 variant="contained"
                 size="large"
-                endIcon={<ArrowForward />}
+                disableElevation
+                endIcon={<East />}
                 onClick={handleOpenDemoDialog}
-                sx={{ 
-                  px: 4, 
-                  py: 1.5,
-                  fontSize: '1.1rem',
-                  boxShadow: 3
+                sx={{
+                  fontFamily: T.font.body,
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  textTransform: 'none',
+                  bgcolor: T.color.forest,
+                  color: '#fff',
+                  borderRadius: T.radius.pill,
+                  px: 4,
+                  py: 1.6,
+                  boxShadow: `0 8px 24px -4px rgba(11,79,62,0.35)`,
+                  transition: 'all 0.3s cubic-bezier(.22,1,.36,1)',
+                  '&:hover': {
+                    bgcolor: T.color.ctaHover,
+                    transform: 'translateY(-2px)',
+                    boxShadow: `0 12px 32px -4px rgba(11,79,62,0.4)`,
+                  },
                 }}
               >
                 {t.hero.scheduleDemo}
@@ -788,10 +1344,21 @@ const CBAMLandingPage: React.FC = () => {
                 variant="outlined"
                 size="large"
                 onClick={() => navigate('/cbam-guide')}
-                sx={{ 
-                  px: 4, 
-                  py: 1.5,
-                  fontSize: '1.1rem'
+                sx={{
+                  fontFamily: T.font.body,
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  textTransform: 'none',
+                  color: T.color.forest,
+                  borderColor: T.color.line,
+                  borderRadius: T.radius.pill,
+                  px: 4,
+                  py: 1.6,
+                  transition: 'all 0.25s ease',
+                  '&:hover': {
+                    borderColor: T.color.forest,
+                    bgcolor: T.color.mint,
+                  },
                 }}
               >
                 {t.hero.learnMore}
@@ -801,14 +1368,42 @@ const CBAMLandingPage: React.FC = () => {
         </Container>
       </Box>
 
-      {/* Features Section */}
-      <Box id="features" sx={{ py: 10, bgcolor: 'background.paper' }}>
+      {/* ── Features Section ── */}
+      <Box
+        id="features"
+        sx={{
+          py: { xs: 10, md: 14 },
+          bgcolor: T.color.warmWhite,
+          position: 'relative',
+        }}
+      >
         <Container maxWidth="lg">
-          <Box textAlign="center" mb={8}>
-            <Typography variant="h2" component="h2" gutterBottom>
+          <Box textAlign="center" mb={{ xs: 6, md: 8 }}>
+            <Chip label="FEATURES" variant="outlined" sx={sectionLabelSx} />
+            <Typography
+              variant="h2"
+              component="h2"
+              sx={{
+                fontFamily: T.font.display,
+                fontWeight: 700,
+                fontSize: { xs: '2rem', md: '2.6rem' },
+                color: T.color.ink,
+                letterSpacing: '-0.02em',
+                mb: 2,
+              }}
+            >
               {t.features.title}
             </Typography>
-            <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 'md', mx: 'auto' }}>
+            <Typography
+              sx={{
+                fontFamily: T.font.body,
+                fontSize: '1.1rem',
+                color: T.color.muted,
+                maxWidth: 560,
+                mx: 'auto',
+                lineHeight: 1.6,
+              }}
+            >
               {t.features.subtitle}
             </Typography>
           </Box>
@@ -819,7 +1414,7 @@ const CBAMLandingPage: React.FC = () => {
                 icon={<Calculate />}
                 title={t.features.cards.calculate.title}
                 description={t.features.cards.calculate.description}
-                color="#059669"
+                index={0}
               />
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
@@ -827,7 +1422,7 @@ const CBAMLandingPage: React.FC = () => {
                 icon={<Description />}
                 title={t.features.cards.reports.title}
                 description={t.features.cards.reports.description}
-                color="#2563eb"
+                index={1}
               />
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
@@ -835,225 +1430,613 @@ const CBAMLandingPage: React.FC = () => {
                 icon={<Send />}
                 title={t.features.cards.sharing.title}
                 description={t.features.cards.sharing.description}
-                color="#7c3aed"
+                index={2}
               />
             </Grid>
           </Grid>
         </Container>
       </Box>
 
-      {/* How It Works */}
-      <Box id="how-it-works" sx={{ py: 10, bgcolor: 'grey.50' }}>
-        <Container maxWidth="lg">
-          <Box textAlign="center" mb={8}>
-            <Typography variant="h2" component="h2" gutterBottom>
+      {/* ── How It Works ── */}
+      <Box
+        id="how-it-works"
+        sx={{
+          py: { xs: 10, md: 14 },
+          bgcolor: T.color.cream,
+          position: 'relative',
+          /* Subtle diagonal line texture */
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `repeating-linear-gradient(
+              -45deg,
+              transparent,
+              transparent 40px,
+              ${T.color.lineFaint} 40px,
+              ${T.color.lineFaint} 41px
+            )`,
+            opacity: 0.4,
+            pointerEvents: 'none',
+          },
+        }}
+      >
+        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
+          <Box textAlign="center" mb={{ xs: 6, md: 8 }}>
+            <Chip label="PROCESS" variant="outlined" sx={sectionLabelSx} />
+            <Typography
+              variant="h2"
+              component="h2"
+              sx={{
+                fontFamily: T.font.display,
+                fontWeight: 700,
+                fontSize: { xs: '2rem', md: '2.6rem' },
+                color: T.color.ink,
+                letterSpacing: '-0.02em',
+                mb: 2,
+              }}
+            >
               {t.howItWorks.title}
             </Typography>
-            <Typography variant="h6" color="text.secondary">
+            <Typography
+              sx={{
+                fontFamily: T.font.body,
+                fontSize: '1.1rem',
+                color: T.color.muted,
+              }}
+            >
               {t.howItWorks.subtitle}
             </Typography>
           </Box>
 
-          <Grid container spacing={4}>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Step 
-                number={1} 
-                title={t.howItWorks.steps.input.title} 
-                description={t.howItWorks.steps.input.description} 
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Step 
-                number={2} 
-                title={t.howItWorks.steps.calculate.title} 
-                description={t.howItWorks.steps.calculate.description} 
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Step 
-                number={3} 
-                title={t.howItWorks.steps.share.title} 
-                description={t.howItWorks.steps.share.description} 
-              />
-            </Grid>
+          <Grid container spacing={4} alignItems="stretch">
+            {[
+              {
+                n: 1,
+                title: t.howItWorks.steps.input.title,
+                desc: t.howItWorks.steps.input.description,
+              },
+              {
+                n: 2,
+                title: t.howItWorks.steps.calculate.title,
+                desc: t.howItWorks.steps.calculate.description,
+              },
+              {
+                n: 3,
+                title: t.howItWorks.steps.share.title,
+                desc: t.howItWorks.steps.share.description,
+              },
+            ].map((step, i) => (
+              <Grid key={step.n} size={{ xs: 12, md: 4 }}>
+                <StepCard
+                  number={step.n}
+                  title={step.title}
+                  description={step.desc}
+                  index={i}
+                />
+              </Grid>
+            ))}
           </Grid>
         </Container>
       </Box>
 
-      {/* Benefits Section */}
-      <Box sx={{ py: 10, bgcolor: 'background.paper' }}>
+      {/* ── Benefits Section ── */}
+      <Box
+        sx={{
+          py: { xs: 10, md: 14 },
+          bgcolor: T.color.warmWhite,
+        }}
+      >
         <Container maxWidth="lg">
-          <Grid container spacing={8} alignItems="center">
+          <Grid container spacing={{ xs: 6, md: 10 }} alignItems="center">
             <Grid size={{ xs: 12, md: 6 }}>
-              <Typography variant="h2" component="h2" gutterBottom>
+              <Chip
+                label="WHY PANONIA"
+                variant="outlined"
+                sx={sectionLabelSx}
+              />
+              <Typography
+                variant="h2"
+                component="h2"
+                sx={{
+                  fontFamily: T.font.display,
+                  fontWeight: 700,
+                  fontSize: { xs: '2rem', md: '2.5rem' },
+                  color: T.color.ink,
+                  letterSpacing: '-0.02em',
+                  mb: 4,
+                }}
+              >
                 {t.benefits.title}
               </Typography>
-              <Stack spacing={3} sx={{ mt: 4 }}>
-                <Benefit 
-                  title={t.benefits.items.compliant.title} 
-                  description={t.benefits.items.compliant.description} 
+              <Stack spacing={1}>
+                <BenefitRow
+                  icon={<VerifiedUser />}
+                  title={t.benefits.items.compliant.title}
+                  description={t.benefits.items.compliant.description}
+                  index={0}
                 />
-                <Benefit 
-                  title={t.benefits.items.saveTime.title} 
-                  description={t.benefits.items.saveTime.description} 
+                <BenefitRow
+                  icon={<Speed />}
+                  title={t.benefits.items.saveTime.title}
+                  description={t.benefits.items.saveTime.description}
+                  index={1}
                 />
-                <Benefit 
-                  title={t.benefits.items.reduceErrors.title} 
-                  description={t.benefits.items.reduceErrors.description} 
+                <BenefitRow
+                  icon={<TrendingUp />}
+                  title={t.benefits.items.reduceErrors.title}
+                  description={t.benefits.items.reduceErrors.description}
+                  index={2}
                 />
-                <Benefit 
-                  title={t.benefits.items.buildTrust.title} 
-                  description={t.benefits.items.buildTrust.description} 
+                <BenefitRow
+                  icon={<Handshake />}
+                  title={t.benefits.items.buildTrust.title}
+                  description={t.benefits.items.buildTrust.description}
+                  index={3}
                 />
               </Stack>
             </Grid>
+
+            {/* Stats card */}
             <Grid size={{ xs: 12, md: 6 }}>
-              <Paper 
-                elevation={3}
-                sx={{ 
-                  p: 4, 
-                  background: 'linear-gradient(135deg, #d1fae5, #dbeafe)',
-                  borderRadius: 3
-                }}
-              >
-                <Box textAlign="center">
-                  <Typography variant="h3" component="div" sx={{ fontWeight: 700, mb: 1 }}>
-                    2,500+
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-                    {t.benefits.stats.companies}
-                  </Typography>
-                  <Divider sx={{ my: 3 }} />
-                  <Typography variant="h3" component="div" color="primary" sx={{ fontWeight: 700, mb: 1 }}>
-                    99.8%
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    {t.benefits.stats.accuracy}
-                  </Typography>
-                </Box>
-              </Paper>
+              <Box className="anim-scale-in delay-3" sx={{ opacity: 0 }}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: { xs: 4, md: 6 },
+                    borderRadius: T.radius.xl,
+                    border: `1px solid ${T.color.line}`,
+                    bgcolor: T.color.warmWhite,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    /* Gradient accent corner */
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: -60,
+                      right: -60,
+                      width: 200,
+                      height: 200,
+                      borderRadius: '50%',
+                      background: `radial-gradient(circle, ${T.color.mint} 0%, transparent 70%)`,
+                    },
+                    '&::after': {
+                      content: '""',
+                      position: 'absolute',
+                      bottom: -40,
+                      left: -40,
+                      width: 160,
+                      height: 160,
+                      borderRadius: '50%',
+                      background: `radial-gradient(circle, ${T.color.accentLight} 0%, transparent 70%)`,
+                    },
+                  }}
+                >
+                  <Box textAlign="center" position="relative" zIndex={1}>
+                    <Typography
+                      sx={{
+                        fontFamily: T.font.display,
+                        fontSize: { xs: '3rem', md: '3.8rem' },
+                        fontWeight: 700,
+                        color: T.color.forest,
+                        lineHeight: 1,
+                        mb: 1,
+                      }}
+                    >
+                      2,500+
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontFamily: T.font.body,
+                        color: T.color.muted,
+                        fontSize: '1rem',
+                        mb: 5,
+                      }}
+                    >
+                      {t.benefits.stats.companies}
+                    </Typography>
+
+                    <Divider
+                      sx={{
+                        borderColor: T.color.lineFaint,
+                        my: 0,
+                        maxWidth: 200,
+                        mx: 'auto',
+                      }}
+                    />
+
+                    <Typography
+                      sx={{
+                        fontFamily: T.font.display,
+                        fontSize: { xs: '3rem', md: '3.8rem' },
+                        fontWeight: 700,
+                        color: T.color.accent,
+                        lineHeight: 1,
+                        mt: 5,
+                        mb: 1,
+                      }}
+                    >
+                      99.8%
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontFamily: T.font.body,
+                        color: T.color.muted,
+                        fontSize: '1rem',
+                      }}
+                    >
+                      {t.benefits.stats.accuracy}
+                    </Typography>
+                  </Box>
+                </Paper>
+              </Box>
             </Grid>
           </Grid>
         </Container>
       </Box>
 
-      {/* CTA Section */}
-      <Box sx={{ py: 10, bgcolor: 'primary.main', color: 'white' }}>
-        <Container maxWidth="md">
-          <Box textAlign="center">
-            <Typography variant="h2" component="h2" gutterBottom sx={{ color: 'white' }}>
-              {t.cta.title}
-            </Typography>
-            <Typography variant="h6" sx={{ mb: 4, color: 'primary.light' }}>
-              {t.cta.subtitle}
-            </Typography>
-            <Button
-              variant="contained"
-              size="large"
-              endIcon={<ArrowForward />}
-              onClick={handleOpenDemoDialog}
-              sx={{ 
-                bgcolor: 'white',
-                color: 'primary.main',
-                px: 4,
-                py: 1.5,
-                fontSize: '1.1rem',
-                '&:hover': {
-                  bgcolor: 'grey.100',
-                }
-              }}
-            >
-              {t.cta.button}
-            </Button>
-          </Box>
+      {/* ── CTA Section ── */}
+      <Box
+        sx={{
+          py: { xs: 10, md: 14 },
+          position: 'relative',
+          overflow: 'hidden',
+          bgcolor: T.color.forest,
+          /* Animated gradient overlay */
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            background: `linear-gradient(135deg, ${T.color.forest} 0%, #0E6B52 30%, ${T.color.forest} 60%, #0A3F32 100%)`,
+            backgroundSize: '200% 200%',
+            animation: 'gradientShift 8s ease infinite',
+          },
+          /* Dot grid on dark */
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            backgroundImage:
+              'radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px)',
+            backgroundSize: '24px 24px',
+            pointerEvents: 'none',
+          },
+        }}
+      >
+        <Container
+          maxWidth="md"
+          sx={{ position: 'relative', zIndex: 1, textAlign: 'center' }}
+        >
+          <Typography
+            variant="h2"
+            component="h2"
+            sx={{
+              fontFamily: T.font.display,
+              fontWeight: 700,
+              fontSize: { xs: '2rem', md: '2.8rem' },
+              color: '#fff',
+              letterSpacing: '-0.02em',
+              mb: 2,
+            }}
+          >
+            {t.cta.title}
+          </Typography>
+          <Typography
+            sx={{
+              fontFamily: T.font.body,
+              fontSize: '1.1rem',
+              color: 'rgba(255,255,255,0.65)',
+              mb: 5,
+              maxWidth: 520,
+              mx: 'auto',
+              lineHeight: 1.65,
+            }}
+          >
+            {t.cta.subtitle}
+          </Typography>
+          <Button
+            variant="contained"
+            size="large"
+            disableElevation
+            endIcon={<East />}
+            onClick={handleOpenDemoDialog}
+            sx={{
+              fontFamily: T.font.body,
+              fontWeight: 600,
+              fontSize: '1rem',
+              textTransform: 'none',
+              bgcolor: '#fff',
+              color: T.color.forest,
+              borderRadius: T.radius.pill,
+              px: 5,
+              py: 1.7,
+              transition: 'all 0.3s cubic-bezier(.22,1,.36,1)',
+              '&:hover': {
+                bgcolor: T.color.accentLight,
+                transform: 'translateY(-2px)',
+                boxShadow: '0 12px 32px -8px rgba(0,0,0,0.25)',
+              },
+            }}
+          >
+            {t.cta.button}
+          </Button>
         </Container>
       </Box>
 
-      {/* Footer */}
-      <Box sx={{ bgcolor: 'grey.900', color: 'grey.300', py: 6 }}>
+      {/* ── Footer ── */}
+      <Box
+        component="footer"
+        sx={{
+          bgcolor: T.color.ink,
+          color: 'rgba(255,255,255,0.55)',
+          pt: { xs: 6, md: 8 },
+          pb: 4,
+        }}
+      >
         <Container maxWidth="lg">
-          <Grid container spacing={4} sx={{ mb: 4 }}>
+          <Grid container spacing={4} sx={{ mb: 6 }}>
+            {/* Brand */}
             <Grid size={{ xs: 12, md: 3 }}>
-              <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: 'white' }}>
-                  PANONIA
+              <Box display="flex" alignItems="center" gap={1.2} mb={2}>
+                <Box
+                  sx={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: '8px',
+                    bgcolor: T.color.forest,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Shield sx={{ color: '#fff', fontSize: 16 }} />
+                </Box>
+                <Typography
+                  sx={{
+                    fontFamily: T.font.display,
+                    fontWeight: 700,
+                    fontSize: '1.1rem',
+                    color: '#fff',
+                  }}
+                >
+                  Panonia
                 </Typography>
               </Box>
-              <Typography variant="body2">
+              <Typography
+                sx={{
+                  fontFamily: T.font.body,
+                  fontSize: '0.9rem',
+                  lineHeight: 1.65,
+                  maxWidth: 240,
+                }}
+              >
                 {t.footer.tagline}
               </Typography>
             </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, mb: 2 }}>
+
+            {/* Product */}
+            <Grid size={{ xs: 6, md: 3 }}>
+              <Typography
+                sx={{
+                  fontFamily: T.font.body,
+                  fontWeight: 600,
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.35)',
+                  mb: 2.5,
+                }}
+              >
                 {t.footer.product.title}
               </Typography>
-              <Stack spacing={1}>
-                <Button color="inherit" size="small">
-                  {t.footer.product.features}
-                </Button>
-                <Button color="inherit" size="small">
-                  {t.footer.product.pricing}
-                </Button>
-                <Button color="inherit" size="small">
-                  {t.footer.product.documentation}
-                </Button>
+              <Stack spacing={1.5}>
+                {[
+                  t.footer.product.features,
+                  t.footer.product.pricing,
+                  t.footer.product.documentation,
+                ].map((item) => (
+                  <Typography
+                    key={item}
+                    component="a"
+                    href="#"
+                    sx={{
+                      fontFamily: T.font.body,
+                      fontSize: '0.9rem',
+                      color: 'rgba(255,255,255,0.55)',
+                      textDecoration: 'none',
+                      transition: 'color 0.2s',
+                      '&:hover': { color: '#fff' },
+                    }}
+                  >
+                    {item}
+                  </Typography>
+                ))}
               </Stack>
             </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, mb: 2 }}>
+
+            {/* Resources */}
+            <Grid size={{ xs: 6, md: 3 }}>
+              <Typography
+                sx={{
+                  fontFamily: T.font.body,
+                  fontWeight: 600,
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.35)',
+                  mb: 2.5,
+                }}
+              >
                 {t.footer.resources.title}
               </Typography>
-              <Stack spacing={1}>
-                <Button color="inherit" size="small" onClick={() => navigate('/cbam-guide')}>
+              <Stack spacing={1.5}>
+                <Typography
+                  component="a"
+                  onClick={() => navigate('/cbam-guide')}
+                  sx={{
+                    fontFamily: T.font.body,
+                    fontSize: '0.9rem',
+                    color: 'rgba(255,255,255,0.55)',
+                    textDecoration: 'none',
+                    cursor: 'pointer',
+                    transition: 'color 0.2s',
+                    '&:hover': { color: '#fff' },
+                  }}
+                >
                   {t.footer.resources.guide}
-                </Button>
-                <Button color="inherit" size="small">
-                  {t.footer.resources.blog}
-                </Button>
-                <Button color="inherit" size="small">
-                  {t.footer.resources.support}
-                </Button>
+                </Typography>
+                {[t.footer.resources.blog, t.footer.resources.support].map(
+                  (item) => (
+                    <Typography
+                      key={item}
+                      component="a"
+                      href="#"
+                      sx={{
+                        fontFamily: T.font.body,
+                        fontSize: '0.9rem',
+                        color: 'rgba(255,255,255,0.55)',
+                        textDecoration: 'none',
+                        transition: 'color 0.2s',
+                        '&:hover': { color: '#fff' },
+                      }}
+                    >
+                      {item}
+                    </Typography>
+                  ),
+                )}
               </Stack>
             </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, mb: 2 }}>
+
+            {/* Company */}
+            <Grid size={{ xs: 6, md: 3 }}>
+              <Typography
+                sx={{
+                  fontFamily: T.font.body,
+                  fontWeight: 600,
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.35)',
+                  mb: 2.5,
+                }}
+              >
                 {t.footer.company.title}
               </Typography>
-              <Stack spacing={1}>
-                <Button color="inherit" size="small">
+              <Stack spacing={1.5}>
+                <Typography
+                  component="a"
+                  href="#"
+                  sx={{
+                    fontFamily: T.font.body,
+                    fontSize: '0.9rem',
+                    color: 'rgba(255,255,255,0.55)',
+                    textDecoration: 'none',
+                    transition: 'color 0.2s',
+                    '&:hover': { color: '#fff' },
+                  }}
+                >
                   {t.footer.company.about}
-                </Button>
-                <Button color="inherit" size="small" onClick={() => navigate('/contact')}>
+                </Typography>
+                <Typography
+                  component="a"
+                  onClick={() => navigate('/contact')}
+                  sx={{
+                    fontFamily: T.font.body,
+                    fontSize: '0.9rem',
+                    color: 'rgba(255,255,255,0.55)',
+                    textDecoration: 'none',
+                    cursor: 'pointer',
+                    transition: 'color 0.2s',
+                    '&:hover': { color: '#fff' },
+                  }}
+                >
                   {t.footer.company.contact}
-                </Button>
-                <Button color="inherit" size="small">
+                </Typography>
+                <Typography
+                  component="a"
+                  href="#"
+                  sx={{
+                    fontFamily: T.font.body,
+                    fontSize: '0.9rem',
+                    color: 'rgba(255,255,255,0.55)',
+                    textDecoration: 'none',
+                    transition: 'color 0.2s',
+                    '&:hover': { color: '#fff' },
+                  }}
+                >
                   {t.footer.company.privacy}
-                </Button>
+                </Typography>
               </Stack>
             </Grid>
           </Grid>
-          <Box sx={{ borderTop: 1, borderColor: 'grey.800', pt: 2, textAlign: 'center' }}>
-            <Typography variant="body2">
-              {t.footer.copyright}
-            </Typography>
-          </Box>
+
+          <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)', mb: 3 }} />
+
+          <Typography
+            sx={{
+              fontFamily: T.font.body,
+              fontSize: '0.82rem',
+              textAlign: 'center',
+              color: 'rgba(255,255,255,0.3)',
+            }}
+          >
+            {t.footer.copyright}
+          </Typography>
         </Container>
       </Box>
 
-      {/* Schedule Demo Dialog */}
-      <Dialog open={demoDialogOpen} onClose={handleCloseDemoDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>Schedule a Demo</DialogTitle>
+      {/* ── Schedule Demo Dialog ── */}
+      <Dialog
+        open={demoDialogOpen}
+        onClose={handleCloseDemoDialog}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: T.radius.lg,
+            overflow: 'hidden',
+          },
+        }}
+      >
+        {/* Accent bar at top */}
+        <Box
+          sx={{
+            height: 4,
+            background: `linear-gradient(90deg, ${T.color.forest}, ${T.color.sage}, ${T.color.accent})`,
+          }}
+        />
+        <DialogTitle
+          sx={{
+            fontFamily: T.font.display,
+            fontWeight: 700,
+            fontSize: '1.4rem',
+            color: T.color.ink,
+            pt: 3,
+          }}
+        >
+          Schedule a Demo
+        </DialogTitle>
         <form onSubmit={handleDemoSubmit}>
           <DialogContent>
             {demoError && (
-              <Alert severity="error" sx={{ mb: 2 }} onClose={() => setDemoError(null)}>
+              <Alert
+                severity="error"
+                sx={{ mb: 2, borderRadius: T.radius.sm }}
+                onClose={() => setDemoError(null)}
+              >
                 {demoError}
               </Alert>
             )}
             {demoSuccess ? (
-              <Alert severity="success">Thank you! We&apos;ll be in touch soon.</Alert>
+              <Alert
+                severity="success"
+                sx={{ borderRadius: T.radius.sm }}
+                icon={<CheckCircle />}
+              >
+                Thank you! We&apos;ll be in touch soon.
+              </Alert>
             ) : (
-              <Stack spacing={2} sx={{ pt: 1 }}>
+              <Stack spacing={2.5} sx={{ pt: 1 }}>
                 <TextField
                   required
                   label="Name"
@@ -1061,6 +2044,15 @@ const CBAMLandingPage: React.FC = () => {
                   onChange={(e) => setDemoName(e.target.value)}
                   fullWidth
                   autoFocus
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: T.radius.sm,
+                      fontFamily: T.font.body,
+                    },
+                    '& .MuiInputLabel-root': {
+                      fontFamily: T.font.body,
+                    },
+                  }}
                 />
                 <TextField
                   required
@@ -1069,12 +2061,30 @@ const CBAMLandingPage: React.FC = () => {
                   value={demoEmail}
                   onChange={(e) => setDemoEmail(e.target.value)}
                   fullWidth
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: T.radius.sm,
+                      fontFamily: T.font.body,
+                    },
+                    '& .MuiInputLabel-root': {
+                      fontFamily: T.font.body,
+                    },
+                  }}
                 />
                 <TextField
                   label="Company"
                   value={demoCompany}
                   onChange={(e) => setDemoCompany(e.target.value)}
                   fullWidth
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: T.radius.sm,
+                      fontFamily: T.font.body,
+                    },
+                    '& .MuiInputLabel-root': {
+                      fontFamily: T.font.body,
+                    },
+                  }}
                 />
                 <TextField
                   label="Message"
@@ -1083,17 +2093,54 @@ const CBAMLandingPage: React.FC = () => {
                   fullWidth
                   multiline
                   rows={3}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: T.radius.sm,
+                      fontFamily: T.font.body,
+                    },
+                    '& .MuiInputLabel-root': {
+                      fontFamily: T.font.body,
+                    },
+                  }}
                 />
               </Stack>
             )}
           </DialogContent>
           {!demoSuccess && (
-            <DialogActions sx={{ px: 3, pb: 2 }}>
-              <Button onClick={handleCloseDemoDialog} disabled={demoLoading}>
+            <DialogActions sx={{ px: 3, pb: 3 }}>
+              <Button
+                onClick={handleCloseDemoDialog}
+                disabled={demoLoading}
+                sx={{
+                  fontFamily: T.font.body,
+                  textTransform: 'none',
+                  borderRadius: T.radius.pill,
+                  px: 3,
+                  color: T.color.muted,
+                }}
+              >
                 Cancel
               </Button>
-              <Button type="submit" variant="contained" disabled={demoLoading}>
-                {demoLoading ? <CircularProgress size={24} /> : 'Submit'}
+              <Button
+                type="submit"
+                variant="contained"
+                disableElevation
+                disabled={demoLoading}
+                sx={{
+                  fontFamily: T.font.body,
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  bgcolor: T.color.forest,
+                  borderRadius: T.radius.pill,
+                  px: 4,
+                  '&:hover': { bgcolor: T.color.ctaHover },
+                }}
+              >
+                {demoLoading ? (
+                  <CircularProgress size={22} sx={{ color: '#fff' }} />
+                ) : (
+                  'Submit'
+                )}
               </Button>
             </DialogActions>
           )}
@@ -1103,19 +2150,14 @@ const CBAMLandingPage: React.FC = () => {
   );
 };
 
+/* ─── App Router ─── */
+
 const App: React.FC = () => {
   const navigate = useNavigate();
 
-  const handleBackToHome = () => {
-    navigate('/');
-  };
-
-  const handleLoginSuccess = () => {
-    navigate('/dashboard');
-  };
-
+  const handleBackToHome = () => navigate('/');
+  const handleLoginSuccess = () => navigate('/dashboard');
   const handleLogout = () => {
-    // Clear localStorage on logout
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
@@ -1127,12 +2169,14 @@ const App: React.FC = () => {
       <Route path="/cbam-guide" element={<CBAMGuide />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/admin" element={<Admin />} />
-      <Route 
-        path="/login" 
-        element={<Login onBack={handleBackToHome} onLoginSuccess={handleLoginSuccess} />} 
+      <Route
+        path="/login"
+        element={
+          <Login onBack={handleBackToHome} onLoginSuccess={handleLoginSuccess} />
+        }
       />
-      <Route 
-        path="/dashboard" 
+      <Route
+        path="/dashboard"
         element={
           <ProtectedRoute>
             <Dashboard onLogout={handleLogout} />
@@ -1143,9 +2187,11 @@ const App: React.FC = () => {
         <Route path="reports" element={<ReportsList />} />
         <Route path="settings" element={<Settings />} />
         <Route path="generate-report" element={<GenerateReport />} />
-        {/* Single URL for wizard: new (no id) creates then redirects; edit has calculationId in path */}
         <Route path="new-calculation" element={<NewCalculation />} />
-        <Route path="new-calculation/:calculationId" element={<NewCalculation />} />
+        <Route
+          path="new-calculation/:calculationId"
+          element={<NewCalculation />}
+        />
       </Route>
     </Routes>
   );

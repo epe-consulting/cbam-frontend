@@ -2,6 +2,11 @@ import { Box, CircularProgress, Typography } from '@mui/material';
 import { DynamicQuestionStep } from './DynamicQuestionStep';
 import type { QuestionWithOptions } from '../hooks/useQuestionsByStep';
 
+const T = {
+  font: { body: "'DM Sans', system-ui, sans-serif" },
+  color: { forest: '#0B4F3E', muted: '#6B8F82' },
+};
+
 export interface QuestionStepWrapperProps {
   questions: QuestionWithOptions[];
   loading: boolean;
@@ -12,7 +17,6 @@ export interface QuestionStepWrapperProps {
   onValueChange?: (questionCode: string, valueText: string) => void;
   onBack: () => void;
   onNext: () => void;
-  /** Optional title rendered above the questions (e.g. "Unesite:") */
   title?: React.ReactNode;
 }
 
@@ -31,20 +35,20 @@ export function QuestionStepWrapper({
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight={120}>
-        <CircularProgress />
+        <CircularProgress sx={{ color: T.color.forest }} />
       </Box>
     );
   }
   if (error) {
     return (
-      <Typography color="error" sx={{ mb: 2 }}>
+      <Typography sx={{ mb: 2, fontFamily: T.font.body, color: '#C0392B' }}>
         {error}
       </Typography>
     );
   }
   if (!questions || questions.length === 0) {
     return (
-      <Typography color="text.secondary">
+      <Typography sx={{ fontFamily: T.font.body, color: T.color.muted }}>
         No questions available for this step.
       </Typography>
     );

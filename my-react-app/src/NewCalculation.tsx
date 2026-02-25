@@ -32,6 +32,33 @@ import {
   getLookupId,
 } from './api/emissionFactors';
 
+/* ─── Design tokens (shared across Panonia) ─── */
+const T = {
+  font: {
+    display: "'Fraunces', Georgia, serif",
+    body: "'DM Sans', system-ui, sans-serif",
+  },
+  color: {
+    forest: '#0B4F3E',
+    sage: '#3A7D6A',
+    mint: '#E8F5EF',
+    cream: '#FAFAF7',
+    warmWhite: '#FFFEF9',
+    ink: '#1A2B25',
+    inkSoft: '#3D5A50',
+    muted: '#6B8F82',
+    line: '#D6E5DD',
+    lineFaint: '#EAF0EC',
+    ctaHover: '#0A3F32',
+  },
+  radius: {
+    sm: '8px',
+    md: '14px',
+    lg: '20px',
+    pill: '999px',
+  },
+};
+
 const NewCalculation: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -56,11 +83,9 @@ const NewCalculation: React.FC = () => {
   const [productionProcess, setProductionProcess] = useState('');
   const [dataQualityLevel, setDataQualityLevel] = useState('');
   
-  // Fuel input state - array of fuel entries (emission factor from API lookups)
   const [fuelEntries, setFuelEntries] = useState<FuelEntry[]>([
     { id: 1, sector: '', subsector: '', subsubsector: '', emissionFactorName: '', denominator: '', amount: '', emissionFactorId: null, emissionFactorValue: null }
   ]);
-  // Emission factor lookup (sectors from backend; cascading dropdowns per entry)
   const [fuelSectors, setFuelSectors] = useState<string[]>([]);
   const [subsectorsCache, setSubsectorsCache] = useState<Record<string, string[]>>({});
   const [subsubsectorsCache, setSubsubsectorsCache] = useState<Record<string, string[]>>({});
@@ -69,38 +94,30 @@ const NewCalculation: React.FC = () => {
   const [fuelLookupLoading, setFuelLookupLoading] = useState(false);
   const [fuelLookupError, setFuelLookupError] = useState<string | null>(null);
 
-  // Anodes input state
   const [anodesQuantity, setAnodesQuantity] = useState<string>('');
   const [hasCarbonPercentage, setHasCarbonPercentage] = useState<string>('');
   const [carbonPercentage, setCarbonPercentage] = useState<string>('');
-  // Step 6: show form (prebaked or Söderberg) only after user presses Next on anode type question
   const [anodeTypeConfirmed, setAnodeTypeConfirmed] = useState(false);
 
-  // Precursor input state (ALU_PRODUCTS_PRECURSORS)
   const [precursorEntries, setPrecursorEntries] = useState<PrecursorEntry[]>([
     { id: 1, vrsta: '', kolicina: '', ugradjeneEmisije: '' }
   ]);
 
-  // PFC input state
   const [_pfcQuantity, _setPfcQuantity] = useState<string>('');
   const [_hasPfcCarbonPercentage, _setHasPfcCarbonPercentage] = useState<string>('');
   const [_pfcCarbonPercentage, _setPfcCarbonPercentage] = useState<string>('');
   const [pfcMethod, setPfcMethod] = useState<string>('');
 
-  // Slope (PFC method a) input state
   const [anodeEffectFrequency, setAnodeEffectFrequency] = useState<string>('');
   const [anodeEffectDuration, setAnodeEffectDuration] = useState<string>('');
   const [primaryAluminumQuantity, setPrimaryAluminumQuantity] = useState<string>('');
   const [cellTechnology, setCellTechnology] = useState<string>('');
 
-  // Own embedded emissions (products path: "Da li imate već izračunate ugrađene emisije?" DA/NE)
   const [ownEmbeddedEmissions, setOwnEmbeddedEmissions] = useState<string>('');
 
-  // Electricity source state
   const [electricitySource, setElectricitySource] = useState<string>('');
   const [ppaHasEmissionFactor, _setPpaHasEmissionFactor] = useState<string>('');
 
-  // BE-driven: current step from calculation.currentStep. Questions for this step (skip PRODUCT_INFO and COMPLETE).
   const stepCodeForQuestions = useMemo(
     () =>
       currentStepCode && currentStepCode !== 'PRODUCT_INFO' && currentStepCode !== 'COMPLETE'
@@ -111,7 +128,6 @@ const NewCalculation: React.FC = () => {
   const { questions: questionsFromApi, loading: questionsLoading, error: questionsError } = useQuestionsByStep(stepCodeForQuestions);
   const { answers, getAnswer, setAnswer, saveAnswer, clearAllLocalAnswers, deleteAnswersForQuestions } = useCalculationAnswers(calculationId);
 
-  // Map BE step_code to step number (1–12) so existing step-based UI still works
   const stepFromCurrentStepCode = (code: string): number => {
     switch (code) {
       case 'PRODUCT_INFO': return 1;
@@ -153,13 +169,12 @@ const NewCalculation: React.FC = () => {
       case 'ALU_PPA_EMISSION_FACTOR':
       case 'ALU_PPA_EMISSION_FACTOR_AND_CONSUMPTION':
       case 'ALU_PPA_CONSUMPTION_ONLY': return 11;
-      case 'SABIRNA_TACKA': return 99; // pass-through routing step, no UI
+      case 'SABIRNA_TACKA': return 99;
       case 'COMPLETE': return 12;
       default: return 1;
     }
   };
 
-  // Load calculation when calculationId is in URL (edit or after create redirect)
   useEffect(() => {
     if (calculationId == null) return;
     let cancelled = false;
@@ -178,13 +193,10 @@ const NewCalculation: React.FC = () => {
     return () => { cancelled = true; };
   }, [calculationId]);
 
-  // Keep step in sync with currentStepCode when it changes (e.g. after Next/Back)
   useEffect(() => {
     setStep(stepFromCurrentStepCode(currentStepCode));
   }, [currentStepCode]);
 
-  // Auto-navigate through pass-through steps (SABIRNA_TACKA: no UI, routing only).
-  // Also clears all pre-filled form state so the new pass starts fresh.
   useEffect(() => {
     if (currentStepCode !== 'SABIRNA_TACKA' || calculationId == null) return;
     let cancelled = false;
@@ -199,9 +211,6 @@ const NewCalculation: React.FC = () => {
           await patchCalculationWizard(calculationId, { currentStep: toStepCode });
         }
         if (cancelled) return;
-        // Clear ALL pre-filled state before navigating to the new pass's first step.
-        // This must happen in the same batch as setCurrentStepCode so the new step
-        // renders with empty forms.
         clearAllLocalAnswers();
         setFuelEntries([{ id: 1, sector: '', subsector: '', subsubsector: '', emissionFactorName: '', denominator: '', amount: '', emissionFactorId: null, emissionFactorValue: null }]);
         setAnodesQuantity('');
@@ -219,14 +228,12 @@ const NewCalculation: React.FC = () => {
         setCurrentStepCode(toStepCode);
         setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode, status: toStepCode === 'COMPLETE' ? 'COMPLETED' : c.status } : null));
       } catch {
-        // routing error – stay on loading state
+        // routing error
       }
     })();
     return () => { cancelled = true; };
   }, [currentStepCode, calculationId, clearAllLocalAnswers]);
 
-  // When entering any fuel step, clear fuel entries so the user starts fresh
-  // (covers direct step transitions within the same pass, e.g. ALU_SECONDARY_FUEL_INPUT → ALU_SECONDARY_FUEL_RELATED)
   const FUEL_STEP_CODES = useMemo(() => new Set([
     'FUEL_INPUT', 'ALU_SECONDARY_FUEL_INPUT', 'ALU_SECONDARY_FUEL_RELATED',
     'ALU_PRODUCTS_REMAINING_FUEL_INPUT',
@@ -237,14 +244,12 @@ const NewCalculation: React.FC = () => {
     }
   }, [currentStepCode, FUEL_STEP_CODES]);
 
-  // When entering the precursors step, clear precursor form so user enters fresh data
   useEffect(() => {
     if (currentStepCode === 'ALU_PRODUCTS_PRECURSORS') {
       setPrecursorEntries([{ id: 1, vrsta: '', kolicina: '', ugradjeneEmisije: '' }]);
     }
   }, [currentStepCode]);
 
-  // Hydrate local state from saved calculation answers (once per calculation load)
   const [questionIdToCode, setQuestionIdToCode] = useState<Record<number, string>>({});
   const hasHydratedRef = useRef(false);
   useEffect(() => {
@@ -323,7 +328,6 @@ const NewCalculation: React.FC = () => {
     });
   }, [answers, questionIdToCode]);
 
-  // Derive answer for display: use saved answer or map from local state (for sync with URL/navigation)
   const getLocalStateForQuestionCode = (code: string): string => {
     switch (code) {
       case 'ALU_DECLARATION_PRODUCT': return aluminumProductType;
@@ -350,7 +354,6 @@ const NewCalculation: React.FC = () => {
     if (!code) return getAnswer(questionId);
     const local = getLocalStateForQuestionCode(code);
     if (!local) return getAnswer(questionId);
-    // VALUE questions: local state is the value; SINGLE_CHOICE/MULTI_CHOICE: convert to option code
     if (['ALU_ANODES_QTY', 'ALU_ANODE_CARBON_PERCENT', 'ALU_AE_FREQUENCY', 'ALU_AE_AVG_DURATION', 'ALU_PRIMARY_AL_QTY'].includes(code)) return local;
     return frontendStateToOptionCode(code, local);
   };
@@ -380,7 +383,6 @@ const NewCalculation: React.FC = () => {
     }
   };
 
-  // When we show the fuel form (primary real-data or secondary fuel steps), load emission factors from API
   const isFuelStepWithLookup =
     step === 5 &&
     ( currentStepCode === 'FUEL_INPUT' ||
@@ -388,7 +390,6 @@ const NewCalculation: React.FC = () => {
       currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' ||
       currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT' );
 
-  // Load emission factor sectors when on fuel step (primary or secondary)
   useEffect(() => {
     if (!isFuelStepWithLookup) return;
     let cancelled = false;
@@ -401,7 +402,6 @@ const NewCalculation: React.FC = () => {
     return () => { cancelled = true; };
   }, [isFuelStepWithLookup]);
 
-  // Populate cascading caches: subsectors by sector (from emission_factors)
   useEffect(() => {
     if (!isFuelStepWithLookup) return;
     const sectors = [...new Set(fuelEntries.map((e: FuelEntry) => e.sector).filter(Boolean))] as string[];
@@ -416,7 +416,6 @@ const NewCalculation: React.FC = () => {
     return () => { cancelled = true; };
   }, [isFuelStepWithLookup, fuelEntries, subsectorsCache]);
 
-  // Subsubsectors by sector+subsector (e.g. if subsector is "Liquid fuels", only options for that subsector)
   useEffect(() => {
     if (!isFuelStepWithLookup) return;
     const keys = [...new Set(fuelEntries.filter((e: FuelEntry) => e.sector && e.subsector).map((e: FuelEntry) => `${e.sector}|${e.subsector}`))] as string[];
@@ -432,7 +431,6 @@ const NewCalculation: React.FC = () => {
     return () => { cancelled = true; };
   }, [isFuelStepWithLookup, fuelEntries, subsubsectorsCache]);
 
-  // Emission factor names by sector+subsector+subsubsector
   useEffect(() => {
     if (!isFuelStepWithLookup) return;
     const keys = [...new Set(fuelEntries.filter((e: FuelEntry) => e.sector && e.subsector).map((e: FuelEntry) => `${e.sector}|${e.subsector}|${e.subsubsector ?? ''}`))] as string[];
@@ -451,7 +449,6 @@ const NewCalculation: React.FC = () => {
     return () => { cancelled = true; };
   }, [isFuelStepWithLookup, fuelEntries, emissionFactorNamesCache]);
 
-  // Denominators by sector+subsector+subsubsector+emissionFactorName
   useEffect(() => {
     if (!isFuelStepWithLookup) return;
     const keys = [...new Set(fuelEntries.filter((e: FuelEntry) => e.sector && e.subsector && e.emissionFactorName).map((e: FuelEntry) => `${e.sector}|${e.subsector}|${e.subsubsector ?? ''}|${e.emissionFactorName}`))] as string[];
@@ -490,9 +487,6 @@ const NewCalculation: React.FC = () => {
     }
   };
 
-  // Step and currentStepCode are now driven by BE (calculation.currentStep); no URL-based restore.
-
-  // After refresh on step 6: if anode type is already saved (from API), show the form. Only run when step or questions load changes, not when answers changes (so selecting an option does not auto-route).
   useEffect(() => {
     if (step !== 6 || !questionsFromApi?.length) return;
     const anodeTypeQuestion = questionsFromApi.find((q: { code: string }) => q.code === 'ALU_ANODE_TYPE');
@@ -501,14 +495,12 @@ const NewCalculation: React.FC = () => {
     if (savedAnswer != null && savedAnswer !== '') setAnodeTypeConfirmed(true);
   }, [step, questionsFromApi]);
 
-  // Persist calculationId so refresh on /new-calculation keeps the same calculation
   useEffect(() => {
     if (calculationId != null && location.pathname.includes('/new-calculation')) {
       sessionStorage.setItem(CBAM_CALC_ID_KEY, String(calculationId));
     }
   }, [calculationId, location.pathname, CBAM_CALC_ID_KEY]);
 
-  // When URL is /dashboard/new-calculation (no id), create calculation and redirect to /dashboard/new-calculation/:id
   useEffect(() => {
     if (calculationId != null || location.pathname !== '/dashboard/new-calculation') return;
     let cancelled = false;
@@ -547,9 +539,6 @@ const NewCalculation: React.FC = () => {
   };
 
   const handleNext = async () => {
-    // Persist current step answers to API only when user presses Next (not on every change).
-    // Step 5 (fuel, real-data) has its own delete-then-save-all logic below, so skip generic persist for that case.
-    // For step 5 with calculated-emissions we use generic persist for ALU_EMISSIONS_INPUT questions.
     if (calculationId != null && questionsFromApi?.length && !(step === 5 && (currentStepCode === 'FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT')) && step !== 13) {
       const questionIds = questionsFromApi.map((q: QuestionWithOptions) => q.id);
       const valuesToSave: { questionId: number; value: string }[] = [];
@@ -562,7 +551,6 @@ const NewCalculation: React.FC = () => {
           if (anodeTypeConfirmed && isPreBaked) valuesToSave.push({ questionId: q.id, value: 'TONNES' });
         } else if (value != null && value !== '') valuesToSave.push({ questionId: q.id, value });
       }
-      // Save first so routing answer exists before getNextStep; then delete only answers we did not re-save (e.g. cleared options).
       const savedIds = new Set(valuesToSave.map((v) => v.questionId));
       for (const item of valuesToSave) {
         await saveAnswer(item.questionId, item.value);
@@ -630,8 +618,6 @@ const NewCalculation: React.FC = () => {
         // validation or API error
       }
     } else if (step === 3) {
-      // ALU_UNWROUGHT = "Kako je proizveden?" (Primarni/Sekundarni/Oba) → require productionProcess (unwrought + products)
-      // ALU_PRODUCT_TYPE = product subtype (wire/sheets/...) → require aluminumProductSubtype when products
       if (currentStepCode === 'ALU_UNWROUGHT' && !productionProcess) return;
       if (currentStepCode === 'ALU_PRODUCT_TYPE' && category === 'Aluminium' && aluminumProductType === 'products' && !aluminumProductSubtype) return;
       if (calculationId == null) return;
@@ -649,9 +635,7 @@ const NewCalculation: React.FC = () => {
         // validation or API error
       }
     } else if (step === 4) {
-      // Only require dataQualityLevel when on ALU_DATA (primary/both path); secondary path never sets it
       if (currentStepCode === 'ALU_DATA' && category === 'Aluminium' && aluminumProductType === 'unwrought' && !dataQualityLevel) return;
-      // Products path: require DA/NE on "Da li imate već izračunate ugrađene emisije?" before Next
       if (currentStepCode === 'ALU_OWN_EMBEDDED_EMISSIONS' && !ownEmbeddedEmissions) return;
       if (calculationId == null) return;
       try {
@@ -845,7 +829,6 @@ const NewCalculation: React.FC = () => {
         // validation or API error
       }
     } else if (step === 13) {
-      // Precursors: save each entry as JSON in calculation_answer, then navigate
       const precursorQuestion = questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_PRECURSOR_ENTRY');
       if (precursorQuestion && calculationId != null) {
         await deleteAnswersForQuestions([precursorQuestion.id]);
@@ -884,7 +867,6 @@ const NewCalculation: React.FC = () => {
     }
     if (calculationId == null) return;
 
-    // Delete answers for the step we're going back TO (per requirement: Back from 2 -> 1, delete step 1's answers)
     if (previousStepCode !== 'PRODUCT_INFO') {
       try {
         const prevQuestions = await getQuestionsWithOptions(previousStepCode);
@@ -907,20 +889,35 @@ const NewCalculation: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg">
+    <Container maxWidth="lg" sx={{ fontFamily: T.font.body }}>
       <Box mb={4}>
-        <Button startIcon={<ArrowBack />} onClick={handleBackToDashboard} sx={{ mb: 2 }}>
+        <Button
+          startIcon={<ArrowBack sx={{ fontSize: '18px !important' }} />}
+          onClick={handleBackToDashboard}
+          sx={{
+            mb: 2, fontFamily: T.font.body, fontWeight: 500, fontSize: '0.9rem',
+            color: T.color.muted, textTransform: 'none', borderRadius: T.radius.pill,
+            '&:hover': { bgcolor: T.color.mint, color: T.color.forest },
+          }}
+        >
           Back to Dashboard
         </Button>
-        <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
+        <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: { xs: '1.6rem', md: '2rem' }, color: T.color.ink, letterSpacing: '-0.02em', mb: 0.5 }}>
           New CBAM Calculation
         </Typography>
-        <Typography variant="h6" color="text.secondary">
+        <Typography sx={{ fontFamily: T.font.body, fontSize: '1.05rem', color: T.color.muted, lineHeight: 1.6 }}>
           Calculate embedded emissions for your products
         </Typography>
       </Box>
 
-      <Paper elevation={2} sx={{ p: 4, borderRadius: 2 }} data-calculation-id={calculationId ?? undefined}>
+      <Paper
+        elevation={0}
+        sx={{
+          p: { xs: 3, md: 4 }, borderRadius: T.radius.lg,
+          border: `1px solid ${T.color.lineFaint}`, bgcolor: T.color.warmWhite,
+        }}
+        data-calculation-id={calculationId ?? undefined}
+      >
         {step === 1 && (
           <ProductInfoStep
             productName={productName}
@@ -1026,7 +1023,7 @@ const NewCalculation: React.FC = () => {
             onNext={handleNext}
             title={
               dataQualityLevel === 'calculated-emissions' ? (
-                <Typography variant="h6" component="h2" sx={{ mb: 3, fontWeight: 600 }}>
+                <Typography sx={{ mb: 3, fontFamily: T.font.display, fontWeight: 600, fontSize: '1.1rem', color: T.color.ink }}>
                   Unesite:
                 </Typography>
               ) : undefined
@@ -1051,12 +1048,12 @@ const NewCalculation: React.FC = () => {
             />
           ) : questionsLoading ? (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight={120}>
-              <CircularProgress />
+              <CircularProgress sx={{ color: T.color.forest }} />
             </Box>
           ) : questionsError ? (
-            <Typography color="error" sx={{ mb: 2 }}>{questionsError}</Typography>
+            <Typography sx={{ mb: 2, fontFamily: T.font.body, color: '#C0392B' }}>{questionsError}</Typography>
           ) : (
-            <Typography color="text.secondary">No questions available for this step.</Typography>
+            <Typography sx={{ fontFamily: T.font.body, color: T.color.muted }}>No questions available for this step.</Typography>
           )
         )}
 
@@ -1103,11 +1100,11 @@ const NewCalculation: React.FC = () => {
               onNext={handleNext}
             />
           ) : questionsLoading ? (
-            <Box display="flex" justifyContent="center" alignItems="center" minHeight={120}><CircularProgress /></Box>
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight={120}><CircularProgress sx={{ color: T.color.forest }} /></Box>
           ) : questionsError ? (
-            <Typography color="error" sx={{ mb: 2 }}>{questionsError}</Typography>
+            <Typography sx={{ mb: 2, fontFamily: T.font.body, color: '#C0392B' }}>{questionsError}</Typography>
           ) : (
-            <Typography color="text.secondary">No questions available for this step.</Typography>
+            <Typography sx={{ fontFamily: T.font.body, color: T.color.muted }}>No questions available for this step.</Typography>
           )
         )}
 
@@ -1141,7 +1138,7 @@ const NewCalculation: React.FC = () => {
 
         {step === 99 && (
           <Box display="flex" justifyContent="center" alignItems="center" minHeight={120}>
-            <CircularProgress />
+            <CircularProgress sx={{ color: T.color.forest }} />
           </Box>
         )}
 
@@ -1187,4 +1184,3 @@ const NewCalculation: React.FC = () => {
 };
 
 export default NewCalculation;
-
