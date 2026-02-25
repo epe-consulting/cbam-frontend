@@ -14,6 +14,31 @@ import {
 import { ArrowBack, ArrowForward } from '@mui/icons-material';
 import type { QuestionWithOptions } from '../hooks/useQuestionsByStep';
 
+const T = {
+  font: {
+    display: "'Fraunces', Georgia, serif",
+    body: "'DM Sans', system-ui, sans-serif",
+  },
+  color: {
+    forest: '#0B4F3E',
+    mint: '#E8F5EF',
+    mintDark: '#C3E6D5',
+    ink: '#1A2B25',
+    inkSoft: '#3D5A50',
+    muted: '#6B8F82',
+    line: '#D6E5DD',
+    lineFaint: '#EAF0EC',
+    ctaHover: '#0A3F32',
+  },
+  radius: { sm: '8px', pill: '999px' },
+};
+
+const textFieldSx = {
+  '& .MuiOutlinedInput-root': { borderRadius: T.radius.sm, fontFamily: T.font.body },
+  '& .MuiInputLabel-root': { fontFamily: T.font.body },
+  '& .MuiFormHelperText-root': { fontFamily: T.font.body },
+};
+
 interface DynamicQuestionStepProps {
   questions: QuestionWithOptions[];
   loading: boolean;
@@ -40,7 +65,6 @@ export function DynamicQuestionStep({
   nextDisabled = false,
 }: DynamicQuestionStepProps) {
   const isHasCarbonYes = (val: string) => val === 'YES' || val === 'yes' || val === 'DA' || val === 'da';
-  // Conditional visibility: ALU_ANODE_CARBON_PERCENT / ALU_SODERBERG_CARBON_PERCENT only when has-carbon is Da (YES/yes/DA/da)
   const visibleQuestions = questions.filter((q) => {
     if (q.code === 'ALU_ANODE_CARBON_PERCENT') {
       const hasCarbonQ = questions.find((x) => x.code === 'ALU_HAS_CARBON_PERCENT');
@@ -52,7 +76,6 @@ export function DynamicQuestionStep({
     }
     return true;
   });
-  // Dedupe by question code so the same question is never shown twice (avoids double declaration step etc.)
   const uniqueVisibleQuestions = visibleQuestions.filter(
     (q, i, arr) => arr.findIndex((x) => x.code === q.code) === i
   );
@@ -70,14 +93,14 @@ export function DynamicQuestionStep({
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight={120}>
-        <CircularProgress />
+        <CircularProgress sx={{ color: T.color.forest }} />
       </Box>
     );
   }
 
   if (error) {
     return (
-      <Typography color="error" sx={{ mb: 2 }}>
+      <Typography sx={{ mb: 2, fontFamily: T.font.body, color: '#C0392B' }}>
         {error}
       </Typography>
     );
@@ -94,11 +117,11 @@ export function DynamicQuestionStep({
           <Grid size={12} key={q.id}>
             {q.questionType === 'VALUE' && (
               <>
-                <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                <Typography sx={{ mb: 2, fontFamily: T.font.body, fontWeight: 500, fontSize: '0.95rem', color: T.color.ink }}>
                   {q.label}
                 </Typography>
                 {q.helpText && (
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  <Typography sx={{ mb: 1, fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>
                     {q.helpText}
                   </Typography>
                 )}
@@ -113,16 +136,17 @@ export function DynamicQuestionStep({
                   }}
                   slotProps={{ htmlInput: { min: 0, step: 'any' } }}
                   helperText={q.helpText ?? undefined}
+                  sx={textFieldSx}
                 />
               </>
             )}
             {(q.questionType === 'SINGLE_CHOICE' || q.questionType === 'MULTI_CHOICE') && (
               <FormControl component="fieldset" fullWidth>
-                <FormLabel component="legend" sx={{ mb: 2, fontWeight: 500 }}>
+                <FormLabel component="legend" sx={{ mb: 2, fontFamily: T.font.body, fontWeight: 500, fontSize: '0.95rem', color: T.color.ink, '&.Mui-focused': { color: T.color.forest } }}>
                   {q.label}
                 </FormLabel>
                 {q.helpText && (
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  <Typography sx={{ mb: 1, fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>
                     {q.helpText}
                   </Typography>
                 )}
@@ -141,9 +165,9 @@ export function DynamicQuestionStep({
                       <FormControlLabel
                         key={opt.id}
                         value={opt.code}
-                        control={<Radio />}
+                        control={<Radio sx={{ color: T.color.muted, '&.Mui-checked': { color: T.color.forest } }} />}
                         label={opt.label}
-                        sx={{ mb: 1 }}
+                        sx={{ mb: 1, '& .MuiFormControlLabel-label': { fontFamily: T.font.body, fontSize: '0.92rem', color: T.color.inkSoft } }}
                       />
                     ))}
                 </RadioGroup>
@@ -153,17 +177,22 @@ export function DynamicQuestionStep({
         ))}
         <Grid size={12}>
           <Box display="flex" justifyContent="space-between" sx={{ mt: 3 }}>
-            <Button type="button" variant="outlined" size="large" startIcon={<ArrowBack />} onClick={onBack}>
+            <Button type="button" variant="outlined" size="large" startIcon={<ArrowBack sx={{ fontSize: '18px !important' }} />} onClick={onBack}
+              sx={{
+                fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', borderRadius: T.radius.pill,
+                borderColor: T.color.line, color: T.color.inkSoft,
+                '&:hover': { bgcolor: T.color.mint, borderColor: T.color.mintDark, color: T.color.forest },
+              }}>
               Back
             </Button>
             <Button
-              type="button"
-              variant="contained"
-              size="large"
-              endIcon={<ArrowForward />}
-              onClick={onNext}
-              disabled={!canProceed}
-            >
+              type="button" variant="contained" size="large" disableElevation
+              endIcon={<ArrowForward sx={{ fontSize: '18px !important' }} />}
+              onClick={onNext} disabled={!canProceed}
+              sx={{
+                fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', borderRadius: T.radius.pill,
+                bgcolor: T.color.forest, '&:hover': { bgcolor: T.color.ctaHover },
+              }}>
               Next
             </Button>
           </Box>

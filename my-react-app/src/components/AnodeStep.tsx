@@ -2,6 +2,29 @@ import { Grid, Paper, Typography } from '@mui/material';
 import { DynamicQuestionStep } from './DynamicQuestionStep';
 import type { QuestionWithOptions } from '../hooks/useQuestionsByStep';
 
+const T = {
+  font: {
+    display: "'Fraunces', Georgia, serif",
+    body: "'DM Sans', system-ui, sans-serif",
+  },
+  color: {
+    forest: '#0B4F3E',
+    mint: '#E8F5EF',
+    mintDark: '#C3E6D5',
+    ink: '#1A2B25',
+    muted: '#6B8F82',
+  },
+  radius: { sm: '8px', md: '14px' },
+};
+
+const emissionsPaperSx = {
+  p: 2.5,
+  bgcolor: T.color.mint,
+  border: `1px solid ${T.color.mintDark}`,
+  borderRadius: T.radius.md,
+  boxShadow: 'none',
+};
+
 export interface AnodeStepProps {
   currentStepCode: string;
   questionsFromApi: QuestionWithOptions[];
@@ -31,19 +54,17 @@ export function AnodeStep({
     const qtyQ = questionsFromApi.find((q: { code: string }) => q.code === 'ALU_ANODES_QTY');
     const hasCarbonQ = questionsFromApi.find((q: { code: string }) => q.code === 'ALU_HAS_CARBON_PERCENT');
     const carbonPercentQ = questionsFromApi.find((q: { code: string }) => q.code === 'ALU_ANODE_CARBON_PERCENT');
-    // Use getAnswerForStep so local state (e.g. "Da" before Next) is reflected
     const qtyVal = qtyQ != null ? getAnswerForStep(qtyQ.id) : '';
     const hasCarbonVal = hasCarbonQ != null ? getAnswerForStep(hasCarbonQ.id) : '';
     const carbonPercentVal = carbonPercentQ != null ? getAnswerForStep(carbonPercentQ.id) : '';
     const showCarbonPercent =
       hasCarbonVal === 'YES' || hasCarbonVal === 'yes' || hasCarbonVal === 'DA' || hasCarbonVal === 'da';
-    // Always include carbon % question when it exists; DynamicQuestionStep shows it only when "Da" is selected (same as Söderberg)
     const prebakedQuestions: QuestionWithOptions[] = [qtyQ, hasCarbonQ, carbonPercentQ].filter(
       (q): q is QuestionWithOptions => q != null
     );
     if (prebakedQuestions.length === 0) {
       return (
-        <Typography color="text.secondary">No questions available for this step.</Typography>
+        <Typography sx={{ fontFamily: T.font.body, color: T.color.muted }}>No questions available for this step.</Typography>
       );
     }
     const amount = Number.parseFloat(String(qtyVal)) || 0;
@@ -71,16 +92,8 @@ export function AnodeStep({
             hasCarbonVal === 'no' ||
             (showCarbonPercent && carbonPercentVal)) && (
             <Grid size={12} sx={{ mt: 2 }}>
-              <Paper
-                elevation={1}
-                sx={{
-                  p: 2,
-                  backgroundColor: 'primary.50',
-                  border: '1px solid',
-                  borderColor: 'primary.200',
-                }}
-              >
-                <Typography variant="body1" sx={{ fontWeight: 600 }}>
+              <Paper elevation={0} sx={emissionsPaperSx}>
+                <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.95rem', color: T.color.forest }}>
                   <strong>Izračunate emisije:</strong> {prebakedEmissions.toFixed(2)} tonnes CO₂e
                   {showCarbonPercent
                     ? ' (formula: amount × (percent/100) × (44/12))'
@@ -101,7 +114,6 @@ export function AnodeStep({
     const carbonPercentQ = questionsFromApi.find(
       (q: { code: string }) => q.code === 'ALU_SODERBERG_CARBON_PERCENT'
     );
-    // Use getAnswerForStep so local state (e.g. "Da" before Next) is reflected, same as Pre-baked
     const pasteQtyVal = pasteQtyQ != null ? getAnswerForStep(pasteQtyQ.id) : '';
     const hasCarbonVal = hasCarbonQ != null ? getAnswerForStep(hasCarbonQ.id) : '';
     const carbonPercentVal = carbonPercentQ != null ? getAnswerForStep(carbonPercentQ.id) : '';
@@ -113,7 +125,7 @@ export function AnodeStep({
     if (showCarbonPercent && carbonPercentQ) soderbergQuestions.push(carbonPercentQ);
     if (soderbergQuestions.length === 0) {
       return (
-        <Typography color="text.secondary">No questions available for this step.</Typography>
+        <Typography sx={{ fontFamily: T.font.body, color: T.color.muted }}>No questions available for this step.</Typography>
       );
     }
     const amount = Number.parseFloat(String(pasteQtyVal)) || 0;
@@ -141,16 +153,8 @@ export function AnodeStep({
             hasCarbonVal === 'no' ||
             (showCarbonPercent && carbonPercentVal)) && (
             <Grid size={12} sx={{ mt: 2 }}>
-              <Paper
-                elevation={1}
-                sx={{
-                  p: 2,
-                  backgroundColor: 'primary.50',
-                  border: '1px solid',
-                  borderColor: 'primary.200',
-                }}
-              >
-                <Typography variant="body1" sx={{ fontWeight: 600 }}>
+              <Paper elevation={0} sx={emissionsPaperSx}>
+                <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.95rem', color: T.color.forest }}>
                   <strong>Izračunate emisije:</strong> {soderbergEmissions.toFixed(2)} tonnes CO₂e
                   {showCarbonPercent
                     ? ' (formula: amount × (percent/100) × (44/12))'
@@ -163,7 +167,6 @@ export function AnodeStep({
     );
   }
 
-  // ALU_ANODE_TYPE: show anode type question (Pre-baked / Söderberg) until user clicks Next
   const anodeTypeQuestion = questionsFromApi.find((q: { code: string }) => q.code === 'ALU_ANODE_TYPE');
   if (anodeTypeQuestion != null) {
     return (

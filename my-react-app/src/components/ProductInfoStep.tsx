@@ -13,6 +13,33 @@ import {
 } from '@mui/material';
 import { ArrowForward } from '@mui/icons-material';
 
+const T = {
+  font: {
+    display: "'Fraunces', Georgia, serif",
+    body: "'DM Sans', system-ui, sans-serif",
+  },
+  color: {
+    forest: '#0B4F3E',
+    mint: '#E8F5EF',
+    ink: '#1A2B25',
+    muted: '#6B8F82',
+    ctaHover: '#0A3F32',
+  },
+  radius: { sm: '8px', pill: '999px' },
+};
+
+const textFieldSx = {
+  '& .MuiOutlinedInput-root': { borderRadius: T.radius.sm, fontFamily: T.font.body },
+  '& .MuiInputLabel-root': { fontFamily: T.font.body },
+  '& .MuiFormHelperText-root': { fontFamily: T.font.body },
+};
+
+const selectSx = {
+  '& .MuiOutlinedInput-root': { borderRadius: T.radius.sm, fontFamily: T.font.body },
+  '& .MuiInputLabel-root': { fontFamily: T.font.body },
+  '& .MuiSelect-select': { fontFamily: T.font.body },
+};
+
 export interface ProductInfoStepProps {
   productName: string;
   onProductNameChange: (value: string) => void;
@@ -44,21 +71,20 @@ export function ProductInfoStep({
 }: ProductInfoStepProps) {
   return (
     <>
-      <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+      <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.2rem', color: T.color.ink, letterSpacing: '-0.02em', mb: 3 }}>
         Product Information
       </Typography>
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 6 }}>
           <TextField
-            fullWidth
-            label="Product Name"
-            variant="outlined"
+            fullWidth label="Product Name" variant="outlined"
             value={productName}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => onProductNameChange(e.target.value)}
+            sx={textFieldSx}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <FormControl fullWidth disabled={categoriesLoading} error={!!categoriesError}>
+          <FormControl fullWidth disabled={categoriesLoading} error={!!categoriesError} sx={selectSx}>
             <InputLabel>Product Category</InputLabel>
             <Select
               value={category}
@@ -69,20 +95,20 @@ export function ProductInfoStep({
               {categoriesLoading ? (
                 <MenuItem disabled>
                   <Box display="flex" alignItems="center" gap={1}>
-                    <CircularProgress size={20} />
-                    Loading categories...
+                    <CircularProgress size={20} sx={{ color: T.color.forest }} />
+                    <Typography sx={{ fontFamily: T.font.body, fontSize: '0.9rem', color: T.color.muted }}>Loading categories...</Typography>
                   </Box>
                 </MenuItem>
               ) : (
                 categoryNames.map((cat) => (
-                  <MenuItem key={cat} value={cat}>
+                  <MenuItem key={cat} value={cat} sx={{ fontFamily: T.font.body }}>
                     {cat}
                   </MenuItem>
                 ))
               )}
             </Select>
             {categoriesError && (
-              <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+              <Typography sx={{ mt: 0.5, fontFamily: T.font.body, fontSize: '0.75rem', color: '#C0392B' }}>
                 {categoriesError}
               </Typography>
             )}
@@ -90,15 +116,14 @@ export function ProductInfoStep({
         </Grid>
         <Grid size={12}>
           {createError && (
-            <Typography variant="body2" color="error" sx={{ mb: 1 }}>
+            <Typography sx={{ mb: 1, fontFamily: T.font.body, fontSize: '0.88rem', color: '#C0392B' }}>
               {createError}
             </Typography>
           )}
           <Box display="flex" justifyContent="flex-end" sx={{ mt: 2 }}>
             <Button
-              variant="contained"
-              size="large"
-              endIcon={<ArrowForward />}
+              variant="contained" size="large" disableElevation
+              endIcon={<ArrowForward sx={{ fontSize: '18px !important' }} />}
               onClick={onNext}
               disabled={
                 !category ||
@@ -108,6 +133,10 @@ export function ProductInfoStep({
                 calculationId == null ||
                 calculationLoading
               }
+              sx={{
+                fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', borderRadius: T.radius.pill,
+                bgcolor: T.color.forest, '&:hover': { bgcolor: T.color.ctaHover },
+              }}
             >
               {createLoading ? 'Saving...' : calculationLoading ? 'Loading...' : 'Next'}
             </Button>

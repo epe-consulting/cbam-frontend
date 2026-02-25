@@ -35,6 +35,97 @@ import {
 } from '@mui/icons-material';
 import { uploadReportToBlob } from './utils/blobStorage';
 
+/* ─── Design tokens (shared across Panonia) ─── */
+const T = {
+  font: {
+    display: "'Fraunces', Georgia, serif",
+    body: "'DM Sans', system-ui, sans-serif",
+  },
+  color: {
+    forest: '#0B4F3E',
+    forestLight: '#14785E',
+    sage: '#3A7D6A',
+    mint: '#E8F5EF',
+    mintDark: '#C3E6D5',
+    cream: '#FAFAF7',
+    warmWhite: '#FFFEF9',
+    ink: '#1A2B25',
+    inkSoft: '#3D5A50',
+    muted: '#6B8F82',
+    accent: '#D4A853',
+    accentLight: '#F4E8C9',
+    line: '#D6E5DD',
+    lineFaint: '#EAF0EC',
+    ctaHover: '#0A3F32',
+    blue: '#2563EB',
+    blueHover: '#1D4ED8',
+  },
+  radius: {
+    sm: '8px',
+    md: '14px',
+    lg: '20px',
+    pill: '999px',
+  },
+};
+
+const sectionPaperSx = {
+  borderRadius: T.radius.lg,
+  border: `1px solid ${T.color.lineFaint}`,
+  bgcolor: T.color.warmWhite,
+  overflow: 'hidden' as const,
+};
+
+const textFieldSx = {
+  '& .MuiOutlinedInput-root': { borderRadius: T.radius.sm, fontFamily: T.font.body },
+  '& .MuiInputLabel-root': { fontFamily: T.font.body },
+};
+
+const tableHeadCellSx = {
+  fontFamily: T.font.body,
+  fontWeight: 600,
+  fontSize: '0.8rem',
+  letterSpacing: '0.03em',
+  color: T.color.inkSoft,
+  bgcolor: T.color.cream,
+  borderBottom: `1px solid ${T.color.line}`,
+  whiteSpace: 'nowrap' as const,
+};
+
+const tableCellSx = {
+  fontFamily: T.font.body,
+  fontSize: '0.88rem',
+  color: T.color.ink,
+  borderBottom: `1px solid ${T.color.lineFaint}`,
+};
+
+const accordionSx = {
+  '&.MuiAccordion-root': {
+    border: `1px solid ${T.color.lineFaint}`,
+    borderRadius: `${T.radius.lg} !important`,
+    bgcolor: T.color.warmWhite,
+    boxShadow: 'none',
+    mb: 2,
+    overflow: 'hidden',
+    '&::before': { display: 'none' },
+    '&.Mui-expanded': { margin: '0 0 16px 0' },
+  },
+};
+
+const accordionSummarySx = {
+  fontFamily: T.font.body,
+  '&:hover': { bgcolor: T.color.lineFaint },
+  '& .MuiAccordionSummary-expandIconWrapper': { color: T.color.muted },
+};
+
+const sectionChipSx = {
+  bgcolor: T.color.forest,
+  color: '#fff',
+  fontFamily: T.font.body,
+  fontWeight: 700,
+  fontSize: '0.75rem',
+  mr: 1.5,
+};
+
 interface UserData {
   id: number;
   username: string;
@@ -155,8 +246,6 @@ const emptyEmission = (): EmissionsRow => ({
 const emptyQuantity = (): QuantityRow => ({
   product: '', quantity: '', totalEmbeddedEmissions: '',
 });
-
-const SECTION_COLOR = '#059669';
 
 const GenerateReport: React.FC = () => {
   const navigate = useNavigate();
@@ -341,17 +430,17 @@ const GenerateReport: React.FC = () => {
 <style>
   @page { margin: 20mm 15mm; size: A4; }
   body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #222; line-height: 1.6; margin: 0; padding: 20px; }
-  h1 { font-size: 22px; color: #059669; margin-bottom: 4px; border-bottom: 3px solid #059669; padding-bottom: 8px; }
-  h2 { font-size: 16px; color: #059669; margin-top: 28px; margin-bottom: 12px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+  h1 { font-size: 22px; color: #0B4F3E; margin-bottom: 4px; border-bottom: 3px solid #0B4F3E; padding-bottom: 8px; }
+  h2 { font-size: 16px; color: #0B4F3E; margin-top: 28px; margin-bottom: 12px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
   .subtitle { color: #666; font-size: 13px; margin-bottom: 16px; }
   .field { margin-bottom: 6px; }
   .field-label { font-weight: 600; display: inline-block; min-width: 260px; }
   .field-value { border-bottom: 1px dotted #999; display: inline-block; min-width: 250px; padding-bottom: 1px; }
   table { width: 100%; border-collapse: collapse; margin: 12px 0; }
   th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; font-size: 12px; }
-  th { background: #f0fdf4; font-weight: 600; color: #059669; }
+  th { background: #E8F5EF; font-weight: 600; color: #0B4F3E; }
   .checkbox { display: inline-block; width: 14px; height: 14px; border: 1.5px solid #666; margin-right: 6px; vertical-align: middle; text-align: center; font-size: 11px; line-height: 14px; }
-  .checked { background: #059669; color: white; }
+  .checked { background: #0B4F3E; color: white; }
   .sig-block { margin-top: 30px; }
   .sig-field { border-bottom: 1px solid #333; display: inline-block; min-width: 300px; margin-bottom: 8px; padding-bottom: 2px; }
 </style></head><body>
@@ -452,18 +541,24 @@ ${data.carbonPrice.pricePaid ? `
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 2 }}>
-        <Skeleton variant="text" width={200} height={40} sx={{ mb: 2 }} />
-        <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2 }} />
+      <Container maxWidth="lg" sx={{ py: 3, fontFamily: T.font.body }}>
+        <Skeleton variant="text" width={200} height={40} sx={{ mb: 2, borderRadius: T.radius.sm }} />
+        <Skeleton variant="rectangular" height={400} sx={{ borderRadius: T.radius.lg }} />
       </Container>
     );
   }
 
   if (fetchError) {
     return (
-      <Container maxWidth="lg" sx={{ py: 2 }}>
-        <Alert severity="error" sx={{ mb: 2 }}>{fetchError}</Alert>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate('/dashboard')}>Back to Dashboard</Button>
+      <Container maxWidth="lg" sx={{ py: 3, fontFamily: T.font.body }}>
+        <Alert severity="error" sx={{ mb: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>{fetchError}</Alert>
+        <Button
+          startIcon={<ArrowBack sx={{ fontSize: '18px !important' }} />}
+          onClick={() => navigate('/dashboard')}
+          sx={{ fontFamily: T.font.body, fontWeight: 500, textTransform: 'none', color: T.color.muted, borderRadius: T.radius.pill, '&:hover': { bgcolor: T.color.mint, color: T.color.forest } }}
+        >
+          Back to Dashboard
+        </Button>
       </Container>
     );
   }
@@ -471,38 +566,43 @@ ${data.carbonPrice.pricePaid ? `
   const completedCalcs = calculations.filter(c => c.status === 'COMPLETED');
 
   return (
-    <Container maxWidth="lg" sx={{ py: 2 }}>
+    <Container maxWidth="lg" sx={{ py: 3, fontFamily: T.font.body }}>
+      {/* Header */}
       <Box mb={3}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate('/dashboard')} sx={{ mb: 2 }}>
+        <Button
+          startIcon={<ArrowBack sx={{ fontSize: '18px !important' }} />}
+          onClick={() => navigate('/dashboard')}
+          sx={{
+            mb: 2, fontFamily: T.font.body, fontWeight: 500, fontSize: '0.9rem',
+            color: T.color.muted, textTransform: 'none', borderRadius: T.radius.pill,
+            '&:hover': { bgcolor: T.color.mint, color: T.color.forest },
+          }}
+        >
           Back to Dashboard
         </Button>
-        <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
+        <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: { xs: '1.6rem', md: '2rem' }, color: T.color.ink, letterSpacing: '-0.02em', mb: 0.5 }}>
           Generate CBAM Report
         </Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography sx={{ fontFamily: T.font.body, color: T.color.muted, lineHeight: 1.6 }}>
           Fill in the details below and download a compliant CBAM Aluminium Disclosure PDF.
         </Typography>
       </Box>
 
       {/* Calculation & Installation selector */}
-      <Paper elevation={2} sx={{ p: 3, borderRadius: 2, mb: 3 }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+      <Paper elevation={0} sx={{ ...sectionPaperSx, p: { xs: 3, md: 4 }, mb: 3 }}>
+        <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.15rem', color: T.color.ink, mb: 2.5 }}>
           Select Calculation & Installation
         </Typography>
         <Grid container spacing={3} alignItems="center">
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
-              select
-              fullWidth
-              label="CBAM Calculation"
-              value={selectedCalcId}
+              select fullWidth label="CBAM Calculation" value={selectedCalcId}
               onChange={e => setSelectedCalcId(e.target.value ? Number(e.target.value) : '')}
               disabled={calcsLoading}
               helperText={completedCalcs.length === 0 && !calcsLoading ? 'No completed calculations available' : ''}
+              sx={textFieldSx}
             >
-              <MenuItem value="">
-                <em>— Select a calculation —</em>
-              </MenuItem>
+              <MenuItem value=""><em>— Select a calculation —</em></MenuItem>
               {calculations.map((c: DashboardCalculationItem) => (
                 <MenuItem key={c.id} value={c.id}>
                   Calculation #{c.id} — {c.status} — {c.currentStep ?? 'N/A'}
@@ -512,16 +612,12 @@ ${data.carbonPrice.pricePaid ? `
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
-              select
-              fullWidth
-              label="Installation Site"
-              value={selectedInstId}
+              select fullWidth label="Installation Site" value={selectedInstId}
               onChange={e => setSelectedInstId(e.target.value ? Number(e.target.value) : '')}
               helperText={installations.length === 0 ? 'No installations — add them in Settings' : ''}
+              sx={textFieldSx}
             >
-              <MenuItem value="">
-                <em>— Select an installation —</em>
-              </MenuItem>
+              <MenuItem value=""><em>— Select an installation —</em></MenuItem>
               {installations.map(inst => (
                 <MenuItem key={inst.id} value={inst.id}>
                   {inst.installationName || `Installation #${inst.id}`}{inst.country ? ` — ${inst.country}` : ''}
@@ -531,13 +627,13 @@ ${data.carbonPrice.pricePaid ? `
           </Grid>
           {(resultLoading || calcResult) && (
             <Grid size={12}>
-              {resultLoading && <Typography color="text.secondary">Loading result...</Typography>}
+              {resultLoading && <Typography sx={{ fontFamily: T.font.body, color: T.color.muted }}>Loading result…</Typography>}
               {calcResult && (
-                <Box sx={{ p: 2, bgcolor: '#f0fdf4', borderRadius: 1, border: '1px solid #bbf7d0' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                <Box sx={{ p: 2.5, bgcolor: T.color.mint, borderRadius: T.radius.sm, border: `1px solid ${T.color.mintDark}` }}>
+                  <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.92rem', color: T.color.forest }}>
                     Total Emissions: {calcResult.totalEmissions != null ? Number(calcResult.totalEmissions).toFixed(4) : 'N/A'} t CO₂e
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography sx={{ fontFamily: T.font.body, fontSize: '0.78rem', color: T.color.muted }}>
                     Report Year: {calcResult.reportYear} &middot; Status: {calcResult.status}
                   </Typography>
                 </Box>
@@ -549,285 +645,287 @@ ${data.carbonPrice.pricePaid ? `
 
       <div>
         {/* Section 1: Producer & Installation */}
-        <Accordion defaultExpanded>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Chip label="1" size="small" sx={{ bgcolor: SECTION_COLOR, color: 'white', mr: 1.5, fontWeight: 700 }} />
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>Producer & Installation Identification</Typography>
+        <Accordion defaultExpanded sx={accordionSx}>
+          <AccordionSummary expandIcon={<ExpandMore />} sx={accordionSummarySx}>
+            <Chip label="1" size="small" sx={sectionChipSx} />
+            <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.05rem', color: T.color.ink }}>Producer & Installation Identification</Typography>
           </AccordionSummary>
-          <AccordionDetails>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'text.secondary' }}>
+          <AccordionDetails sx={{ px: { xs: 2, md: 3 }, pb: 3 }}>
+            <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.92rem', color: T.color.muted, mb: 2 }}>
               Producer (Operator)
             </Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField fullWidth label="Legal Name" value={data.producer.legalName}
                   onChange={e => set('producer')('legalName', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }} />
+                  slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField fullWidth label="Registration Number" value={data.producer.registrationNumber}
                   onChange={e => set('producer')('registrationNumber', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }} />
+                  slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField fullWidth label="Country" value={data.producer.country}
                   onChange={e => set('producer')('country', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }} />
+                  slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField fullWidth label="Contact Person (name / email)" value={data.producer.contactPerson}
                   onChange={e => set('producer')('contactPerson', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }} />
+                  slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
               </Grid>
             </Grid>
 
-            <Divider sx={{ my: 3 }} />
+            <Divider sx={{ my: 3, borderColor: T.color.lineFaint }} />
 
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'text.secondary' }}>
+            <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.92rem', color: T.color.muted, mb: 2 }}>
               Installation (Production Site)
             </Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField fullWidth label="Installation Name" value={data.installation.installationName}
                   onChange={e => set('installation')('installationName', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }} />
+                  slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField fullWidth label="Address" value={data.installation.address}
                   onChange={e => set('installation')('address', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }} />
+                  slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField fullWidth label="Country" value={data.installation.country}
                   onChange={e => set('installation')('country', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }} />
+                  slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField fullWidth label="UN/LOCODE" value={data.installation.unLocode}
                   onChange={e => set('installation')('unLocode', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }} />
+                  slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField fullWidth label="Coordinates (Lat / Long)" value={data.installation.coordinates}
                   onChange={e => set('installation')('coordinates', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }}
+                  slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx}
                   placeholder="e.g. 48.8566, 2.3522" />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField fullWidth label="CBAM Registry Installation ID" value={data.installation.cbamRegistryId}
                   onChange={e => set('installation')('cbamRegistryId', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }} />
+                  slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
               </Grid>
             </Grid>
           </AccordionDetails>
         </Accordion>
 
         {/* Section 2: Products */}
-        <Accordion defaultExpanded>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Chip label="2" size="small" sx={{ bgcolor: SECTION_COLOR, color: 'white', mr: 1.5, fontWeight: 700 }} />
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>Products Supplied to EU Buyer</Typography>
+        <Accordion defaultExpanded sx={accordionSx}>
+          <AccordionSummary expandIcon={<ExpandMore />} sx={accordionSummarySx}>
+            <Chip label="2" size="small" sx={sectionChipSx} />
+            <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.05rem', color: T.color.ink }}>Products Supplied to EU Buyer</Typography>
           </AccordionSummary>
-          <AccordionDetails>
+          <AccordionDetails sx={{ px: { xs: 2, md: 3 }, pb: 3 }}>
             <TableContainer>
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 600 }}>Product Description</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>CN Code</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Production Route</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Quantity (t)</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Country of Origin</TableCell>
+                    <TableCell sx={tableHeadCellSx}>Product Description</TableCell>
+                    <TableCell sx={tableHeadCellSx}>CN Code</TableCell>
+                    <TableCell sx={tableHeadCellSx}>Production Route</TableCell>
+                    <TableCell sx={tableHeadCellSx}>Quantity (t)</TableCell>
+                    <TableCell sx={tableHeadCellSx}>Country of Origin</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {data.products.map((p, i) => (
-                    <TableRow key={i}>
-                      <TableCell><TextField variant="standard" fullWidth value={p.description} onChange={e => setProduct(i, 'description', e.target.value)} placeholder="e.g. Unwrought aluminium" /></TableCell>
-                      <TableCell><TextField variant="standard" fullWidth value={p.cnCode} onChange={e => setProduct(i, 'cnCode', e.target.value)} placeholder="7601 10 00" /></TableCell>
-                      <TableCell>
-                        <TextField variant="standard" fullWidth select value={p.productionRoute} onChange={e => setProduct(i, 'productionRoute', e.target.value)}>
+                    <TableRow key={i} sx={{ '&:hover': { bgcolor: T.color.lineFaint } }}>
+                      <TableCell sx={tableCellSx}><TextField variant="standard" fullWidth value={p.description} onChange={e => setProduct(i, 'description', e.target.value)} placeholder="e.g. Unwrought aluminium" InputProps={{ sx: { fontFamily: T.font.body } }} /></TableCell>
+                      <TableCell sx={tableCellSx}><TextField variant="standard" fullWidth value={p.cnCode} onChange={e => setProduct(i, 'cnCode', e.target.value)} placeholder="7601 10 00" InputProps={{ sx: { fontFamily: T.font.body } }} /></TableCell>
+                      <TableCell sx={tableCellSx}>
+                        <TextField variant="standard" fullWidth select value={p.productionRoute} onChange={e => setProduct(i, 'productionRoute', e.target.value)} InputProps={{ sx: { fontFamily: T.font.body } }}>
                           <MenuItem value=""><em>Select</em></MenuItem>
                           <MenuItem value="Primary">Primary</MenuItem>
                           <MenuItem value="Secondary">Secondary</MenuItem>
                           <MenuItem value="Mixed">Mixed</MenuItem>
                         </TextField>
                       </TableCell>
-                      <TableCell><TextField variant="standard" fullWidth value={p.quantity} onChange={e => setProduct(i, 'quantity', e.target.value)} type="number" /></TableCell>
-                      <TableCell><TextField variant="standard" fullWidth value={p.countryOfOrigin} onChange={e => setProduct(i, 'countryOfOrigin', e.target.value)} /></TableCell>
+                      <TableCell sx={tableCellSx}><TextField variant="standard" fullWidth value={p.quantity} onChange={e => setProduct(i, 'quantity', e.target.value)} type="number" InputProps={{ sx: { fontFamily: T.font.body } }} /></TableCell>
+                      <TableCell sx={tableCellSx}><TextField variant="standard" fullWidth value={p.countryOfOrigin} onChange={e => setProduct(i, 'countryOfOrigin', e.target.value)} InputProps={{ sx: { fontFamily: T.font.body } }} /></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </TableContainer>
-            <Button size="small" sx={{ mt: 1 }} onClick={() => setData(prev => ({ ...prev, products: [...prev.products, emptyProduct()] }))}>
+            <Button size="small" onClick={() => setData(prev => ({ ...prev, products: [...prev.products, emptyProduct()] }))}
+              sx={{ mt: 1.5, fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', color: T.color.forest, borderRadius: T.radius.pill, '&:hover': { bgcolor: T.color.mint } }}>
               + Add Row
             </Button>
           </AccordionDetails>
         </Accordion>
 
         {/* Section 3: Embedded Emissions */}
-        <Accordion defaultExpanded>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Chip label="3" size="small" sx={{ bgcolor: SECTION_COLOR, color: 'white', mr: 1.5, fontWeight: 700 }} />
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>Embedded Emissions (Verified Values)</Typography>
+        <Accordion defaultExpanded sx={accordionSx}>
+          <AccordionSummary expandIcon={<ExpandMore />} sx={accordionSummarySx}>
+            <Chip label="3" size="small" sx={sectionChipSx} />
+            <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.05rem', color: T.color.ink }}>Embedded Emissions (Verified Values)</Typography>
           </AccordionSummary>
-          <AccordionDetails>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'text.secondary' }}>
+          <AccordionDetails sx={{ px: { xs: 2, md: 3 }, pb: 3 }}>
+            <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.88rem', color: T.color.muted, mb: 1.5 }}>
               Per Product – Specific Embedded Emissions
             </Typography>
             <TableContainer>
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 600 }}>Product</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Direct Emissions (tCO₂e/t)</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Indirect Emissions (tCO₂e/t)</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Total Embedded (tCO₂e/t)</TableCell>
+                    <TableCell sx={tableHeadCellSx}>Product</TableCell>
+                    <TableCell sx={tableHeadCellSx}>Direct Emissions (tCO₂e/t)</TableCell>
+                    <TableCell sx={tableHeadCellSx}>Indirect Emissions (tCO₂e/t)</TableCell>
+                    <TableCell sx={tableHeadCellSx}>Total Embedded (tCO₂e/t)</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {data.emissions.map((e, i) => (
-                    <TableRow key={i}>
-                      <TableCell><TextField variant="standard" fullWidth value={e.product} onChange={ev => setEmission(i, 'product', ev.target.value)} /></TableCell>
-                      <TableCell><TextField variant="standard" fullWidth value={e.directEmissions} onChange={ev => setEmission(i, 'directEmissions', ev.target.value)} type="number" /></TableCell>
-                      <TableCell><TextField variant="standard" fullWidth value={e.indirectEmissions} onChange={ev => setEmission(i, 'indirectEmissions', ev.target.value)} type="number" /></TableCell>
-                      <TableCell><TextField variant="standard" fullWidth value={e.totalEmbedded} onChange={ev => setEmission(i, 'totalEmbedded', ev.target.value)} type="number" /></TableCell>
+                    <TableRow key={i} sx={{ '&:hover': { bgcolor: T.color.lineFaint } }}>
+                      <TableCell sx={tableCellSx}><TextField variant="standard" fullWidth value={e.product} onChange={ev => setEmission(i, 'product', ev.target.value)} InputProps={{ sx: { fontFamily: T.font.body } }} /></TableCell>
+                      <TableCell sx={tableCellSx}><TextField variant="standard" fullWidth value={e.directEmissions} onChange={ev => setEmission(i, 'directEmissions', ev.target.value)} type="number" InputProps={{ sx: { fontFamily: T.font.body } }} /></TableCell>
+                      <TableCell sx={tableCellSx}><TextField variant="standard" fullWidth value={e.indirectEmissions} onChange={ev => setEmission(i, 'indirectEmissions', ev.target.value)} type="number" InputProps={{ sx: { fontFamily: T.font.body } }} /></TableCell>
+                      <TableCell sx={tableCellSx}><TextField variant="standard" fullWidth value={e.totalEmbedded} onChange={ev => setEmission(i, 'totalEmbedded', ev.target.value)} type="number" InputProps={{ sx: { fontFamily: T.font.body } }} /></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </TableContainer>
-            <Button size="small" sx={{ mt: 1 }} onClick={() => setData(prev => ({ ...prev, emissions: [...prev.emissions, emptyEmission()] }))}>
+            <Button size="small" onClick={() => setData(prev => ({ ...prev, emissions: [...prev.emissions, emptyEmission()] }))}
+              sx={{ mt: 1.5, fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', color: T.color.forest, borderRadius: T.radius.pill, '&:hover': { bgcolor: T.color.mint } }}>
               + Add Row
             </Button>
 
-            <Divider sx={{ my: 3 }} />
+            <Divider sx={{ my: 3, borderColor: T.color.lineFaint }} />
 
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'text.secondary' }}>
+            <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.88rem', color: T.color.muted, mb: 1.5 }}>
               Totals for Quantity Supplied
             </Typography>
             <TableContainer>
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 600 }}>Product</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Quantity (t)</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Total Embedded Emissions (tCO₂e)</TableCell>
+                    <TableCell sx={tableHeadCellSx}>Product</TableCell>
+                    <TableCell sx={tableHeadCellSx}>Quantity (t)</TableCell>
+                    <TableCell sx={tableHeadCellSx}>Total Embedded Emissions (tCO₂e)</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {data.quantities.map((q, i) => (
-                    <TableRow key={i}>
-                      <TableCell><TextField variant="standard" fullWidth value={q.product} onChange={ev => setQuantity(i, 'product', ev.target.value)} /></TableCell>
-                      <TableCell><TextField variant="standard" fullWidth value={q.quantity} onChange={ev => setQuantity(i, 'quantity', ev.target.value)} type="number" /></TableCell>
-                      <TableCell><TextField variant="standard" fullWidth value={q.totalEmbeddedEmissions} onChange={ev => setQuantity(i, 'totalEmbeddedEmissions', ev.target.value)} type="number" /></TableCell>
+                    <TableRow key={i} sx={{ '&:hover': { bgcolor: T.color.lineFaint } }}>
+                      <TableCell sx={tableCellSx}><TextField variant="standard" fullWidth value={q.product} onChange={ev => setQuantity(i, 'product', ev.target.value)} InputProps={{ sx: { fontFamily: T.font.body } }} /></TableCell>
+                      <TableCell sx={tableCellSx}><TextField variant="standard" fullWidth value={q.quantity} onChange={ev => setQuantity(i, 'quantity', ev.target.value)} type="number" InputProps={{ sx: { fontFamily: T.font.body } }} /></TableCell>
+                      <TableCell sx={tableCellSx}><TextField variant="standard" fullWidth value={q.totalEmbeddedEmissions} onChange={ev => setQuantity(i, 'totalEmbeddedEmissions', ev.target.value)} type="number" InputProps={{ sx: { fontFamily: T.font.body } }} /></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </TableContainer>
-            <Button size="small" sx={{ mt: 1 }} onClick={() => setData(prev => ({ ...prev, quantities: [...prev.quantities, emptyQuantity()] }))}>
+            <Button size="small" onClick={() => setData(prev => ({ ...prev, quantities: [...prev.quantities, emptyQuantity()] }))}
+              sx={{ mt: 1.5, fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', color: T.color.forest, borderRadius: T.radius.pill, '&:hover': { bgcolor: T.color.mint } }}>
               + Add Row
             </Button>
           </AccordionDetails>
         </Accordion>
 
         {/* Section 4: Verification Statement */}
-        <Accordion defaultExpanded>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Chip label="4" size="small" sx={{ bgcolor: SECTION_COLOR, color: 'white', mr: 1.5, fontWeight: 700 }} />
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>Verification Statement</Typography>
+        <Accordion defaultExpanded sx={accordionSx}>
+          <AccordionSummary expandIcon={<ExpandMore />} sx={accordionSummarySx}>
+            <Chip label="4" size="small" sx={sectionChipSx} />
+            <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.05rem', color: T.color.ink }}>Verification Statement</Typography>
           </AccordionSummary>
-          <AccordionDetails>
+          <AccordionDetails sx={{ px: { xs: 2, md: 3 }, pb: 3 }}>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField fullWidth label="Verifier Company" value={data.verification.verifierCompany}
                   onChange={e => set('verification')('verifierCompany', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }} />
+                  slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField fullWidth label="Accreditation Reference" value={data.verification.accreditationRef}
                   onChange={e => set('verification')('accreditationRef', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }} />
+                  slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField fullWidth label="Verification Report Reference / ID" value={data.verification.verificationReportRef}
                   onChange={e => set('verification')('verificationReportRef', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }} />
+                  slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField fullWidth label="Verification Date" type="date" value={data.verification.verificationDate}
                   onChange={e => set('verification')('verificationDate', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }} />
+                  slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
               </Grid>
               <Grid size={12}>
-                <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 1, border: '1px solid #e2e8f0', fontStyle: 'italic', color: '#555', mb: 2 }}>
+                <Box sx={{ p: 2.5, bgcolor: T.color.cream, borderRadius: T.radius.sm, border: `1px solid ${T.color.lineFaint}`, fontStyle: 'italic', color: T.color.muted, mb: 2, fontFamily: T.font.body, fontSize: '0.92rem', lineHeight: 1.6 }}>
                   "The embedded emissions reported above have been verified in accordance with applicable CBAM verification requirements."
                 </Box>
                 <FormControlLabel
                   control={<Checkbox checked={data.verification.reportAttached}
-                    onChange={e => set('verification')('reportAttached', e.target.checked as never)} />}
-                  label="Verification report attached" />
+                    onChange={e => set('verification')('reportAttached', e.target.checked as never)}
+                    sx={{ color: T.color.muted, '&.Mui-checked': { color: T.color.forest } }} />}
+                  label={<Typography sx={{ fontFamily: T.font.body, fontSize: '0.92rem', color: T.color.inkSoft }}>Verification report attached</Typography>} />
               </Grid>
             </Grid>
           </AccordionDetails>
         </Accordion>
 
         {/* Section 5: Carbon Price */}
-        <Accordion defaultExpanded>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Chip label="5" size="small" sx={{ bgcolor: SECTION_COLOR, color: 'white', mr: 1.5, fontWeight: 700 }} />
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>Carbon Price Paid in Country of Production</Typography>
+        <Accordion defaultExpanded sx={accordionSx}>
+          <AccordionSummary expandIcon={<ExpandMore />} sx={accordionSummarySx}>
+            <Chip label="5" size="small" sx={sectionChipSx} />
+            <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.05rem', color: T.color.ink }}>Carbon Price Paid in Country of Production</Typography>
           </AccordionSummary>
-          <AccordionDetails>
+          <AccordionDetails sx={{ px: { xs: 2, md: 3 }, pb: 3 }}>
             <FormControlLabel
               control={<Checkbox checked={data.carbonPrice.noPricePaid}
-                onChange={e => {
-                  set('carbonPrice')('noPricePaid', e.target.checked as never);
-                  if (e.target.checked) set('carbonPrice')('pricePaid', false as never);
-                }} />}
-              label="No carbon price paid" />
+                onChange={e => { set('carbonPrice')('noPricePaid', e.target.checked as never); if (e.target.checked) set('carbonPrice')('pricePaid', false as never); }}
+                sx={{ color: T.color.muted, '&.Mui-checked': { color: T.color.forest } }} />}
+              label={<Typography sx={{ fontFamily: T.font.body, fontSize: '0.92rem', color: T.color.inkSoft }}>No carbon price paid</Typography>} />
             <FormControlLabel
               control={<Checkbox checked={data.carbonPrice.pricePaid}
-                onChange={e => {
-                  set('carbonPrice')('pricePaid', e.target.checked as never);
-                  if (e.target.checked) set('carbonPrice')('noPricePaid', false as never);
-                }} />}
-              label="Carbon price paid (details below)" />
+                onChange={e => { set('carbonPrice')('pricePaid', e.target.checked as never); if (e.target.checked) set('carbonPrice')('noPricePaid', false as never); }}
+                sx={{ color: T.color.muted, '&.Mui-checked': { color: T.color.forest } }} />}
+              label={<Typography sx={{ fontFamily: T.font.body, fontSize: '0.92rem', color: T.color.inkSoft }}>Carbon price paid (details below)</Typography>} />
 
             {data.carbonPrice.pricePaid && (
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <TextField fullWidth label="Scheme Type" value={data.carbonPrice.schemeType}
                     onChange={e => set('carbonPrice')('schemeType', e.target.value)}
-                    slotProps={{ inputLabel: { shrink: true } }}
+                    slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx}
                     placeholder="ETS / Carbon Tax / Other" />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <TextField fullWidth label="Carbon Price (€/tCO₂e)" value={data.carbonPrice.carbonPrice}
                     onChange={e => set('carbonPrice')('carbonPrice', e.target.value)}
-                    slotProps={{ inputLabel: { shrink: true } }} type="number" />
+                    slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} type="number" />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <TextField fullWidth label="Emissions Covered (tCO₂e)" value={data.carbonPrice.emissionsCovered}
                     onChange={e => set('carbonPrice')('emissionsCovered', e.target.value)}
-                    slotProps={{ inputLabel: { shrink: true } }} type="number" />
+                    slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} type="number" />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <TextField fullWidth label="Total Amount Paid" value={data.carbonPrice.totalAmountPaid}
                     onChange={e => set('carbonPrice')('totalAmountPaid', e.target.value)}
-                    slotProps={{ inputLabel: { shrink: true } }} />
+                    slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
                 </Grid>
                 <Grid size={12}>
                   <FormControlLabel
                     control={<Checkbox checked={data.carbonPrice.paymentEvidence}
-                      onChange={e => set('carbonPrice')('paymentEvidence', e.target.checked as never)} />}
-                    label="Evidence of payment attached" />
+                      onChange={e => set('carbonPrice')('paymentEvidence', e.target.checked as never)}
+                      sx={{ color: T.color.muted, '&.Mui-checked': { color: T.color.forest } }} />}
+                    label={<Typography sx={{ fontFamily: T.font.body, fontSize: '0.92rem', color: T.color.inkSoft }}>Evidence of payment attached</Typography>} />
                   <FormControlLabel
                     control={<Checkbox checked={data.carbonPrice.certificationAttached}
-                      onChange={e => set('carbonPrice')('certificationAttached', e.target.checked as never)} />}
-                    label="Independent certification attached" />
+                      onChange={e => set('carbonPrice')('certificationAttached', e.target.checked as never)}
+                      sx={{ color: T.color.muted, '&.Mui-checked': { color: T.color.forest } }} />}
+                    label={<Typography sx={{ fontFamily: T.font.body, fontSize: '0.92rem', color: T.color.inkSoft }}>Independent certification attached</Typography>} />
                 </Grid>
               </Grid>
             )}
@@ -835,30 +933,30 @@ ${data.carbonPrice.pricePaid ? `
         </Accordion>
 
         {/* Section 6: Declaration */}
-        <Accordion defaultExpanded>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Chip label="6" size="small" sx={{ bgcolor: SECTION_COLOR, color: 'white', mr: 1.5, fontWeight: 700 }} />
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>Declaration by Installation Operator</Typography>
+        <Accordion defaultExpanded sx={accordionSx}>
+          <AccordionSummary expandIcon={<ExpandMore />} sx={accordionSummarySx}>
+            <Chip label="6" size="small" sx={sectionChipSx} />
+            <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.05rem', color: T.color.ink }}>Declaration by Installation Operator</Typography>
           </AccordionSummary>
-          <AccordionDetails>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <AccordionDetails sx={{ px: { xs: 2, md: 3 }, pb: 3 }}>
+            <Typography sx={{ fontFamily: T.font.body, fontSize: '0.92rem', color: T.color.muted, mb: 2, lineHeight: 1.6 }}>
               I confirm that the information provided in this disclosure is accurate and complete for the reporting year indicated above.
             </Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 4 }}>
                 <TextField fullWidth label="Name" value={data.declaration.name}
                   onChange={e => set('declaration')('name', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }} />
+                  slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
                 <TextField fullWidth label="Position" value={data.declaration.position}
                   onChange={e => set('declaration')('position', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }} />
+                  slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
                 <TextField fullWidth label="Date" type="date" value={data.declaration.date}
                   onChange={e => set('declaration')('date', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }} />
+                  slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
               </Grid>
             </Grid>
           </AccordionDetails>
@@ -866,19 +964,19 @@ ${data.carbonPrice.pricePaid ? `
       </div>
 
       {/* Reporting Year */}
-      <Paper elevation={2} sx={{ p: 3, borderRadius: 2, mt: 3 }}>
+      <Paper elevation={0} sx={{ ...sectionPaperSx, p: { xs: 3, md: 4 }, mt: 1 }}>
         <Grid container spacing={2} alignItems="center">
           <Grid size={{ xs: 12, md: 3 }}>
             <TextField fullWidth label="Reporting Year" value={data.reportingYear}
               onChange={e => setData(prev => ({ ...prev, reportingYear: e.target.value }))}
-              slotProps={{ inputLabel: { shrink: true } }} type="number" />
+              slotProps={{ inputLabel: { shrink: true } }} type="number" sx={textFieldSx} />
           </Grid>
           <Grid size={{ xs: 12, md: 9 }}>
             {missingFields.length > 0 && (
-              <Alert severity="warning" sx={{ mb: 0 }}>
-                <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>Missing fields:</Typography>
+              <Alert severity="warning" sx={{ mb: 0, borderRadius: T.radius.sm, fontFamily: T.font.body, '& .MuiAlert-message': { fontFamily: T.font.body } }}>
+                <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.88rem', mb: 0.5 }}>Missing fields:</Typography>
                 {missingFields.map((f, i) => (
-                  <Typography key={i} variant="body2">• {f}</Typography>
+                  <Typography key={i} sx={{ fontFamily: T.font.body, fontSize: '0.85rem' }}>• {f}</Typography>
                 ))}
               </Alert>
             )}
@@ -889,47 +987,38 @@ ${data.carbonPrice.pricePaid ? `
       {/* Action buttons */}
       <Box sx={{ mt: 3, mb: 1, display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
         <Button
-          variant="contained"
-          size="large"
-          startIcon={<PictureAsPdf />}
+          variant="contained" size="large" disableElevation startIcon={<PictureAsPdf />}
           onClick={handleDownloadPdf}
           sx={{
-            py: 1.5,
-            px: 5,
-            fontSize: '1.1rem',
-            bgcolor: SECTION_COLOR,
-            '&:hover': { bgcolor: '#047857' },
+            py: 1.5, px: 5, fontFamily: T.font.body, fontWeight: 600, fontSize: '1rem', textTransform: 'none',
+            bgcolor: T.color.forest, borderRadius: T.radius.pill,
+            '&:hover': { bgcolor: T.color.ctaHover },
           }}
         >
           Download PDF
         </Button>
         <Button
-          variant="contained"
-          size="large"
-          startIcon={<CloudUpload />}
-          onClick={handleUploadReport}
-          disabled={uploading || !companyId}
+          variant="contained" size="large" disableElevation startIcon={<CloudUpload />}
+          onClick={handleUploadReport} disabled={uploading || !companyId}
           sx={{
-            py: 1.5,
-            px: 5,
-            fontSize: '1.1rem',
-            bgcolor: '#2563eb',
-            '&:hover': { bgcolor: '#1d4ed8' },
+            py: 1.5, px: 5, fontFamily: T.font.body, fontWeight: 600, fontSize: '1rem', textTransform: 'none',
+            bgcolor: T.color.blue, borderRadius: T.radius.pill,
+            '&:hover': { bgcolor: T.color.blueHover },
           }}
         >
-          {uploading ? 'Uploading...' : 'Upload Report'}
+          {uploading ? 'Uploading…' : 'Upload Report'}
         </Button>
       </Box>
       {uploadResult && (
         <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
-          <Alert severity={uploadResult.success ? 'success' : 'error'} sx={{ mt: 1 }}>
+          <Alert severity={uploadResult.success ? 'success' : 'error'} sx={{ mt: 1, borderRadius: T.radius.sm, fontFamily: T.font.body }}>
             {uploadResult.message}
           </Alert>
         </Box>
       )}
       {!companyId && !loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
-          <Alert severity="info" sx={{ mt: 1 }}>
+          <Alert severity="info" sx={{ mt: 1, borderRadius: T.radius.sm, fontFamily: T.font.body }}>
             Upload is unavailable — no company is associated with your account.
           </Alert>
         </Box>

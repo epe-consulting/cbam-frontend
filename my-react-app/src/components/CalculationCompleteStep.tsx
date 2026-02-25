@@ -18,6 +18,39 @@ import {
 import { ArrowBack } from '@mui/icons-material';
 import { apiRequest } from '../utils/api';
 
+const T = {
+  font: {
+    display: "'Fraunces', Georgia, serif",
+    body: "'DM Sans', system-ui, sans-serif",
+    mono: "'DM Mono', 'Fira Code', monospace",
+  },
+  color: {
+    forest: '#0B4F3E',
+    sage: '#3A7D6A',
+    mint: '#E8F5EF',
+    mintDark: '#C3E6D5',
+    cream: '#FAFAF7',
+    warmWhite: '#FFFEF9',
+    ink: '#1A2B25',
+    inkSoft: '#3D5A50',
+    muted: '#6B8F82',
+    accent: '#D4A853',
+    accentLight: '#F4E8C9',
+    line: '#D6E5DD',
+    lineFaint: '#EAF0EC',
+    ctaHover: '#0A3F32',
+  },
+  radius: { sm: '8px', md: '14px', lg: '20px', pill: '999px' },
+};
+
+const tableHeadCellSx = {
+  fontFamily: T.font.body, fontWeight: 600, fontSize: '0.8rem', letterSpacing: '0.03em',
+  color: T.color.inkSoft, bgcolor: T.color.cream, borderBottom: `1px solid ${T.color.line}`, whiteSpace: 'nowrap' as const,
+};
+const tableCellSx = {
+  fontFamily: T.font.body, fontSize: '0.88rem', color: T.color.ink, borderBottom: `1px solid ${T.color.lineFaint}`,
+};
+
 interface ResultItem {
   id: number;
   formulaCode: string;
@@ -105,7 +138,6 @@ export function CalculationCompleteStep({
     };
   }, [calculationId]);
 
-  // Fallback summary from answers (legacy)
   const directQ = questionsFromApi.find((q) => q.code === 'ALU_TOTAL_DIRECT_EMISSIONS');
   const indirectQ = questionsFromApi.find((q) => q.code === 'ALU_TOTAL_INDIRECT_EMISSIONS');
   const directVal = directQ ? getAnswer(directQ.id) : '';
@@ -114,39 +146,37 @@ export function CalculationCompleteStep({
     (Number.parseFloat(String(directVal)) || 0) + (Number.parseFloat(String(indirectVal)) || 0);
 
   return (
-    <Box sx={{ py: 4 }}>
-      <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
+    <Box sx={{ py: 4, fontFamily: T.font.body }}>
+      <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: '1.5rem', color: T.color.ink, letterSpacing: '-0.02em', mb: 1 }}>
         Calculation complete
       </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+      <Typography sx={{ fontFamily: T.font.body, color: T.color.muted, lineHeight: 1.6, mb: 3 }}>
         Your emissions have been computed and saved.
       </Typography>
 
-      {/* Loading */}
       {resultLoading && (
         <Box display="flex" justifyContent="center" py={4}>
-          <CircularProgress />
+          <CircularProgress sx={{ color: T.color.forest }} />
         </Box>
       )}
 
-      {/* Error - fall back to old summary */}
       {resultError && !resultLoading && (
         <>
-          <Alert severity="warning" sx={{ mb: 2 }}>
+          <Alert severity="warning" sx={{ mb: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>
             Could not load detailed results: {resultError}
           </Alert>
           {questionsFromApi.length >= 2 && (directVal || indirectVal) && (
-            <Paper elevation={1} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'grey.300' }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+            <Paper elevation={0} sx={{ p: 3, mb: 3, bgcolor: T.color.warmWhite, border: `1px solid ${T.color.lineFaint}`, borderRadius: T.radius.md }}>
+              <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1rem', color: T.color.ink, mb: 2 }}>
                 Summary (from answers)
               </Typography>
-              <Typography variant="body1" sx={{ mb: 1 }}>
+              <Typography sx={{ fontFamily: T.font.body, fontSize: '0.95rem', color: T.color.inkSoft, mb: 0.5 }}>
                 Total direct emissions: {String(directVal || '—')} tonnes CO₂e
               </Typography>
-              <Typography variant="body1" sx={{ mb: 1 }}>
+              <Typography sx={{ fontFamily: T.font.body, fontSize: '0.95rem', color: T.color.inkSoft, mb: 0.5 }}>
                 Total indirect emissions: {String(indirectVal || '—')} tonnes CO₂e
               </Typography>
-              <Typography variant="body1" sx={{ fontWeight: 600 }}>
+              <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.95rem', color: T.color.forest }}>
                 Total: {fallbackTotal.toFixed(2)} tonnes CO₂e
               </Typography>
             </Paper>
@@ -154,64 +184,59 @@ export function CalculationCompleteStep({
         </>
       )}
 
-      {/* Results loaded */}
       {!resultLoading && !resultError && result && (
         <>
-          {/* Total */}
+          {/* Total Emissions Hero Card */}
           <Paper
-            elevation={2}
+            elevation={0}
             sx={{
-              p: 3,
-              mb: 3,
-              background: 'linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%)',
-              border: '1px solid',
-              borderColor: 'success.light',
+              p: 3, mb: 3, bgcolor: T.color.mint, border: `1px solid ${T.color.mintDark}`, borderRadius: T.radius.lg,
             }}
           >
             <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
               <Box>
-                <Typography variant="overline" color="text.secondary">
+                <Typography sx={{ fontFamily: T.font.body, fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: T.color.muted, mb: 0.5 }}>
                   Total Emissions
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: 'success.dark' }}>
+                <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: '2rem', color: T.color.forest, letterSpacing: '-0.02em' }}>
                   {result.totalEmissions != null ? Number(result.totalEmissions).toFixed(4) : '—'}{' '}
-                  <Typography component="span" variant="h6" color="text.secondary">
+                  <Typography component="span" sx={{ fontFamily: T.font.body, fontSize: '1rem', fontWeight: 500, color: T.color.muted }}>
                     tonnes CO₂e
                   </Typography>
                 </Typography>
               </Box>
               <Box textAlign="right">
-                <Chip label={result.status} color="success" size="small" sx={{ mb: 0.5 }} />
-                <Typography variant="caption" display="block" color="text.secondary">
+                <Chip label={result.status} size="small"
+                  sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.78rem', bgcolor: T.color.forest, color: '#fff', mb: 0.5 }} />
+                <Typography sx={{ fontFamily: T.font.body, fontSize: '0.82rem', color: T.color.muted }} display="block">
                   Report year: {result.reportYear}
                 </Typography>
               </Box>
             </Box>
           </Paper>
 
-          {/* Breakdown */}
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+          {/* Breakdown Table */}
+          <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.1rem', color: T.color.ink, mb: 2 }}>
             Emission Breakdown
           </Typography>
-          <TableContainer component={Paper} elevation={1} sx={{ mb: 3 }}>
+          <TableContainer component={Paper} elevation={0}
+            sx={{ mb: 3, borderRadius: T.radius.lg, border: `1px solid ${T.color.lineFaint}`, bgcolor: T.color.warmWhite, overflow: 'hidden' }}>
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ bgcolor: 'grey.50' }}>
-                  <TableCell sx={{ fontWeight: 600 }}>#</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Formula</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Pass</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Entry</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Expression</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Inputs</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="right">
-                    Result (tonnes CO₂e)
-                  </TableCell>
+                <TableRow>
+                  <TableCell sx={tableHeadCellSx}>#</TableCell>
+                  <TableCell sx={tableHeadCellSx}>Formula</TableCell>
+                  <TableCell sx={tableHeadCellSx}>Pass</TableCell>
+                  <TableCell sx={tableHeadCellSx}>Entry</TableCell>
+                  <TableCell sx={tableHeadCellSx}>Expression</TableCell>
+                  <TableCell sx={tableHeadCellSx}>Inputs</TableCell>
+                  <TableCell sx={{ ...tableHeadCellSx, textAlign: 'right' }}>Result (tonnes CO₂e)</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {result.items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                    <TableCell colSpan={7} align="center" sx={{ ...tableCellSx, py: 4, color: T.color.muted }}>
                       No computed items found.
                     </TableCell>
                   </TableRow>
@@ -219,59 +244,51 @@ export function CalculationCompleteStep({
                   result.items.map((item, idx) => {
                     const snapshot = parseSnapshot(item.inputSnapshot);
                     return (
-                      <TableRow key={item.id} hover>
-                        <TableCell>{idx + 1}</TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      <TableRow key={item.id} sx={{ '&:hover': { bgcolor: T.color.lineFaint }, transition: 'background 0.15s ease' }}>
+                        <TableCell sx={tableCellSx}>{idx + 1}</TableCell>
+                        <TableCell sx={tableCellSx}>
+                          <Typography sx={{ fontFamily: T.font.body, fontWeight: 500, fontSize: '0.88rem', color: T.color.ink }}>
                             {humanizeFormulaCode(item.formulaCode)}
                           </Typography>
                           {item.outputCode && (
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography sx={{ fontFamily: T.font.body, fontSize: '0.78rem', color: T.color.muted }}>
                               {item.outputCode}
                             </Typography>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={tableCellSx}>
                           {item.passCode ? (
-                            <Chip label={item.passCode} size="small" variant="outlined" />
-                          ) : (
-                            '—'
-                          )}
+                            <Chip label={item.passCode} size="small" variant="outlined"
+                              sx={{ fontFamily: T.font.body, fontSize: '0.78rem', borderColor: T.color.line, color: T.color.inkSoft }} />
+                          ) : '—'}
                         </TableCell>
-                        <TableCell>{item.entryIndex != null ? item.entryIndex + 1 : '—'}</TableCell>
-                        <TableCell>
+                        <TableCell sx={tableCellSx}>{item.entryIndex != null ? item.entryIndex + 1 : '—'}</TableCell>
+                        <TableCell sx={tableCellSx}>
                           <Typography
-                            variant="body2"
                             sx={{
-                              fontFamily: 'monospace',
-                              fontSize: '0.8rem',
-                              maxWidth: 280,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
+                              fontFamily: T.font.mono, fontSize: '0.8rem', color: T.color.inkSoft,
+                              maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                             }}
                             title={item.expression}
                           >
                             {item.expression}
                           </Typography>
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={tableCellSx}>
                           {Object.keys(snapshot).length > 0 ? (
                             <Box>
                               {Object.entries(snapshot).map(([k, v]) => (
-                                <Typography key={k} variant="caption" display="block" color="text.secondary">
+                                <Typography key={k} sx={{ fontFamily: T.font.body, fontSize: '0.78rem', color: T.color.muted }} display="block">
                                   <strong>{k}</strong>: {String(v)}
                                 </Typography>
                               ))}
                             </Box>
                           ) : (
-                            <Typography variant="body2" color="text.secondary">
-                              —
-                            </Typography>
+                            <Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem', color: T.color.muted }}>—</Typography>
                           )}
                         </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: 'monospace' }}>
+                        <TableCell sx={{ ...tableCellSx, textAlign: 'right' }}>
+                          <Typography sx={{ fontFamily: T.font.mono, fontWeight: 600, fontSize: '0.88rem', color: T.color.forest }}>
                             {Number(item.resultValue).toFixed(4)}
                           </Typography>
                         </TableCell>
@@ -283,18 +300,32 @@ export function CalculationCompleteStep({
             </Table>
           </TableContainer>
 
-          <Divider sx={{ mb: 3 }} />
+          <Divider sx={{ mb: 3, borderColor: T.color.lineFaint }} />
         </>
       )}
 
       <Box display="flex" gap={2} flexWrap="wrap">
-        <Button variant="outlined" size="large" startIcon={<ArrowBack />} onClick={onBack}>
+        <Button variant="outlined" size="large" startIcon={<ArrowBack sx={{ fontSize: '18px !important' }} />} onClick={onBack}
+          sx={{
+            fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', borderRadius: T.radius.pill,
+            borderColor: T.color.line, color: T.color.inkSoft,
+            '&:hover': { bgcolor: T.color.mint, borderColor: T.color.mintDark, color: T.color.forest },
+          }}>
           Back
         </Button>
-        <Button variant="contained" size="large" onClick={onBackToDashboard}>
+        <Button variant="contained" size="large" disableElevation onClick={onBackToDashboard}
+          sx={{
+            fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', borderRadius: T.radius.pill,
+            bgcolor: T.color.forest, '&:hover': { bgcolor: T.color.ctaHover },
+          }}>
           Back to Dashboard
         </Button>
-        <Button variant="outlined" size="large" onClick={onNewCalculation}>
+        <Button variant="outlined" size="large" onClick={onNewCalculation}
+          sx={{
+            fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', borderRadius: T.radius.pill,
+            borderColor: T.color.line, color: T.color.inkSoft,
+            '&:hover': { bgcolor: T.color.mint, borderColor: T.color.mintDark, color: T.color.forest },
+          }}>
           New calculation
         </Button>
       </Box>

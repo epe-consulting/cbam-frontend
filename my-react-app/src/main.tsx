@@ -9,56 +9,104 @@ import App from './App.tsx'
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#059669', // emerald-600
-      light: '#10b981', // emerald-500
-      dark: '#047857', // emerald-700
+      main: '#0B4F3E',
+      light: '#3A7D6A',
+      dark: '#0A3F32',
     },
     secondary: {
-      main: '#1e293b', // slate-800
+      main: '#1A2B25',
     },
     background: {
-      default: '#f8fafc', // slate-50
-      paper: '#ffffff',
+      default: '#FAFAF7',
+      paper: '#FFFEF9',
+    },
+    text: {
+      primary: '#1A2B25',
+      secondary: '#6B8F82',
+    },
+    divider: '#D6E5DD',
+    success: {
+      main: '#0B4F3E',
+      light: '#E8F5EF',
+    },
+    error: {
+      main: '#C0392B',
+      light: '#FDEDEC',
     },
   },
   typography: {
-    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    fontFamily: "'DM Sans', system-ui, -apple-system, sans-serif",
     h1: {
+      fontFamily: "'Fraunces', Georgia, serif",
       fontSize: '3.75rem',
       fontWeight: 700,
-      lineHeight: 1.2,
+      lineHeight: 1.12,
+      letterSpacing: '-0.025em',
     },
     h2: {
+      fontFamily: "'Fraunces', Georgia, serif",
       fontSize: '2.25rem',
       fontWeight: 700,
-      lineHeight: 1.3,
+      lineHeight: 1.2,
+      letterSpacing: '-0.02em',
     },
     h3: {
+      fontFamily: "'Fraunces', Georgia, serif",
       fontSize: '1.5rem',
       fontWeight: 600,
-      lineHeight: 1.4,
+      lineHeight: 1.3,
     },
     h4: {
+      fontFamily: "'Fraunces', Georgia, serif",
       fontSize: '1.25rem',
       fontWeight: 600,
       lineHeight: 1.4,
     },
+    h5: {
+      fontFamily: "'Fraunces', Georgia, serif",
+      fontWeight: 600,
+    },
+    h6: {
+      fontFamily: "'Fraunces', Georgia, serif",
+      fontWeight: 600,
+    },
+    body1: {
+      fontFamily: "'DM Sans', system-ui, sans-serif",
+    },
+    body2: {
+      fontFamily: "'DM Sans', system-ui, sans-serif",
+    },
+    button: {
+      fontFamily: "'DM Sans', system-ui, sans-serif",
+      fontWeight: 600,
+    },
+  },
+  shape: {
+    borderRadius: 14,
   },
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
           textTransform: 'none',
-          borderRadius: '8px',
-          fontWeight: 500,
+          borderRadius: '999px',
+          fontWeight: 600,
         },
       },
     },
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: '16px',
-          boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+          borderRadius: '20px',
+          boxShadow: 'none',
+          border: '1px solid #EAF0EC',
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
         },
       },
     },
