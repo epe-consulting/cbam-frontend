@@ -13,7 +13,6 @@ import {
   Paper,
   Chip,
   Stack,
-  Divider,
   List,
   ListItem,
   ListItemIcon,
@@ -42,6 +41,7 @@ import {
   Shield,
   East,
 } from '@mui/icons-material';
+import UnifiedFooter from './components/UnifiedFooter';
 
 type Lang = 'en' | 'ju' | 'tr';
 
@@ -1207,217 +1207,22 @@ const CBAMGuide: React.FC = () => {
         </Container>
       </Box>
 
-      {/* ── Footer ── */}
-      <Box
-        component="footer"
-        sx={{
-          bgcolor: T.color.ink,
-          color: 'rgba(255,255,255,0.55)',
-          pt: { xs: 6, md: 8 },
-          pb: 4,
+      <UnifiedFooter
+        labels={{
+          tagline: t.footer.tagline,
+          productTitle: t.footer.product.title,
+          productFeatures: t.footer.product.features,
+          productPricing: t.footer.product.pricing,
+          resourcesTitle: t.footer.resources.title,
+          resourcesGuide: t.footer.resources.guide,
+          resourcesSupport: t.footer.resources.support,
+          companyTitle: t.footer.company.title,
+          companyAbout: t.footer.company.about,
+          companyContact: t.footer.company.contact,
+          companyPrivacy: t.footer.company.privacy,
+          copyright: t.footer.copyright,
         }}
-      >
-        <Container maxWidth="lg">
-          <Grid container spacing={4} sx={{ mb: 6 }}>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Box display="flex" alignItems="center" gap={1.2} mb={2}>
-                <Box
-                  sx={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: '8px',
-                    bgcolor: T.color.forest,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Shield sx={{ color: '#fff', fontSize: 16 }} />
-                </Box>
-                <Typography
-                  sx={{
-                    fontFamily: T.font.display,
-                    fontWeight: 700,
-                    fontSize: '1.1rem',
-                    color: '#fff',
-                  }}
-                >
-                  Panonia
-                </Typography>
-              </Box>
-              <Typography
-                sx={{
-                  fontFamily: T.font.body,
-                  fontSize: '0.9rem',
-                  lineHeight: 1.65,
-                  maxWidth: 240,
-                }}
-              >
-                {t.footer.tagline}
-              </Typography>
-            </Grid>
-
-            <Grid size={{ xs: 6, md: 3 }}>
-              <Typography
-                sx={{
-                  fontFamily: T.font.body,
-                  fontWeight: 600,
-                  fontSize: '0.8rem',
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.35)',
-                  mb: 2.5,
-                }}
-              >
-                {t.footer.product.title}
-              </Typography>
-              <Stack spacing={1.5}>
-                {[t.footer.product.features, t.footer.product.pricing, t.footer.product.documentation].map((item) => (
-                  <Typography
-                    key={item}
-                    component="a"
-                    href="#"
-                    sx={{
-                      fontFamily: T.font.body,
-                      fontSize: '0.9rem',
-                      color: 'rgba(255,255,255,0.55)',
-                      textDecoration: 'none',
-                      transition: 'color 0.2s',
-                      '&:hover': { color: '#fff' },
-                    }}
-                  >
-                    {item}
-                  </Typography>
-                ))}
-              </Stack>
-            </Grid>
-
-            <Grid size={{ xs: 6, md: 3 }}>
-              <Typography
-                sx={{
-                  fontFamily: T.font.body,
-                  fontWeight: 600,
-                  fontSize: '0.8rem',
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.35)',
-                  mb: 2.5,
-                }}
-              >
-                {t.footer.resources.title}
-              </Typography>
-              <Stack spacing={1.5}>
-                <Typography
-                  component="a"
-                  onClick={() => navigate('/cbam-guide')}
-                  sx={{
-                    fontFamily: T.font.body,
-                    fontSize: '0.9rem',
-                    color: 'rgba(255,255,255,0.55)',
-                    textDecoration: 'none',
-                    cursor: 'pointer',
-                    transition: 'color 0.2s',
-                    '&:hover': { color: '#fff' },
-                  }}
-                >
-                  {t.footer.resources.guide}
-                </Typography>
-                {[t.footer.resources.blog, t.footer.resources.support].map((item) => (
-                  <Typography
-                    key={item}
-                    component="a"
-                    href="#"
-                    sx={{
-                      fontFamily: T.font.body,
-                      fontSize: '0.9rem',
-                      color: 'rgba(255,255,255,0.55)',
-                      textDecoration: 'none',
-                      transition: 'color 0.2s',
-                      '&:hover': { color: '#fff' },
-                    }}
-                  >
-                    {item}
-                  </Typography>
-                ))}
-              </Stack>
-            </Grid>
-
-            <Grid size={{ xs: 6, md: 3 }}>
-              <Typography
-                sx={{
-                  fontFamily: T.font.body,
-                  fontWeight: 600,
-                  fontSize: '0.8rem',
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.35)',
-                  mb: 2.5,
-                }}
-              >
-                {t.footer.company.title}
-              </Typography>
-              <Stack spacing={1.5}>
-                <Typography
-                  component="a"
-                  href="#"
-                  sx={{
-                    fontFamily: T.font.body,
-                    fontSize: '0.9rem',
-                    color: 'rgba(255,255,255,0.55)',
-                    textDecoration: 'none',
-                    transition: 'color 0.2s',
-                    '&:hover': { color: '#fff' },
-                  }}
-                >
-                  {t.footer.company.about}
-                </Typography>
-                <Typography
-                  component="a"
-                  onClick={() => navigate('/contact')}
-                  sx={{
-                    fontFamily: T.font.body,
-                    fontSize: '0.9rem',
-                    color: 'rgba(255,255,255,0.55)',
-                    textDecoration: 'none',
-                    cursor: 'pointer',
-                    transition: 'color 0.2s',
-                    '&:hover': { color: '#fff' },
-                  }}
-                >
-                  {t.footer.company.contact}
-                </Typography>
-                <Typography
-                  component="a"
-                  href="#"
-                  sx={{
-                    fontFamily: T.font.body,
-                    fontSize: '0.9rem',
-                    color: 'rgba(255,255,255,0.55)',
-                    textDecoration: 'none',
-                    transition: 'color 0.2s',
-                    '&:hover': { color: '#fff' },
-                  }}
-                >
-                  {t.footer.company.privacy}
-                </Typography>
-              </Stack>
-            </Grid>
-          </Grid>
-
-          <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)', mb: 3 }} />
-
-          <Typography
-            sx={{
-              fontFamily: T.font.body,
-              fontSize: '0.82rem',
-              textAlign: 'center',
-              color: 'rgba(255,255,255,0.3)',
-            }}
-          >
-            {t.footer.copyright}
-          </Typography>
-        </Container>
-      </Box>
+      />
     </Box>
   );
 };

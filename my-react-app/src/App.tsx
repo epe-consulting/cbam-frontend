@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import {
   AppBar,
   Toolbar,
@@ -39,6 +39,11 @@ import Admin from './Admin';
 import ProtectedRoute from './ProtectedRoute';
 import CBAMGuide from './CBAMGuide';
 import Contact from './Contact';
+import About from './About';
+import Privacy from './Privacy';
+import Support from './Support';
+import Features from './Features';
+import UnifiedFooter from './components/UnifiedFooter';
 import {
   Shield,
   Language,
@@ -62,6 +67,7 @@ interface Translations {
     features: string;
     howItWorks: string;
     about: string;
+    privacy: string;
     login: string;
   };
   hero: {
@@ -168,6 +174,7 @@ const translations: Record<Language, Translations> = {
       features: 'Features',
       howItWorks: 'How It Works',
       about: 'About CBAM',
+      privacy: 'Privacy',
       login: 'Login',
     },
     hero: {
@@ -284,6 +291,7 @@ const translations: Record<Language, Translations> = {
       features: 'Mogućnosti',
       howItWorks: 'Kako Funkcionira',
       about: 'O CBAM-u',
+      privacy: 'Privatnost',
       login: 'Prijava',
     },
     hero: {
@@ -401,6 +409,7 @@ const translations: Record<Language, Translations> = {
       features: 'Özellikler',
       howItWorks: 'Nasıl Çalışır',
       about: 'CBAM Hakkında',
+      privacy: 'Gizlilik',
       login: 'Giriş',
     },
     hero: {
@@ -1080,11 +1089,15 @@ const CBAMLandingPage: React.FC = () => {
           {!isMobile && (
             <Box display="flex" gap={1} sx={{ mr: 3 }}>
               {[
-                { label: t.nav.features, href: '#features' },
+                { label: t.nav.features, onClick: () => navigate('/features') },
                 { label: t.nav.howItWorks, href: '#how-it-works' },
                 {
                   label: t.nav.about,
                   onClick: () => navigate('/cbam-guide'),
+                },
+                {
+                  label: t.nav.privacy,
+                  onClick: () => navigate('/privacy'),
                 },
               ].map((item) => (
                 <Button
@@ -1764,226 +1777,22 @@ const CBAMLandingPage: React.FC = () => {
       </Box>
 
       {/* ── Footer ── */}
-      <Box
-        component="footer"
-        sx={{
-          bgcolor: T.color.ink,
-          color: 'rgba(255,255,255,0.55)',
-          pt: { xs: 6, md: 8 },
-          pb: 4,
+      <UnifiedFooter
+        labels={{
+          tagline: t.footer.tagline,
+          productTitle: t.footer.product.title,
+          productFeatures: t.footer.product.features,
+          productPricing: t.footer.product.pricing,
+          resourcesTitle: t.footer.resources.title,
+          resourcesGuide: t.footer.resources.guide,
+          resourcesSupport: t.footer.resources.support,
+          companyTitle: t.footer.company.title,
+          companyAbout: t.footer.company.about,
+          companyContact: t.footer.company.contact,
+          companyPrivacy: t.footer.company.privacy,
+          copyright: t.footer.copyright,
         }}
-      >
-        <Container maxWidth="lg">
-          <Grid container spacing={4} sx={{ mb: 6 }}>
-            {/* Brand */}
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Box display="flex" alignItems="center" gap={1.2} mb={2}>
-                <Box
-                  sx={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: '8px',
-                    bgcolor: T.color.forest,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Shield sx={{ color: '#fff', fontSize: 16 }} />
-                </Box>
-                <Typography
-                  sx={{
-                    fontFamily: T.font.display,
-                    fontWeight: 700,
-                    fontSize: '1.1rem',
-                    color: '#fff',
-                  }}
-                >
-                  Panonia
-                </Typography>
-              </Box>
-              <Typography
-                sx={{
-                  fontFamily: T.font.body,
-                  fontSize: '0.9rem',
-                  lineHeight: 1.65,
-                  maxWidth: 240,
-                }}
-              >
-                {t.footer.tagline}
-              </Typography>
-            </Grid>
-
-            {/* Product */}
-            <Grid size={{ xs: 6, md: 3 }}>
-              <Typography
-                sx={{
-                  fontFamily: T.font.body,
-                  fontWeight: 600,
-                  fontSize: '0.8rem',
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.35)',
-                  mb: 2.5,
-                }}
-              >
-                {t.footer.product.title}
-              </Typography>
-              <Stack spacing={1.5}>
-                {[
-                  t.footer.product.features,
-                  t.footer.product.pricing,
-                  t.footer.product.documentation,
-                ].map((item) => (
-                  <Typography
-                    key={item}
-                    component="a"
-                    href="#"
-                    sx={{
-                      fontFamily: T.font.body,
-                      fontSize: '0.9rem',
-                      color: 'rgba(255,255,255,0.55)',
-                      textDecoration: 'none',
-                      transition: 'color 0.2s',
-                      '&:hover': { color: '#fff' },
-                    }}
-                  >
-                    {item}
-                  </Typography>
-                ))}
-              </Stack>
-            </Grid>
-
-            {/* Resources */}
-            <Grid size={{ xs: 6, md: 3 }}>
-              <Typography
-                sx={{
-                  fontFamily: T.font.body,
-                  fontWeight: 600,
-                  fontSize: '0.8rem',
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.35)',
-                  mb: 2.5,
-                }}
-              >
-                {t.footer.resources.title}
-              </Typography>
-              <Stack spacing={1.5}>
-                <Typography
-                  component="a"
-                  onClick={() => navigate('/cbam-guide')}
-                  sx={{
-                    fontFamily: T.font.body,
-                    fontSize: '0.9rem',
-                    color: 'rgba(255,255,255,0.55)',
-                    textDecoration: 'none',
-                    cursor: 'pointer',
-                    transition: 'color 0.2s',
-                    '&:hover': { color: '#fff' },
-                  }}
-                >
-                  {t.footer.resources.guide}
-                </Typography>
-                {[t.footer.resources.blog, t.footer.resources.support].map(
-                  (item) => (
-                    <Typography
-                      key={item}
-                      component="a"
-                      href="#"
-                      sx={{
-                        fontFamily: T.font.body,
-                        fontSize: '0.9rem',
-                        color: 'rgba(255,255,255,0.55)',
-                        textDecoration: 'none',
-                        transition: 'color 0.2s',
-                        '&:hover': { color: '#fff' },
-                      }}
-                    >
-                      {item}
-                    </Typography>
-                  ),
-                )}
-              </Stack>
-            </Grid>
-
-            {/* Company */}
-            <Grid size={{ xs: 6, md: 3 }}>
-              <Typography
-                sx={{
-                  fontFamily: T.font.body,
-                  fontWeight: 600,
-                  fontSize: '0.8rem',
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.35)',
-                  mb: 2.5,
-                }}
-              >
-                {t.footer.company.title}
-              </Typography>
-              <Stack spacing={1.5}>
-                <Typography
-                  component="a"
-                  href="#"
-                  sx={{
-                    fontFamily: T.font.body,
-                    fontSize: '0.9rem',
-                    color: 'rgba(255,255,255,0.55)',
-                    textDecoration: 'none',
-                    transition: 'color 0.2s',
-                    '&:hover': { color: '#fff' },
-                  }}
-                >
-                  {t.footer.company.about}
-                </Typography>
-                <Typography
-                  component="a"
-                  onClick={() => navigate('/contact')}
-                  sx={{
-                    fontFamily: T.font.body,
-                    fontSize: '0.9rem',
-                    color: 'rgba(255,255,255,0.55)',
-                    textDecoration: 'none',
-                    cursor: 'pointer',
-                    transition: 'color 0.2s',
-                    '&:hover': { color: '#fff' },
-                  }}
-                >
-                  {t.footer.company.contact}
-                </Typography>
-                <Typography
-                  component="a"
-                  href="#"
-                  sx={{
-                    fontFamily: T.font.body,
-                    fontSize: '0.9rem',
-                    color: 'rgba(255,255,255,0.55)',
-                    textDecoration: 'none',
-                    transition: 'color 0.2s',
-                    '&:hover': { color: '#fff' },
-                  }}
-                >
-                  {t.footer.company.privacy}
-                </Typography>
-              </Stack>
-            </Grid>
-          </Grid>
-
-          <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)', mb: 3 }} />
-
-          <Typography
-            sx={{
-              fontFamily: T.font.body,
-              fontSize: '0.82rem',
-              textAlign: 'center',
-              color: 'rgba(255,255,255,0.3)',
-            }}
-          >
-            {t.footer.copyright}
-          </Typography>
-        </Container>
-      </Box>
+      />
 
       {/* ── Schedule Demo Dialog ── */}
       <Dialog
@@ -2164,37 +1973,54 @@ const App: React.FC = () => {
   };
 
   return (
-    <Routes>
-      <Route path="/" element={<CBAMLandingPage />} />
-      <Route path="/cbam-guide" element={<CBAMGuide />} />
-      <Route path="/contact" element={<Contact />} />
-      <Route path="/admin" element={<Admin />} />
-      <Route
-        path="/login"
-        element={
-          <Login onBack={handleBackToHome} onLoginSuccess={handleLoginSuccess} />
-        }
-      />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard onLogout={handleLogout} />
-          </ProtectedRoute>
-        }
-      >
-        <Route path="calculations" element={<CalculationsList />} />
-        <Route path="reports" element={<ReportsList />} />
-        <Route path="settings" element={<Settings />} />
-        <Route path="generate-report" element={<GenerateReport />} />
-        <Route path="new-calculation" element={<NewCalculation />} />
+    <>
+      <ScrollToTopOnRouteChange />
+      <Routes>
+        <Route path="/" element={<CBAMLandingPage />} />
+        <Route path="/features" element={<Features />} />
+        <Route path="/cbam-guide" element={<CBAMGuide />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/support" element={<Support />} />
+        <Route path="/admin" element={<Admin />} />
         <Route
-          path="new-calculation/:calculationId"
-          element={<NewCalculation />}
+          path="/login"
+          element={
+            <Login onBack={handleBackToHome} onLoginSuccess={handleLoginSuccess} />
+          }
         />
-      </Route>
-    </Routes>
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard onLogout={handleLogout} />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="calculations" element={<CalculationsList />} />
+          <Route path="reports" element={<ReportsList />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="generate-report" element={<GenerateReport />} />
+          <Route path="new-calculation" element={<NewCalculation />} />
+          <Route
+            path="new-calculation/:calculationId"
+            element={<NewCalculation />}
+          />
+        </Route>
+      </Routes>
+    </>
   );
+};
+
+const ScrollToTopOnRouteChange: React.FC = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [pathname]);
+
+  return null;
 };
 
 export default App;
