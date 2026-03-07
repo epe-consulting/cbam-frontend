@@ -510,6 +510,15 @@ const GenerateReport: React.FC = () => {
   const missingFields = getMissingFields();
 
   const buildReportHtml = (): string => {
+    const reportingPeriodText =
+      productInfoSummary.reportingPeriodFrom && productInfoSummary.reportingPeriodTo
+        ? `${esc(productInfoSummary.reportingPeriodFrom)} - ${esc(productInfoSummary.reportingPeriodTo)}`
+        : productInfoSummary.reportingPeriodFrom
+          ? esc(productInfoSummary.reportingPeriodFrom)
+          : productInfoSummary.reportingPeriodTo
+            ? esc(productInfoSummary.reportingPeriodTo)
+            : 'N/A';
+
     const productRows = data.products
       .filter(p => p.description || p.cnCode || p.quantity)
       .map(p => `<tr><td>${esc(p.description)}</td><td>${esc(p.cnCode)}</td><td>${esc(p.productionRoute)}</td><td>${esc(p.quantity)}</td><td>${esc(p.countryOfOrigin)}</td></tr>`)
@@ -549,6 +558,7 @@ const GenerateReport: React.FC = () => {
 </style></head><body>
 <h1>CBAM ALUMINIUM DISCLOSURE</h1>
 <p class="subtitle">Installation Operator → EU Authorised CBAM Declarant<br>Reporting Year: ${esc(data.reportingYear)}</p>
+<p class="subtitle" style="margin-top:-10px;">Reporting period: ${reportingPeriodText}</p>
 ${calcInfo}
 
 <h2>0. Additional Questions</h2>
@@ -1072,25 +1082,15 @@ ${data.carbonPrice.pricePaid ? `
         </Accordion>
       </div>
 
-      {/* Reporting Year */}
       <Paper elevation={0} sx={{ ...sectionPaperSx, p: { xs: 3, md: 4 }, mt: 1 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid size={{ xs: 12, md: 3 }}>
-            <TextField fullWidth label="Reporting Year" value={data.reportingYear}
-              onChange={e => setData(prev => ({ ...prev, reportingYear: e.target.value }))}
-              slotProps={{ inputLabel: { shrink: true } }} type="number" sx={textFieldSx} />
-          </Grid>
-          <Grid size={{ xs: 12, md: 9 }}>
-            {missingFields.length > 0 && (
-              <Alert severity="warning" sx={{ mb: 0, borderRadius: T.radius.sm, fontFamily: T.font.body, '& .MuiAlert-message': { fontFamily: T.font.body } }}>
-                <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.88rem', mb: 0.5 }}>Missing fields:</Typography>
-                {missingFields.map((f, i) => (
-                  <Typography key={i} sx={{ fontFamily: T.font.body, fontSize: '0.85rem' }}>• {f}</Typography>
-                ))}
-              </Alert>
-            )}
-          </Grid>
-        </Grid>
+        {missingFields.length > 0 && (
+          <Alert severity="warning" sx={{ mb: 0, borderRadius: T.radius.sm, fontFamily: T.font.body, '& .MuiAlert-message': { fontFamily: T.font.body } }}>
+            <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.88rem', mb: 0.5 }}>Missing fields:</Typography>
+            {missingFields.map((f, i) => (
+              <Typography key={i} sx={{ fontFamily: T.font.body, fontSize: '0.85rem' }}>• {f}</Typography>
+            ))}
+          </Alert>
+        )}
       </Paper>
 
       {/* Action buttons */}
