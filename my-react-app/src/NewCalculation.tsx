@@ -16,6 +16,7 @@ import { apiRequest } from './utils/api';
 import { optionCodeToFrontendState, frontendStateToOptionCode } from './utils/questionStepMapping';
 import { QuestionStepWrapper } from './components/QuestionStepWrapper';
 import { ProductInfoStep } from './components/ProductInfoStep';
+import { ProductDetailsStep, type ProductDetailEntry } from './components/ProductDetailsStep';
 import { FuelInputStep, type FuelEntry } from './components/FuelInputStep';
 import { PrecursorInputStep, type PrecursorEntry } from './components/PrecursorInputStep';
 import { AnodeStep } from './components/AnodeStep';
@@ -67,9 +68,14 @@ const NewCalculation: React.FC = () => {
     const n = parseInt(calculationIdParam, 10);
     return Number.isNaN(n) ? null : n;
   })() : null;
-  const { categoryNames, categories: productCategories, loading: categoriesLoading, error: categoriesError } = useProductCategories();
+  const { categoryNames, loading: categoriesLoading, error: categoriesError } = useProductCategories();
   const [category, setCategory] = useState('');
-  const [productName, setProductName] = useState('');
+  const [reportingPeriodFrom, setReportingPeriodFrom] = useState('');
+  const [reportingPeriodTo, setReportingPeriodTo] = useState('');
+  const [reportingPeriodError, setReportingPeriodError] = useState<string | null>(null);
+  const [productDetailEntries, setProductDetailEntries] = useState<ProductDetailEntry[]>([
+    { id: 1, productName: '', cnCode: '', quantity: '', countryOfOrigin: '' },
+  ]);
   const [step, setStep] = useState(1);
   const CBAM_CALC_ID_KEY = 'cbam-new-calculation-id';
   const [, setCalculation] = useState<CalculationDto | null>(null);
@@ -79,7 +85,6 @@ const NewCalculation: React.FC = () => {
   const [createLoading, setCreateLoading] = useState(false);
   const [calculationLoading, setCalculationLoading] = useState(false);
   const [aluminumProductType, setAluminumProductType] = useState('');
-  const [aluminumProductSubtype, setAluminumProductSubtype] = useState('');
   const [productionProcess, setProductionProcess] = useState('');
   const [dataQualityLevel, setDataQualityLevel] = useState('');
   
@@ -120,7 +125,10 @@ const NewCalculation: React.FC = () => {
 
   const stepCodeForQuestions = useMemo(
     () =>
-      currentStepCode && currentStepCode !== 'PRODUCT_INFO' && currentStepCode !== 'COMPLETE'
+      currentStepCode &&
+      currentStepCode !== 'PRODUCT_INFO' &&
+      currentStepCode !== 'CBAM_PRODUCT_DETAILS' &&
+      currentStepCode !== 'COMPLETE'
         ? currentStepCode
         : null,
     [currentStepCode]
@@ -131,9 +139,9 @@ const NewCalculation: React.FC = () => {
   const stepFromCurrentStepCode = (code: string): number => {
     switch (code) {
       case 'PRODUCT_INFO': return 1;
+      case 'CBAM_PRODUCT_DETAILS': return 2;
       case 'ALU_DECLARATION': return 2;
-      case 'ALU_UNWROUGHT':
-      case 'ALU_PRODUCT_TYPE': return 3;
+      case 'ALU_UNWROUGHT': return 3;
       case 'ALU_DATA':
       case 'ALU_SECONDARY_UNWROUGHT_SOURCES':
       case 'ALU_SECONDARY_UNWROUGHT_QTY':
@@ -238,11 +246,38 @@ const NewCalculation: React.FC = () => {
     'FUEL_INPUT', 'ALU_SECONDARY_FUEL_INPUT', 'ALU_SECONDARY_FUEL_RELATED',
     'ALU_PRODUCTS_REMAINING_FUEL_INPUT',
   ]), []);
+  const ELECTRICITY_STEP_CODES = useMemo(() => new Set([
+    'ALU_ELECTRICITY_SOURCE',
+    'ALU_GRID_CONSUMPTION',
+    'ALU_OWN_PLANT_FUEL_TYPE',
+    'ALU_OWN_PLANT_CONSUMPTION',
+    'ALU_PPA_EMISSION_FACTOR',
+    'ALU_PPA_EMISSION_FACTOR_AND_CONSUMPTION',
+    'ALU_PPA_CONSUMPTION_ONLY',
+  ]), []);
   useEffect(() => {
     if (FUEL_STEP_CODES.has(currentStepCode)) {
       setFuelEntries([{ id: 1, sector: '', subsector: '', subsubsector: '', emissionFactorName: '', denominator: '', amount: '', emissionFactorId: null, emissionFactorValue: null }]);
     }
   }, [currentStepCode, FUEL_STEP_CODES]);
+
+  useEffect(() => {
+    if (calculationId == null) return;
+    if (!ELECTRICITY_STEP_CODES.has(currentStepCode)) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await patchCalculationWizard(calculationId, { currentStep: 'SABIRNA_TACKA' });
+        if (cancelled) return;
+        stepStackRef.current.push(currentStepCode);
+        setCurrentStepCode('SABIRNA_TACKA');
+        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: 'SABIRNA_TACKA' } : null));
+      } catch {
+        // ignore reroute errors
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [currentStepCode, calculationId, ELECTRICITY_STEP_CODES]);
 
   useEffect(() => {
     if (currentStepCode === 'ALU_PRODUCTS_PRECURSORS') {
@@ -286,9 +321,6 @@ const NewCalculation: React.FC = () => {
         case 'ALU_UNWROUGHT_PRODUCTION_METHOD':
           setProductionProcess(frontend);
           break;
-        case 'ALU_PRODUCT_TYPE':
-          setAluminumProductSubtype(frontend);
-          break;
         case 'ALU_DATA_AVAILABILITY':
           setDataQualityLevel(frontend);
           break;
@@ -322,6 +354,15 @@ const NewCalculation: React.FC = () => {
         case 'ALU_CELL_TECHNOLOGY':
           setCellTechnology(valueStr.toLowerCase().replace(/_/g, '-'));
           break;
+        case 'CBAM_REPORTING_PERIOD_FROM':
+          setReportingPeriodFrom(valueStr);
+          break;
+        case 'CBAM_REPORTING_PERIOD_TO':
+          setReportingPeriodTo(valueStr);
+          break;
+        case 'CBAM_PRODUCT_CATEGORY':
+          setCategory(valueStr);
+          break;
         default:
           break;
       }
@@ -332,7 +373,6 @@ const NewCalculation: React.FC = () => {
     switch (code) {
       case 'ALU_DECLARATION_PRODUCT': return aluminumProductType;
       case 'ALU_UNWROUGHT_PRODUCTION_METHOD': return productionProcess;
-      case 'ALU_PRODUCT_TYPE': return aluminumProductSubtype;
       case 'ALU_DATA_AVAILABILITY': return dataQualityLevel;
       case 'ALU_OWN_EMBEDDED_EMISSIONS': return ownEmbeddedEmissions;
       case 'ALU_PFC_METHOD': return pfcMethod;
@@ -344,6 +384,9 @@ const NewCalculation: React.FC = () => {
       case 'ALU_AE_AVG_DURATION': return anodeEffectDuration;
       case 'ALU_PRIMARY_AL_QTY': return primaryAluminumQuantity;
       case 'ALU_CELL_TECHNOLOGY': return cellTechnology;
+      case 'CBAM_REPORTING_PERIOD_FROM': return reportingPeriodFrom;
+      case 'CBAM_REPORTING_PERIOD_TO': return reportingPeriodTo;
+      case 'CBAM_PRODUCT_CATEGORY': return category;
       default: return '';
     }
   };
@@ -362,7 +405,6 @@ const NewCalculation: React.FC = () => {
     switch (questionCode) {
       case 'ALU_DECLARATION_PRODUCT': setAluminumProductType(frontend); break;
       case 'ALU_UNWROUGHT_PRODUCTION_METHOD': setProductionProcess(frontend); break;
-      case 'ALU_PRODUCT_TYPE': setAluminumProductSubtype(frontend); break;
       case 'ALU_DATA_AVAILABILITY': setDataQualityLevel(frontend); break;
       case 'ALU_OWN_EMBEDDED_EMISSIONS': setOwnEmbeddedEmissions(frontend); break;
       case 'ALU_PFC_METHOD': setPfcMethod(frontend); break;
@@ -561,14 +603,14 @@ const NewCalculation: React.FC = () => {
       }
     }
     if (step === 1 && currentStepCode === 'PRODUCT_INFO') {
-      if (!category || !productName) {
+      if (!category || !reportingPeriodFrom || !reportingPeriodTo) {
         return;
       }
-      const productCategoryId = productCategories.find((c) => c.name === category)?.id;
-      if (productCategoryId == null) {
-        setCreateError('Invalid product category');
+      if (new Date(reportingPeriodFrom) > new Date(reportingPeriodTo)) {
+        setReportingPeriodError('"Od" datum ne može biti nakon "Do" datuma.');
         return;
       }
+      setReportingPeriodError(null);
       if (calculationId == null) {
         setCreateError('Please wait for the calculation to be ready, or start from the dashboard.');
         return;
@@ -576,20 +618,35 @@ const NewCalculation: React.FC = () => {
       setCreateError(null);
       setCreateLoading(true);
       try {
-        const cpResult = await apiRequest<{ success: boolean; calculationProduct?: unknown }>('/calculation-products/create', {
-          method: 'POST',
-          body: JSON.stringify({
-            calculation: { id: calculationId },
-            productName: productName.trim(),
-            productCategory: { id: productCategoryId },
-          }),
-        });
-        if (cpResult === null || !cpResult.data.success) {
-          setCreateError((cpResult?.data as { message?: string })?.message ?? 'Failed to save product');
+        let questionCodeMap = questionIdToCode;
+        if (
+          !Object.values(questionCodeMap).includes('CBAM_PRODUCT_CATEGORY') ||
+          !Object.values(questionCodeMap).includes('CBAM_REPORTING_PERIOD_FROM') ||
+          !Object.values(questionCodeMap).includes('CBAM_REPORTING_PERIOD_TO')
+        ) {
+          const allQuestions = await getAllQuestions();
+          const refreshedMap: Record<number, string> = {};
+          allQuestions.forEach((q) => {
+            refreshedMap[q.id] = q.code;
+          });
+          questionCodeMap = refreshedMap;
+          setQuestionIdToCode(refreshedMap);
+        }
+
+        const categoryQuestionId = Object.entries(questionCodeMap).find(([, code]) => code === 'CBAM_PRODUCT_CATEGORY')?.[0];
+        const reportingFromQuestionId = Object.entries(questionCodeMap).find(([, code]) => code === 'CBAM_REPORTING_PERIOD_FROM')?.[0];
+        const reportingToQuestionId = Object.entries(questionCodeMap).find(([, code]) => code === 'CBAM_REPORTING_PERIOD_TO')?.[0];
+        if (categoryQuestionId == null || reportingFromQuestionId == null || reportingToQuestionId == null) {
+          setCreateError('Product info pitanja nisu pronađena. Pokreni nove migracije pa pokušaj ponovo.');
           setCreateLoading(false);
           return;
         }
-        const nextStep = category === 'Aluminium' ? 'ALU_DECLARATION' : 'FUEL_INPUT';
+
+        await saveAnswer(Number(categoryQuestionId), category);
+        await saveAnswer(Number(reportingFromQuestionId), reportingPeriodFrom);
+        await saveAnswer(Number(reportingToQuestionId), reportingPeriodTo);
+
+        const nextStep = category === 'Aluminium' ? 'CBAM_PRODUCT_DETAILS' : 'FUEL_INPUT';
         await patchCalculationWizard(calculationId, { currentStep: nextStep });
         stepStackRef.current.push('PRODUCT_INFO');
         setCurrentStepCode(nextStep);
@@ -602,6 +659,41 @@ const NewCalculation: React.FC = () => {
       return;
     }
     if (step === 2) {
+      if (currentStepCode === 'CBAM_PRODUCT_DETAILS') {
+        if (calculationId == null) return;
+        let questionCodeMap = questionIdToCode;
+        if (!Object.values(questionCodeMap).includes('CBAM_PRODUCT_ENTRY')) {
+          const allQuestions = await getAllQuestions();
+          const refreshedMap: Record<number, string> = {};
+          allQuestions.forEach((q) => {
+            refreshedMap[q.id] = q.code;
+          });
+          questionCodeMap = refreshedMap;
+          setQuestionIdToCode(refreshedMap);
+        }
+
+        const productEntryQuestionId = Object.entries(questionCodeMap).find(([, code]) => code === 'CBAM_PRODUCT_ENTRY')?.[0];
+        if (productEntryQuestionId == null) {
+          setCreateError('Pitanje za product details nije pronađeno. Pokreni nove migracije pa pokušaj ponovo.');
+          return;
+        }
+        const productEntryQuestionIdNum = Number(productEntryQuestionId);
+        await deleteAnswersForQuestions([productEntryQuestionIdNum]);
+        for (const entry of productDetailEntries) {
+          await saveAnswer(productEntryQuestionIdNum, JSON.stringify({
+            product_name: entry.productName,
+            cn_code: entry.cnCode,
+            quantity: entry.quantity,
+            country_of_origin: entry.countryOfOrigin,
+          }));
+        }
+        const nextStep = 'ALU_DECLARATION';
+        await patchCalculationWizard(calculationId, { currentStep: nextStep });
+        stepStackRef.current.push(currentStepCode);
+        setCurrentStepCode(nextStep);
+        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: nextStep } : null));
+        return;
+      }
       if (category === 'Aluminium' && !aluminumProductType) return;
       if (calculationId == null) return;
       try {
@@ -619,7 +711,6 @@ const NewCalculation: React.FC = () => {
       }
     } else if (step === 3) {
       if (currentStepCode === 'ALU_UNWROUGHT' && !productionProcess) return;
-      if (currentStepCode === 'ALU_PRODUCT_TYPE' && category === 'Aluminium' && aluminumProductType === 'products' && !aluminumProductSubtype) return;
       if (calculationId == null) return;
       try {
         const { toStepCode } = await getNextStep(calculationId, currentStepCode);
@@ -675,14 +766,15 @@ const NewCalculation: React.FC = () => {
       if (calculationId == null) return;
       try {
         const { toStepCode } = await getNextStep(calculationId, currentStepCode);
+        const resolvedToStepCode = isProductsRemainingFuel ? 'SABIRNA_TACKA' : toStepCode;
         stepStackRef.current.push(currentStepCode);
-        if (toStepCode === 'COMPLETE') {
+        if (resolvedToStepCode === 'COMPLETE') {
           await patchCalculationWizard(calculationId, { status: 'COMPLETED' });
         } else {
-          await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+          await patchCalculationWizard(calculationId, { currentStep: resolvedToStepCode });
         }
-        setCurrentStepCode(toStepCode);
-        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode, status: toStepCode === 'COMPLETE' ? 'COMPLETED' : c.status } : null));
+        setCurrentStepCode(resolvedToStepCode);
+        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: resolvedToStepCode, status: resolvedToStepCode === 'COMPLETE' ? 'COMPLETED' : c.status } : null));
       } catch {
         // validation or API error
       }
@@ -784,15 +876,10 @@ const NewCalculation: React.FC = () => {
       if (needsQty && qtyQuestion && !getAnswer(qtyQuestion.id)) return;
       if (calculationId == null) return;
       try {
-        const { toStepCode } = await getNextStep(calculationId, currentStepCode);
         stepStackRef.current.push(currentStepCode);
-        if (toStepCode === 'COMPLETE') {
-          await patchCalculationWizard(calculationId, { status: 'COMPLETED' });
-        } else {
-          await patchCalculationWizard(calculationId, { currentStep: toStepCode });
-        }
-        setCurrentStepCode(toStepCode);
-        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode, status: toStepCode === 'COMPLETE' ? 'COMPLETED' : c.status } : null));
+        await patchCalculationWizard(calculationId, { currentStep: 'SABIRNA_TACKA' });
+        setCurrentStepCode('SABIRNA_TACKA');
+        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: 'SABIRNA_TACKA' } : null));
       } catch {
         // validation or API error
       }
@@ -920,10 +1007,24 @@ const NewCalculation: React.FC = () => {
       >
         {step === 1 && (
           <ProductInfoStep
-            productName={productName}
-            onProductNameChange={setProductName}
             category={category}
-            onCategoryChange={setCategory}
+            onCategoryChange={(value) => {
+              setCreateError(null);
+              setCategory(value);
+            }}
+            reportingPeriodFrom={reportingPeriodFrom}
+            onReportingPeriodFromChange={(value) => {
+              setCreateError(null);
+              setReportingPeriodError(null);
+              setReportingPeriodFrom(value);
+            }}
+            reportingPeriodTo={reportingPeriodTo}
+            onReportingPeriodToChange={(value) => {
+              setCreateError(null);
+              setReportingPeriodError(null);
+              setReportingPeriodTo(value);
+            }}
+            reportingPeriodError={reportingPeriodError}
             categoryNames={categoryNames}
             categoriesLoading={categoriesLoading}
             categoriesError={categoriesError}
@@ -935,7 +1036,38 @@ const NewCalculation: React.FC = () => {
           />
         )}
 
-        {step === 2 && (
+        {step === 2 && currentStepCode === 'CBAM_PRODUCT_DETAILS' && (
+          <ProductDetailsStep
+            title="Product details"
+            entries={productDetailEntries}
+            updateEntry={(index: number, updates: Partial<ProductDetailEntry>) =>
+              setProductDetailEntries((prev: ProductDetailEntry[]) =>
+                prev.map((e: ProductDetailEntry, i: number) => (i === index ? { ...e, ...updates } : e))
+              )
+            }
+            addEntry={() =>
+              setProductDetailEntries((prev: ProductDetailEntry[]) => [
+                ...prev,
+                {
+                  id: prev.length > 0 ? Math.max(...prev.map((e: ProductDetailEntry) => e.id)) + 1 : 1,
+                  productName: '',
+                  cnCode: '',
+                  quantity: '',
+                  countryOfOrigin: '',
+                },
+              ])
+            }
+            removeEntry={(index: number) =>
+              setProductDetailEntries((prev: ProductDetailEntry[]) =>
+                prev.filter((_: ProductDetailEntry, i: number) => i !== index)
+              )
+            }
+            onBack={handleBack}
+            onNext={handleNext}
+          />
+        )}
+
+        {step === 2 && currentStepCode !== 'CBAM_PRODUCT_DETAILS' && (
           <QuestionStepWrapper
             questions={questionsFromApi}
             loading={questionsLoading}

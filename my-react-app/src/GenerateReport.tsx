@@ -171,6 +171,17 @@ interface CalcResult {
   items: ResultItem[];
 }
 
+interface CalculationAnswerDetailRow {
+  questionCode: string | null;
+  answerValue: string | null;
+}
+
+interface ProductInfoSummary {
+  productCategory: string | null;
+  reportingPeriodFrom: string | null;
+  reportingPeriodTo: string | null;
+}
+
 interface ProductRow {
   description: string;
   cnCode: string;
@@ -247,6 +258,32 @@ const emptyQuantity = (): QuantityRow => ({
   product: '', quantity: '', totalEmbeddedEmissions: '',
 });
 
+const mapProductRowsFromAnswerDetails = (rows: CalculationAnswerDetailRow[]): ProductRow[] => {
+  return rows
+    .filter((row) => row.questionCode === 'CBAM_PRODUCT_ENTRY' && row.answerValue)
+    .map((row) => {
+      try {
+        const parsed = JSON.parse(row.answerValue as string) as {
+          product_name?: string;
+          cn_code?: string;
+          quantity?: string;
+          country_of_origin?: string;
+        };
+        return {
+          description: parsed.product_name ?? '',
+          cnCode: parsed.cn_code ?? '',
+          productionRoute: '',
+          quantity: parsed.quantity ?? '',
+          countryOfOrigin: parsed.country_of_origin ?? '',
+        };
+      } catch {
+        return null;
+      }
+    })
+    .filter((row): row is ProductRow => row !== null)
+    .filter((row) => row.description || row.cnCode || row.quantity || row.countryOfOrigin);
+};
+
 const GenerateReport: React.FC = () => {
   const navigate = useNavigate();
   const dashCtx = useDashboardCalculations();
@@ -266,6 +303,11 @@ const GenerateReport: React.FC = () => {
 
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [productInfoSummary, setProductInfoSummary] = useState<ProductInfoSummary>({
+    productCategory: null,
+    reportingPeriodFrom: null,
+    reportingPeriodTo: null,
+  });
 
   const [data, setData] = useState<ReportData>({
     reportingYear: new Date().getFullYear().toString(),
@@ -341,19 +383,40 @@ const GenerateReport: React.FC = () => {
   useEffect(() => {
     if (!selectedCalcId) {
       setCalcResult(null);
+      setProductInfoSummary({ productCategory: null, reportingPeriodFrom: null, reportingPeriodTo: null });
       return;
     }
     let cancelled = false;
     const fetchResult = async () => {
       setResultLoading(true);
-      const res = await apiRequest<{ success: boolean; result?: CalcResult }>(
-        `/calculations/${selectedCalcId}/result`
-      );
+      const [res, answersRes, productInfoRes] = await Promise.all([
+        apiRequest<{ success: boolean; result?: CalcResult }>(`/calculations/${selectedCalcId}/result`),
+        apiRequest<{ success: boolean; answers?: CalculationAnswerDetailRow[] }>(
+          `/calculation-answers/detail/by-calculation?calculationId=${selectedCalcId}`
+        ),
+        apiRequest<{ success: boolean; productInfo?: ProductInfoSummary }>(
+          `/calculation-answers/product-info/by-calculation?calculationId=${selectedCalcId}`
+        ),
+      ]);
+
+      if (!cancelled && answersRes?.data?.success && Array.isArray(answersRes.data.answers)) {
+        const mappedProductRows = mapProductRowsFromAnswerDetails(answersRes.data.answers);
+        setData((prev) => ({ ...prev, products: mappedProductRows.length > 0 ? mappedProductRows : [emptyProduct()] }));
+      }
+
       if (!cancelled && res?.data?.success && res.data.result) {
         setCalcResult(res.data.result);
+        setData((prev) => ({ ...prev, reportingYear: String(res.data.result?.reportYear ?? prev.reportingYear) }));
       } else if (!cancelled) {
         setCalcResult(null);
       }
+
+      if (!cancelled && productInfoRes?.data?.success && productInfoRes.data.productInfo) {
+        setProductInfoSummary(productInfoRes.data.productInfo);
+      } else if (!cancelled) {
+        setProductInfoSummary({ productCategory: null, reportingPeriodFrom: null, reportingPeriodTo: null });
+      }
+
       if (!cancelled) setResultLoading(false);
     };
     fetchResult();
@@ -407,6 +470,15 @@ const GenerateReport: React.FC = () => {
   const missingFields = getMissingFields();
 
   const buildReportHtml = (): string => {
+    const reportingPeriodText =
+      productInfoSummary.reportingPeriodFrom && productInfoSummary.reportingPeriodTo
+        ? `${esc(productInfoSummary.reportingPeriodFrom)} - ${esc(productInfoSummary.reportingPeriodTo)}`
+        : productInfoSummary.reportingPeriodFrom
+          ? esc(productInfoSummary.reportingPeriodFrom)
+          : productInfoSummary.reportingPeriodTo
+            ? esc(productInfoSummary.reportingPeriodTo)
+            : 'N/A';
+
     const productRows = data.products
       .filter(p => p.description || p.cnCode || p.quantity)
       .map(p => `<tr><td>${esc(p.description)}</td><td>${esc(p.cnCode)}</td><td>${esc(p.productionRoute)}</td><td>${esc(p.quantity)}</td><td>${esc(p.countryOfOrigin)}</td></tr>`)
@@ -446,7 +518,13 @@ const GenerateReport: React.FC = () => {
 </style></head><body>
 <h1>CBAM ALUMINIUM DISCLOSURE</h1>
 <p class="subtitle">Installation Operator → EU Authorised CBAM Declarant<br>Reporting Year: ${esc(data.reportingYear)}</p>
+<p class="subtitle" style="margin-top:-10px;">Reporting period: ${reportingPeriodText}</p>
 ${calcInfo}
+
+<h2>0. Additional Questions</h2>
+<div class="field"><span class="field-label">Product category:</span> <span class="field-value">${esc(productInfoSummary.productCategory ?? '')}</span></div>
+<div class="field"><span class="field-label">Reporting period (from):</span> <span class="field-value">${esc(productInfoSummary.reportingPeriodFrom ?? '')}</span></div>
+<div class="field"><span class="field-label">Reporting period (to):</span> <span class="field-value">${esc(productInfoSummary.reportingPeriodTo ?? '')}</span></div>
 
 <h2>1. Producer & Installation Identification</h2>
 <p style="font-weight:600;color:#555;margin-bottom:8px;">Producer (Operator)</p>

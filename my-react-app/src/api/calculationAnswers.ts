@@ -23,6 +23,12 @@ interface CalculationAnswerUpsertResponse {
   message?: string;
 }
 
+interface ProductInfoSummaryDto {
+  productCategory: string | null;
+  reportingPeriodFrom: string | null;
+  reportingPeriodTo: string | null;
+}
+
 /**
  * GET /calculation-answers/by-calculation?calculationId=...
  */
@@ -95,4 +101,24 @@ export async function getCalculationAnswerByCalculationAndQuestion(
     return null;
   }
   return result.data.calculationAnswer ?? null;
+}
+
+/**
+ * GET /calculation-answers/product-info/by-calculation?calculationId=...
+ * Returns compact PRODUCT_INFO values from calculation_answer.
+ */
+export async function getProductInfoByCalculation(
+  calculationId: number
+): Promise<ProductInfoSummaryDto> {
+  const result = await apiRequest<{
+    success: boolean;
+    productInfo?: ProductInfoSummaryDto;
+    message?: string;
+  }>(
+    `/calculation-answers/product-info/by-calculation?calculationId=${calculationId}`
+  );
+  if (result === null || !result.data.success || !result.data.productInfo) {
+    throw new Error(result?.data?.message ?? 'Failed to fetch product info');
+  }
+  return result.data.productInfo;
 }

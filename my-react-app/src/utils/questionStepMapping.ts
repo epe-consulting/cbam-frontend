@@ -1,6 +1,6 @@
 /**
  * Maps frontend step + context to DB step_code(s) for fetching questions.
- * step_code values come from SQL: ALU_DECLARATION, ALU_UNWROUGHT, ALU_PRODUCT_TYPE, ALU_DATA, FUEL_INPUT, ALU_EMISSIONS_INPUT, ALU_ANODES, ALU_ANODES_INPUT, ALU_PFC_METHOD, ALU_PFC_METHOD_A, ALU_ELECTRICITY_SOURCE.
+ * step_code values come from SQL: ALU_DECLARATION, ALU_UNWROUGHT, ALU_DATA, FUEL_INPUT, ALU_EMISSIONS_INPUT, ALU_ANODES, ALU_ANODES_INPUT, ALU_PFC_METHOD, ALU_PFC_METHOD_A, ALU_ELECTRICITY_SOURCE.
  * Returns string[] for step 6 (anode) so we fetch both ALU_ANODES_INPUT and ALU_ANODES and merge (no migration needed).
  */
 export function getStepCode(params: {
@@ -17,7 +17,7 @@ export function getStepCode(params: {
     case 2:
       return 'ALU_DECLARATION'; // ALU_DECLARATION_PRODUCT
     case 3:
-      return aluminumProductType === 'unwrought' ? 'ALU_UNWROUGHT' : 'ALU_PRODUCT_TYPE';
+      return aluminumProductType === 'unwrought' ? 'ALU_UNWROUGHT' : null;
     case 4:
       return aluminumProductType === 'unwrought' ? 'ALU_DATA' : null; // products step 4 has no questions from DB
     case 5:
@@ -52,14 +52,6 @@ export function optionCodeToFrontendState(questionCode: string, optionCode: stri
       if (optionCode === 'PRIMARY') return 'primary';
       if (optionCode === 'SECONDARY') return 'secondary';
       if (optionCode === 'BOTH') return 'both';
-      return lower;
-    case 'ALU_PRODUCT_TYPE':
-      if (optionCode === 'WIRE_7605') return 'wire';
-      if (optionCode === 'PLATES_7606') return 'sheets';
-      if (optionCode === 'FOIL_7607') return 'foils';
-      if (optionCode === 'PROFILES_7610') return 'profiles';
-      if (optionCode === 'TUBES_FITTINGS_7608_7609') return 'tubes';
-      if (optionCode === 'OTHER_7616') return 'other';
       return lower;
     case 'ALU_DATA_AVAILABILITY':
       if (optionCode === 'HAS_REAL_INPUTS') return 'real-data';
@@ -112,14 +104,6 @@ export function frontendStateToOptionCode(questionCode: string, frontendValue: s
       if (frontendValue === 'primary') return 'PRIMARY';
       if (frontendValue === 'secondary') return 'SECONDARY';
       if (frontendValue === 'both') return 'BOTH';
-      return frontendValue.toUpperCase();
-    case 'ALU_PRODUCT_TYPE':
-      if (frontendValue === 'wire') return 'WIRE_7605';
-      if (frontendValue === 'sheets') return 'PLATES_7606';
-      if (frontendValue === 'foils') return 'FOIL_7607';
-      if (frontendValue === 'profiles') return 'PROFILES_7610';
-      if (frontendValue === 'tubes') return 'TUBES_FITTINGS_7608_7609';
-      if (frontendValue === 'other') return 'OTHER_7616';
       return frontendValue.toUpperCase();
     case 'ALU_DATA_AVAILABILITY':
       if (frontendValue === 'real-data') return 'HAS_REAL_INPUTS';
