@@ -284,6 +284,28 @@ const mapProductRowsFromAnswerDetails = (rows: CalculationAnswerDetailRow[]): Pr
     .filter((row) => row.description || row.cnCode || row.quantity || row.countryOfOrigin);
 };
 
+const extractProductCategoryFromAnswerDetails = (rows: CalculationAnswerDetailRow[]): string | null => {
+  for (const row of rows) {
+    if (row.questionCode === 'CBAM_PRODUCT_CATEGORY' && row.answerValue && row.answerValue.trim() !== '') {
+      return row.answerValue;
+    }
+  }
+  return null;
+};
+
+const extractLatestAnswerByQuestionCode = (
+  rows: CalculationAnswerDetailRow[],
+  questionCode: string
+): string | null => {
+  for (let i = rows.length - 1; i >= 0; i -= 1) {
+    const row = rows[i];
+    if (row.questionCode === questionCode && row.answerValue != null && row.answerValue.trim() !== '') {
+      return row.answerValue;
+    }
+  }
+  return null;
+};
+
 const GenerateReport: React.FC = () => {
   const navigate = useNavigate();
   const dashCtx = useDashboardCalculations();
@@ -307,6 +329,15 @@ const GenerateReport: React.FC = () => {
     productCategory: null,
     reportingPeriodFrom: null,
     reportingPeriodTo: null,
+  });
+  const [additionalQuestionAnswers, setAdditionalQuestionAnswers] = useState<{
+    scrapTonnes: string | null;
+    preConsumerScrapPct: string | null;
+    otherElementsPct: string | null;
+  }>({
+    scrapTonnes: null,
+    preConsumerScrapPct: null,
+    otherElementsPct: null,
   });
 
   const [data, setData] = useState<ReportData>({
@@ -384,6 +415,7 @@ const GenerateReport: React.FC = () => {
     if (!selectedCalcId) {
       setCalcResult(null);
       setProductInfoSummary({ productCategory: null, reportingPeriodFrom: null, reportingPeriodTo: null });
+      setAdditionalQuestionAnswers({ scrapTonnes: null, preConsumerScrapPct: null, otherElementsPct: null });
       return;
     }
     let cancelled = false;
@@ -400,8 +432,16 @@ const GenerateReport: React.FC = () => {
       ]);
 
       if (!cancelled && answersRes?.data?.success && Array.isArray(answersRes.data.answers)) {
+        const categoryFromAnswers = extractProductCategoryFromAnswerDetails(answersRes.data.answers);
+        const scrapTonnes = extractLatestAnswerByQuestionCode(answersRes.data.answers, 'ALU_SCRAP_TONNES');
+        const preConsumerScrapPct = extractLatestAnswerByQuestionCode(answersRes.data.answers, 'ALU_SCRAP_PRE_CONSUMER_PCT');
+        const otherElementsPct = extractLatestAnswerByQuestionCode(answersRes.data.answers, 'ALU_OTHER_ELEMENTS_PCT');
         const mappedProductRows = mapProductRowsFromAnswerDetails(answersRes.data.answers);
         setData((prev) => ({ ...prev, products: mappedProductRows.length > 0 ? mappedProductRows : [emptyProduct()] }));
+        if (categoryFromAnswers) {
+          setProductInfoSummary((prev) => ({ ...prev, productCategory: categoryFromAnswers }));
+        }
+        setAdditionalQuestionAnswers({ scrapTonnes, preConsumerScrapPct, otherElementsPct });
       }
 
       if (!cancelled && res?.data?.success && res.data.result) {
@@ -470,15 +510,6 @@ const GenerateReport: React.FC = () => {
   const missingFields = getMissingFields();
 
   const buildReportHtml = (): string => {
-    const reportingPeriodText =
-      productInfoSummary.reportingPeriodFrom && productInfoSummary.reportingPeriodTo
-        ? `${esc(productInfoSummary.reportingPeriodFrom)} - ${esc(productInfoSummary.reportingPeriodTo)}`
-        : productInfoSummary.reportingPeriodFrom
-          ? esc(productInfoSummary.reportingPeriodFrom)
-          : productInfoSummary.reportingPeriodTo
-            ? esc(productInfoSummary.reportingPeriodTo)
-            : 'N/A';
-
     const productRows = data.products
       .filter(p => p.description || p.cnCode || p.quantity)
       .map(p => `<tr><td>${esc(p.description)}</td><td>${esc(p.cnCode)}</td><td>${esc(p.productionRoute)}</td><td>${esc(p.quantity)}</td><td>${esc(p.countryOfOrigin)}</td></tr>`)
@@ -518,13 +549,13 @@ const GenerateReport: React.FC = () => {
 </style></head><body>
 <h1>CBAM ALUMINIUM DISCLOSURE</h1>
 <p class="subtitle">Installation Operator → EU Authorised CBAM Declarant<br>Reporting Year: ${esc(data.reportingYear)}</p>
-<p class="subtitle" style="margin-top:-10px;">Reporting period: ${reportingPeriodText}</p>
 ${calcInfo}
 
 <h2>0. Additional Questions</h2>
-<div class="field"><span class="field-label">Product category:</span> <span class="field-value">${esc(productInfoSummary.productCategory ?? '')}</span></div>
-<div class="field"><span class="field-label">Reporting period (from):</span> <span class="field-value">${esc(productInfoSummary.reportingPeriodFrom ?? '')}</span></div>
-<div class="field"><span class="field-label">Reporting period (to):</span> <span class="field-value">${esc(productInfoSummary.reportingPeriodTo ?? '')}</span></div>
+<div class="field"><span class="field-label">Product category:</span> <span class="field-value">${esc(productInfoSummary.productCategory ?? 'N/A')}</span></div>
+<div class="field"><span class="field-label">Tonnes of scrap used for producing 1 tonne of the unwrought aluminium product:</span> <span class="field-value">${esc(additionalQuestionAnswers.scrapTonnes ?? 'N/A')}</span></div>
+<div class="field"><span class="field-label">Percentage of scrap that is pre-consumer scrap:</span> <span class="field-value">${esc(additionalQuestionAnswers.preConsumerScrapPct ?? 'N/A')}</span></div>
+<div class="field"><span class="field-label">If the total content of elements other than aluminium exceeds 1%, the total percentage of such elements:</span> <span class="field-value">${esc(additionalQuestionAnswers.otherElementsPct ?? 'N/A')}</span></div>
 
 <h2>1. Producer & Installation Identification</h2>
 <p style="font-weight:600;color:#555;margin-bottom:8px;">Producer (Operator)</p>
