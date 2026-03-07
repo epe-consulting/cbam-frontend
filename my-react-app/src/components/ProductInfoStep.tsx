@@ -41,10 +41,13 @@ const selectSx = {
 };
 
 export interface ProductInfoStepProps {
-  productName: string;
-  onProductNameChange: (value: string) => void;
   category: string;
   onCategoryChange: (value: string) => void;
+  reportingPeriodFrom: string;
+  onReportingPeriodFromChange: (value: string) => void;
+  reportingPeriodTo: string;
+  onReportingPeriodToChange: (value: string) => void;
+  reportingPeriodError: string | null;
   categoryNames: string[];
   categoriesLoading: boolean;
   categoriesError: string | null;
@@ -56,10 +59,13 @@ export interface ProductInfoStepProps {
 }
 
 export function ProductInfoStep({
-  productName,
-  onProductNameChange,
   category,
   onCategoryChange,
+  reportingPeriodFrom,
+  onReportingPeriodFromChange,
+  reportingPeriodTo,
+  onReportingPeriodToChange,
+  reportingPeriodError,
   categoryNames,
   categoriesLoading,
   categoriesError,
@@ -72,17 +78,9 @@ export function ProductInfoStep({
   return (
     <>
       <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.2rem', color: T.color.ink, letterSpacing: '-0.02em', mb: 3 }}>
-        Product Information
+        Izaberi kategoriju i reporting period
       </Typography>
       <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <TextField
-            fullWidth label="Product Name" variant="outlined"
-            value={productName}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onProductNameChange(e.target.value)}
-            sx={textFieldSx}
-          />
-        </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
           <FormControl fullWidth disabled={categoriesLoading} error={!!categoriesError} sx={selectSx}>
             <InputLabel>Product Category</InputLabel>
@@ -114,7 +112,34 @@ export function ProductInfoStep({
             )}
           </FormControl>
         </Grid>
+        <Grid size={{ xs: 12, md: 3 }}>
+          <TextField
+            fullWidth
+            label="Od"
+            type="date"
+            value={reportingPeriodFrom}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onReportingPeriodFromChange(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            sx={textFieldSx}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 3 }}>
+          <TextField
+            fullWidth
+            label="Do"
+            type="date"
+            value={reportingPeriodTo}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onReportingPeriodToChange(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            sx={textFieldSx}
+          />
+        </Grid>
         <Grid size={12}>
+          {reportingPeriodError && (
+            <Typography sx={{ mb: 1, fontFamily: T.font.body, fontSize: '0.88rem', color: '#C0392B' }}>
+              {reportingPeriodError}
+            </Typography>
+          )}
           {createError && (
             <Typography sx={{ mb: 1, fontFamily: T.font.body, fontSize: '0.88rem', color: '#C0392B' }}>
               {createError}
@@ -127,7 +152,8 @@ export function ProductInfoStep({
               onClick={onNext}
               disabled={
                 !category ||
-                !productName ||
+                !reportingPeriodFrom ||
+                !reportingPeriodTo ||
                 categoriesLoading ||
                 createLoading ||
                 calculationId == null ||
