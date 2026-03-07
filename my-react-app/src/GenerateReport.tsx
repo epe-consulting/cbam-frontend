@@ -470,6 +470,15 @@ const GenerateReport: React.FC = () => {
   const missingFields = getMissingFields();
 
   const buildReportHtml = (): string => {
+    const reportingPeriodText =
+      productInfoSummary.reportingPeriodFrom && productInfoSummary.reportingPeriodTo
+        ? `${esc(productInfoSummary.reportingPeriodFrom)} - ${esc(productInfoSummary.reportingPeriodTo)}`
+        : productInfoSummary.reportingPeriodFrom
+          ? esc(productInfoSummary.reportingPeriodFrom)
+          : productInfoSummary.reportingPeriodTo
+            ? esc(productInfoSummary.reportingPeriodTo)
+            : 'N/A';
+
     const productRows = data.products
       .filter(p => p.description || p.cnCode || p.quantity)
       .map(p => `<tr><td>${esc(p.description)}</td><td>${esc(p.cnCode)}</td><td>${esc(p.productionRoute)}</td><td>${esc(p.quantity)}</td><td>${esc(p.countryOfOrigin)}</td></tr>`)
@@ -509,6 +518,7 @@ const GenerateReport: React.FC = () => {
 </style></head><body>
 <h1>CBAM ALUMINIUM DISCLOSURE</h1>
 <p class="subtitle">Installation Operator → EU Authorised CBAM Declarant<br>Reporting Year: ${esc(data.reportingYear)}</p>
+<p class="subtitle" style="margin-top:-10px;">Reporting period: ${reportingPeriodText}</p>
 ${calcInfo}
 
 <h2>0. Additional Questions</h2>
