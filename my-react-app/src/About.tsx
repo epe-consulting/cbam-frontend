@@ -348,19 +348,6 @@ const About: React.FC = () => {
                 </Box>
               </Paper>
             </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Paper elevation={0} sx={{ borderRadius: T.radius.lg, border: `1px solid ${T.color.line}`, bgcolor: T.color.warmWhite, overflow: 'hidden' }}>
-                <Box component="img" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=1200&q=80" alt="Stock team placeholder 3" sx={{ width: '100%', height: 240, objectFit: 'cover' }} />
-                <Box sx={{ p: 2.5 }}>
-                  <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, color: T.color.ink, fontSize: '1.15rem' }}>
-                    Ibrahim Ahmetovic
-                  </Typography>
-                  <Typography sx={{ fontFamily: T.font.body, color: T.color.muted, mt: 0.5 }}>
-                    {t.team.ibrahimRole}
-                  </Typography>
-                </Box>
-              </Paper>
-            </Grid>
           </Grid>
         </Box>
       </Container>
