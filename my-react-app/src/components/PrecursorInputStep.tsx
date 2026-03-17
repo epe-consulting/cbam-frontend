@@ -111,7 +111,7 @@ export function PrecursorInputStep({
           </Grid>
           <Grid size={4}>
             <TextField
-              fullWidth label="Količina (kg)" value={entry.kolicina}
+              fullWidth label="Količina (t)" value={entry.kolicina}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 updatePrecursorEntry(index, { kolicina: e.target.value })
               }
@@ -121,7 +121,7 @@ export function PrecursorInputStep({
           </Grid>
           <Grid size={4}>
             <TextField
-              fullWidth label="Ugrađene emisije (kgCO2e/kg)" value={entry.ugradjeneEmisije}
+              fullWidth label="Ugrađene emisije (tCO2e/t)" value={entry.ugradjeneEmisije}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 updatePrecursorEntry(index, { ugradjeneEmisije: e.target.value })
               }
