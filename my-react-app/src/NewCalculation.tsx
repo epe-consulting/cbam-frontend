@@ -19,6 +19,16 @@ import { ProductInfoStep } from './components/ProductInfoStep';
 import { ProductDetailsStep, type ProductDetailEntry } from './components/ProductDetailsStep';
 import { FuelInputStep, type FuelEntry } from './components/FuelInputStep';
 import { PrecursorInputStep, type PrecursorEntry } from './components/PrecursorInputStep';
+import {
+  ExternalUnwroughtInputStep,
+  EXTERNAL_UNWROUGHT_CN_CODE,
+  type ExternalUnwroughtEntry,
+} from './components/ExternalUnwroughtInputStep';
+
+/** When step stack is empty (e.g. page refresh), Back still goes one step back. */
+const STEP_PREVIOUS_FALLBACK: Record<string, string> = {
+  ALU_EXTERNAL_UNWROUGHT_INPUT: 'ALU_PRODUCTS_UNWROUGHT_INPUT',
+};
 import { AnodeStep } from './components/AnodeStep';
 import { FlueGasStep } from './components/FlueGasStep';
 import { CalculationCompleteStep } from './components/CalculationCompleteStep';
@@ -105,7 +115,20 @@ const NewCalculation: React.FC = () => {
   const [anodeTypeConfirmed, setAnodeTypeConfirmed] = useState(false);
 
   const [precursorEntries, setPrecursorEntries] = useState<PrecursorEntry[]>([
-    { id: 1, vrsta: '', kolicina: '', ugradjeneEmisije: '' }
+    {
+      id: 1,
+      cnCodeId: null,
+      cnCode: '',
+      vrsta: '',
+      countryId: null,
+      drzava: '',
+      kolicina: '',
+      emisijePoznate: '',
+      ugradjeneEmisije: '',
+    },
+  ]);
+  const [externalUnwroughtEntries, setExternalUnwroughtEntries] = useState<ExternalUnwroughtEntry[]>([
+    { id: 1, countryId: null, drzava: '', kolicina: '', clanicaEu: '', emisijePoznate: '', ugradjeneEmisije: '' },
   ]);
 
   const [_pfcQuantity, _setPfcQuantity] = useState<string>('');
@@ -163,6 +186,7 @@ const NewCalculation: React.FC = () => {
       case 'ALU_SECONDARY_FUEL_RELATED':
       case 'ALU_PRODUCTS_REMAINING_FUEL_INPUT': return 5;
       case 'ALU_PRODUCTS_PRECURSORS': return 13;
+      case 'ALU_EXTERNAL_UNWROUGHT_INPUT': return 14;
       case 'ALU_ANODE_TYPE':
       case 'ALU_ANODES_INPUT':
       case 'ALU_ANODES_SODERBERG': return 6;
@@ -193,6 +217,10 @@ const NewCalculation: React.FC = () => {
         setCalculation(calc);
         setCurrentStepCode(calc.currentStep);
         setStep(stepFromCurrentStepCode(calc.currentStep));
+        const fallbackPrevious = STEP_PREVIOUS_FALLBACK[calc.currentStep];
+        if (fallbackPrevious && stepStackRef.current.length === 0) {
+          stepStackRef.current = [fallbackPrevious];
+        }
       })
       .catch(() => {})
       .finally(() => {
@@ -232,7 +260,17 @@ const NewCalculation: React.FC = () => {
         setCellTechnology('');
         setElectricitySource('');
         setOwnEmbeddedEmissions('');
-        setPrecursorEntries([{ id: 1, vrsta: '', kolicina: '', ugradjeneEmisije: '' }]);
+        setPrecursorEntries([{
+          id: 1,
+          cnCodeId: null,
+          cnCode: '',
+          vrsta: '',
+          countryId: null,
+          drzava: '',
+          kolicina: '',
+          emisijePoznate: '',
+          ugradjeneEmisije: '',
+        }]);
         setCurrentStepCode(toStepCode);
         setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode, status: toStepCode === 'COMPLETE' ? 'COMPLETED' : c.status } : null));
       } catch {
@@ -281,7 +319,25 @@ const NewCalculation: React.FC = () => {
 
   useEffect(() => {
     if (currentStepCode === 'ALU_PRODUCTS_PRECURSORS') {
-      setPrecursorEntries([{ id: 1, vrsta: '', kolicina: '', ugradjeneEmisije: '' }]);
+      setPrecursorEntries([{
+        id: 1,
+        cnCodeId: null,
+        cnCode: '',
+        vrsta: '',
+        countryId: null,
+        drzava: '',
+        kolicina: '',
+        emisijePoznate: '',
+        ugradjeneEmisije: '',
+      }]);
+    }
+  }, [currentStepCode]);
+
+  useEffect(() => {
+    if (currentStepCode === 'ALU_EXTERNAL_UNWROUGHT_INPUT') {
+      setExternalUnwroughtEntries([
+        { id: 1, countryId: null, drzava: '', kolicina: '', clanicaEu: '', emisijePoznate: '', ugradjeneEmisije: '' },
+      ]);
     }
   }, [currentStepCode]);
 
@@ -915,16 +971,54 @@ const NewCalculation: React.FC = () => {
       } catch {
         // validation or API error
       }
+    } else if (step === 14) {
+      const externalQuestion = questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_EXTERNAL_UNWROUGHT_ENTRY');
+      if (externalQuestion && calculationId != null) {
+        await deleteAnswersForQuestions([externalQuestion.id]);
+        for (const entry of externalUnwroughtEntries) {
+          if (entry.countryId != null && entry.kolicina.trim()) {
+            await saveAnswer(externalQuestion.id, JSON.stringify({
+              cn_code: EXTERNAL_UNWROUGHT_CN_CODE,
+              country_id: entry.countryId,
+              drzava: entry.drzava,
+              kolicina: entry.kolicina,
+              clanica_eu: entry.clanicaEu,
+              emisije_poznate: entry.clanicaEu === 'NON_EU_MEMBER' ? entry.emisijePoznate : '',
+              ugradjene_emisije: entry.clanicaEu === 'NON_EU_MEMBER' && entry.emisijePoznate === 'YES'
+                ? entry.ugradjeneEmisije
+                : '',
+            }));
+          }
+        }
+      }
+      if (calculationId == null) return;
+      try {
+        const { toStepCode } = await getNextStep(calculationId, currentStepCode);
+        stepStackRef.current.push(currentStepCode);
+        if (toStepCode === 'COMPLETE') {
+          await patchCalculationWizard(calculationId, { status: 'COMPLETED' });
+        } else {
+          await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+        }
+        setCurrentStepCode(toStepCode);
+        setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode, status: toStepCode === 'COMPLETE' ? 'COMPLETED' : c.status } : null));
+      } catch {
+        // validation or API error
+      }
     } else if (step === 13) {
       const precursorQuestion = questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_PRECURSOR_ENTRY');
       if (precursorQuestion && calculationId != null) {
         await deleteAnswersForQuestions([precursorQuestion.id]);
         for (const entry of precursorEntries) {
-          if (entry.vrsta.trim() || entry.kolicina.trim() || entry.ugradjeneEmisije.trim()) {
+          if (entry.cnCodeId != null && entry.countryId != null && entry.kolicina.trim()) {
             await saveAnswer(precursorQuestion.id, JSON.stringify({
+              cn_code: entry.cnCode,
               vrsta: entry.vrsta,
+              country_id: entry.countryId,
+              drzava: entry.drzava,
               kolicina: entry.kolicina,
-              ugradjene_emisije: entry.ugradjeneEmisije,
+              emisije_poznate: entry.emisijePoznate,
+              ugradjene_emisije: entry.emisijePoznate === 'YES' ? entry.ugradjeneEmisije : '',
             }));
           }
         }
@@ -947,7 +1041,10 @@ const NewCalculation: React.FC = () => {
   };
 
   const handleBack = async () => {
-    const previousStepCode = stepStackRef.current.pop();
+    let previousStepCode = stepStackRef.current.pop() ?? null;
+    if (previousStepCode == null) {
+      previousStepCode = STEP_PREVIOUS_FALLBACK[currentStepCode] ?? null;
+    }
     if (previousStepCode == null) {
       navigate('/dashboard');
       return;
@@ -1095,7 +1192,7 @@ const NewCalculation: React.FC = () => {
           />
         )}
 
-        {step === 4 && (
+        {step === 4 && currentStepCode !== 'ALU_EXTERNAL_UNWROUGHT_INPUT' && (
           <QuestionStepWrapper
             questions={questionsFromApi}
             loading={questionsLoading}
@@ -1274,6 +1371,39 @@ const NewCalculation: React.FC = () => {
           </Box>
         )}
 
+        {step === 14 && (
+          <ExternalUnwroughtInputStep
+            title={questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_EXTERNAL_UNWROUGHT_ENTRY')?.label}
+            entries={externalUnwroughtEntries}
+            updateEntry={(index: number, updates: Partial<ExternalUnwroughtEntry>) =>
+              setExternalUnwroughtEntries((prev: ExternalUnwroughtEntry[]) =>
+                prev.map((e: ExternalUnwroughtEntry, i: number) => (i === index ? { ...e, ...updates } : e))
+              )
+            }
+            addEntry={() =>
+              setExternalUnwroughtEntries((prev: ExternalUnwroughtEntry[]) => [
+                ...prev,
+                {
+                  id: prev.length > 0 ? Math.max(...prev.map((e: ExternalUnwroughtEntry) => e.id)) + 1 : 1,
+                  countryId: null,
+                  drzava: '',
+                  kolicina: '',
+                  clanicaEu: '',
+                  emisijePoznate: '',
+                  ugradjeneEmisije: '',
+                },
+              ])
+            }
+            removeEntry={(index: number) =>
+              setExternalUnwroughtEntries((prev: ExternalUnwroughtEntry[]) =>
+                prev.filter((_: ExternalUnwroughtEntry, i: number) => i !== index)
+              )
+            }
+            onBack={handleBack}
+            onNext={handleNext}
+          />
+        )}
+
         {step === 13 && (
           <PrecursorInputStep
             title={questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_PRECURSOR_ENTRY')?.label}
@@ -1286,8 +1416,13 @@ const NewCalculation: React.FC = () => {
                 ...prev,
                 {
                   id: prev.length > 0 ? Math.max(...prev.map((e: PrecursorEntry) => e.id)) + 1 : 1,
+                  cnCodeId: null,
+                  cnCode: '',
                   vrsta: '',
+                  countryId: null,
+                  drzava: '',
                   kolicina: '',
+                  emisijePoznate: '',
                   ugradjeneEmisije: '',
                 },
               ])
