@@ -20,7 +20,7 @@ jobs:
       - name: Log in to ACR
         uses: docker/login-action@v3
         with:
-          registry: cbaregistry.azurecr.io
+          registry: cbamic.azurecr.io
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
@@ -35,5 +35,5 @@ jobs:
             VITE_BLOB_CONTAINER_URL=${{ secrets.BLOB_CONTAINER_URL }}
             VITE_BLOB_SAS_TOKEN=${{ secrets.BLOB_SAS_TOKEN }}
           tags: |
-            cbaregistry.azurecr.io/cbam-front-prod:${{ github.sha }}
-            cbaregistry.azurecr.io/cbam-front-prod:latest
+            cbamic.azurecr.io/cbam-front-prod:${{ github.sha }}
+            cbamic.azurecr.io/cbam-front-prod:latest
