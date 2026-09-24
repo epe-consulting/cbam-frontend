@@ -24,11 +24,6 @@ import {
   EXTERNAL_UNWROUGHT_CN_CODE,
   type ExternalUnwroughtEntry,
 } from './components/ExternalUnwroughtInputStep';
-
-/** When step stack is empty (e.g. page refresh), Back still goes one step back. */
-const STEP_PREVIOUS_FALLBACK: Record<string, string> = {
-  ALU_EXTERNAL_UNWROUGHT_INPUT: 'ALU_PRODUCTS_UNWROUGHT_INPUT',
-};
 import { AnodeStep } from './components/AnodeStep';
 import { FlueGasStep } from './components/FlueGasStep';
 import { CalculationCompleteStep } from './components/CalculationCompleteStep';
@@ -42,6 +37,11 @@ import {
   getLookupDenominators,
   getLookupId,
 } from './api/emissionFactors';
+import {
+  inferPreviousStepFallback,
+  resolvePreviousStep,
+  type WizardAnswerLookup,
+} from './utils/wizardBackNavigation';
 
 /* ─── Design tokens (shared across Panonia) ─── */
 const T = {
@@ -91,6 +91,7 @@ const NewCalculation: React.FC = () => {
   const [, setCalculation] = useState<CalculationDto | null>(null);
   const [currentStepCode, setCurrentStepCode] = useState<string>('PRODUCT_INFO');
   const stepStackRef = useRef<string[]>([]);
+  const returningToElectricityStepRef = useRef(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createLoading, setCreateLoading] = useState(false);
   const [calculationLoading, setCalculationLoading] = useState(false);
@@ -217,10 +218,6 @@ const NewCalculation: React.FC = () => {
         setCalculation(calc);
         setCurrentStepCode(calc.currentStep);
         setStep(stepFromCurrentStepCode(calc.currentStep));
-        const fallbackPrevious = STEP_PREVIOUS_FALLBACK[calc.currentStep];
-        if (fallbackPrevious && stepStackRef.current.length === 0) {
-          stepStackRef.current = [fallbackPrevious];
-        }
       })
       .catch(() => {})
       .finally(() => {
@@ -240,7 +237,6 @@ const NewCalculation: React.FC = () => {
       try {
         const { toStepCode } = await getNextStep(calculationId, currentStepCode);
         if (cancelled) return;
-        stepStackRef.current.push(currentStepCode);
         if (toStepCode === 'COMPLETE') {
           await patchCalculationWizard(calculationId, { status: 'COMPLETED' });
         } else {
@@ -302,6 +298,10 @@ const NewCalculation: React.FC = () => {
   useEffect(() => {
     if (calculationId == null) return;
     if (!ELECTRICITY_STEP_CODES.has(currentStepCode)) return;
+    if (returningToElectricityStepRef.current) {
+      returningToElectricityStepRef.current = false;
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
@@ -342,6 +342,27 @@ const NewCalculation: React.FC = () => {
   }, [currentStepCode]);
 
   const [questionIdToCode, setQuestionIdToCode] = useState<Record<number, string>>({});
+
+  const wizardAnswerLookup = useMemo((): WizardAnswerLookup => ({
+    getAnswerByCode: (code: string) => {
+      const qId = Object.entries(questionIdToCode).find(([, c]) => c === code)?.[0];
+      return qId != null ? getAnswer(Number(qId)) : '';
+    },
+    hasAnswerByCode: (code: string) => {
+      const qId = Object.entries(questionIdToCode).find(([, c]) => c === code)?.[0];
+      return qId != null && getAnswer(Number(qId)).trim() !== '';
+    },
+  }), [questionIdToCode, getAnswer, answers]);
+
+  useEffect(() => {
+    if (calculationId == null || stepStackRef.current.length > 0) return;
+    if (Object.keys(questionIdToCode).length === 0) return;
+    const fallbackPrevious = inferPreviousStepFallback(currentStepCode, wizardAnswerLookup);
+    if (fallbackPrevious) {
+      stepStackRef.current = [fallbackPrevious];
+    }
+  }, [calculationId, currentStepCode, questionIdToCode, wizardAnswerLookup]);
+
   const hasHydratedRef = useRef(false);
   useEffect(() => {
     if (!calculationId) return;
@@ -1041,15 +1062,20 @@ const NewCalculation: React.FC = () => {
   };
 
   const handleBack = async () => {
-    let previousStepCode = stepStackRef.current.pop() ?? null;
-    if (previousStepCode == null) {
-      previousStepCode = STEP_PREVIOUS_FALLBACK[currentStepCode] ?? null;
-    }
+    const previousStepCode = resolvePreviousStep(
+      stepStackRef.current,
+      currentStepCode,
+      wizardAnswerLookup,
+    );
     if (previousStepCode == null) {
       navigate('/dashboard');
       return;
     }
     if (calculationId == null) return;
+
+    if (ELECTRICITY_STEP_CODES.has(previousStepCode)) {
+      returningToElectricityStepRef.current = true;
+    }
 
     if (previousStepCode !== 'PRODUCT_INFO') {
       try {

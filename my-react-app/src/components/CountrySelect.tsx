@@ -1,4 +1,3 @@
-import React from 'react';
 import { FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 import type { CountryDto } from '../hooks/useCountries';
 
@@ -33,7 +32,7 @@ export function CountrySelect({
         label={label}
         value={value ?? ''}
         onChange={(e) => {
-          const raw = e.target.value;
+          const raw = e.target.value as number | '';
           if (raw === '') {
             onChange(null);
             return;
