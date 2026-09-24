@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Autocomplete,
   Box,
   Button,
   CircularProgress,
@@ -14,7 +13,6 @@ import {
   Typography,
 } from '@mui/material';
 import { Add, ArrowBack, ArrowForward, Delete } from '@mui/icons-material';
-import { useCnCodes, type CnCodeDto } from '../hooks/useCnCodes';
 import { useCountries } from '../hooks/useCountries';
 import { CountrySelect } from './CountrySelect';
 
@@ -46,38 +44,37 @@ const textFieldSx = {
   '& .MuiFormHelperText-root': { fontFamily: T.font.body },
 };
 
-const readOnlyFieldSx = {
-  ...textFieldSx,
-  '& .MuiOutlinedInput-root': {
-    ...textFieldSx['& .MuiOutlinedInput-root'],
-    bgcolor: T.color.mint,
-  },
-};
+/** Fixed CN code for external unwrought aluminium on this step only. */
+export const EXTERNAL_UNWROUGHT_CN_CODE = '7601';
 
-export interface PrecursorEntry {
+export interface ExternalUnwroughtEntry {
   id: number;
-  cnCodeId: number | null;
-  cnCode: string;
-  vrsta: string;
   countryId: number | null;
   drzava: string;
   kolicina: string;
+  clanicaEu: '' | 'EU_MEMBER' | 'NON_EU_MEMBER';
   emisijePoznate: '' | 'YES' | 'NO';
   ugradjeneEmisije: string;
 }
 
-export interface PrecursorInputStepProps {
+export interface ExternalUnwroughtInputStepProps {
   title?: string;
-  precursorEntries: PrecursorEntry[];
-  updatePrecursorEntry: (index: number, updates: Partial<PrecursorEntry>) => void;
-  addPrecursorEntry: () => void;
-  removePrecursorEntry?: (index: number) => void;
+  entries: ExternalUnwroughtEntry[];
+  updateEntry: (index: number, updates: Partial<ExternalUnwroughtEntry>) => void;
+  addEntry: () => void;
+  removeEntry?: (index: number) => void;
   onBack: () => void;
   onNext: () => void;
 }
 
-function isEntryValid(entry: PrecursorEntry): boolean {
-  if (entry.cnCodeId == null || entry.countryId == null || !entry.kolicina.trim() || !entry.emisijePoznate) {
+function isEntryValid(entry: ExternalUnwroughtEntry): boolean {
+  if (entry.countryId == null || !entry.kolicina.trim() || !entry.clanicaEu) {
+    return false;
+  }
+  if (entry.clanicaEu === 'EU_MEMBER') {
+    return true;
+  }
+  if (!entry.emisijePoznate) {
     return false;
   }
   if (entry.emisijePoznate === 'YES') {
@@ -86,29 +83,17 @@ function isEntryValid(entry: PrecursorEntry): boolean {
   return true;
 }
 
-export function PrecursorInputStep({
+export function ExternalUnwroughtInputStep({
   title,
-  precursorEntries,
-  updatePrecursorEntry,
-  addPrecursorEntry,
-  removePrecursorEntry,
+  entries,
+  updateEntry,
+  addEntry,
+  removeEntry,
   onBack,
   onNext,
-}: PrecursorInputStepProps) {
-  const { cnCodes, loading: cnCodesLoading, error: cnCodesError } = useCnCodes();
+}: ExternalUnwroughtInputStepProps) {
   const { countries, loading: countriesLoading, error: countriesError } = useCountries();
-  const allValid = precursorEntries.length > 0 && precursorEntries.every(isEntryValid);
-  const dataLoading = cnCodesLoading || countriesLoading;
-
-  const resolveSelectedCnCode = (entry: PrecursorEntry): CnCodeDto | null => {
-    if (entry.cnCodeId != null) {
-      return cnCodes.find((c) => c.id === entry.cnCodeId) ?? null;
-    }
-    if (entry.cnCode) {
-      return cnCodes.find((c) => c.cnCode === entry.cnCode) ?? null;
-    }
-    return null;
-  };
+  const allValid = entries.length > 0 && entries.every(isEntryValid);
 
   return (
     <Grid container spacing={3} sx={{ width: '100%', maxWidth: '100%', fontFamily: T.font.body }}>
@@ -120,15 +105,13 @@ export function PrecursorInputStep({
         </Grid>
       )}
 
-      {(cnCodesError || countriesError) && (
+      {countriesError && (
         <Grid size={12}>
-          <Typography sx={{ fontFamily: T.font.body, color: T.color.error }}>
-            {cnCodesError ?? countriesError}
-          </Typography>
+          <Typography sx={{ fontFamily: T.font.body, color: T.color.error }}>{countriesError}</Typography>
         </Grid>
       )}
 
-      {dataLoading && (
+      {countriesLoading && (
         <Grid size={12}>
           <Box display="flex" justifyContent="center" py={2}>
             <CircularProgress size={28} sx={{ color: T.color.forest }} />
@@ -136,7 +119,7 @@ export function PrecursorInputStep({
         </Grid>
       )}
 
-      {!dataLoading && precursorEntries.map((entry, index) => (
+      {!countriesLoading && entries.map((entry, index) => (
         <Grid
           container
           key={entry.id}
@@ -151,10 +134,10 @@ export function PrecursorInputStep({
             position: 'relative',
           }}
         >
-          {precursorEntries.length > 1 && removePrecursorEntry && (
+          {entries.length > 1 && removeEntry && (
             <IconButton
               size="small"
-              onClick={() => removePrecursorEntry(index)}
+              onClick={() => removeEntry(index)}
               sx={{
                 position: 'absolute',
                 top: 8,
@@ -168,50 +151,18 @@ export function PrecursorInputStep({
             </IconButton>
           )}
 
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Autocomplete
-              options={cnCodes}
-              value={resolveSelectedCnCode(entry)}
-              onChange={(_event, selected) => {
-                updatePrecursorEntry(index, {
-                  cnCodeId: selected?.id ?? null,
-                  cnCode: selected?.cnCode ?? '',
-                  vrsta: selected?.description ?? '',
-                });
-              }}
-              getOptionLabel={(option) => option.description}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-              disabled={cnCodes.length === 0}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Vrsta"
-                  required
-                  sx={textFieldSx}
-                />
-              )}
-            />
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 3 }}>
-            <TextField
-              fullWidth
-              label="CN Code"
-              value={entry.cnCode}
-              slotProps={{ input: { readOnly: true } }}
-              sx={readOnlyFieldSx}
-            />
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 4 }}>
+          <Grid size={{ xs: 12, md: 5 }}>
             <CountrySelect
               countries={countries}
               value={entry.countryId}
               disabled={countriesLoading}
               onChange={(selected) => {
-                updatePrecursorEntry(index, {
+                updateEntry(index, {
                   countryId: selected?.id ?? null,
                   drzava: selected?.country ?? '',
+                  clanicaEu: selected ? (selected.isEu ? 'EU_MEMBER' : 'NON_EU_MEMBER') : '',
+                  emisijePoznate: '',
+                  ugradjeneEmisije: '',
                 });
               }}
             />
@@ -223,7 +174,7 @@ export function PrecursorInputStep({
               label="Količina (kg)"
               value={entry.kolicina}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                updatePrecursorEntry(index, { kolicina: e.target.value })
+                updateEntry(index, { kolicina: e.target.value })
               }
               slotProps={{ htmlInput: { min: 0, step: 'any' } }}
               sx={textFieldSx}
@@ -232,34 +183,59 @@ export function PrecursorInputStep({
 
           <Grid size={12}>
             <FormControl component="fieldset" sx={{ width: '100%' }} required>
-              <Typography sx={{ fontFamily: T.font.body, fontSize: '0.95rem', color: T.color.inkSoft, mb: 1 }}>
-                Da li su poznate ugrađene emisije?
+              <Typography sx={{ fontFamily: T.font.body, fontSize: '0.95rem', fontWeight: 600, color: T.color.ink, mb: 1 }}>
+                Da li je ova država članica EU?
               </Typography>
               <RadioGroup
                 row
-                value={entry.emisijePoznate}
+                value={entry.clanicaEu}
                 onChange={(e) => {
-                  const value = e.target.value as 'YES' | 'NO';
-                  updatePrecursorEntry(index, {
-                    emisijePoznate: value,
-                    ugradjeneEmisije: value === 'NO' ? '' : entry.ugradjeneEmisije,
+                  const value = e.target.value as 'EU_MEMBER' | 'NON_EU_MEMBER';
+                  updateEntry(index, {
+                    clanicaEu: value,
+                    emisijePoznate: '',
+                    ugradjeneEmisije: '',
                   });
                 }}
               >
-                <FormControlLabel value="YES" control={<Radio />} label="DA" sx={{ fontFamily: T.font.body }} />
-                <FormControlLabel value="NO" control={<Radio />} label="NE" sx={{ fontFamily: T.font.body }} />
+                <FormControlLabel value="EU_MEMBER" control={<Radio />} label="Članica EU" sx={{ fontFamily: T.font.body }} />
+                <FormControlLabel value="NON_EU_MEMBER" control={<Radio />} label="Nije članica EU" sx={{ fontFamily: T.font.body }} />
               </RadioGroup>
             </FormControl>
           </Grid>
 
-          {entry.emisijePoznate === 'YES' && (
+          {entry.clanicaEu === 'NON_EU_MEMBER' && (
+            <Grid size={12}>
+              <FormControl component="fieldset" sx={{ width: '100%' }}>
+                <Typography sx={{ fontFamily: T.font.body, fontSize: '0.95rem', color: T.color.inkSoft, mb: 1 }}>
+                  Da li su poznate ugrađene emisije?
+                </Typography>
+                <RadioGroup
+                  row
+                  value={entry.emisijePoznate}
+                  onChange={(e) => {
+                    const value = e.target.value as 'YES' | 'NO';
+                    updateEntry(index, {
+                      emisijePoznate: value,
+                      ugradjeneEmisije: value === 'NO' ? '' : entry.ugradjeneEmisije,
+                    });
+                  }}
+                >
+                  <FormControlLabel value="YES" control={<Radio />} label="DA" sx={{ fontFamily: T.font.body }} />
+                  <FormControlLabel value="NO" control={<Radio />} label="NE" sx={{ fontFamily: T.font.body }} />
+                </RadioGroup>
+              </FormControl>
+            </Grid>
+          )}
+
+          {entry.clanicaEu === 'NON_EU_MEMBER' && entry.emisijePoznate === 'YES' && (
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Ugrađene emisije (kgCO2e/kg)"
                 value={entry.ugradjeneEmisije}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  updatePrecursorEntry(index, { ugradjeneEmisije: e.target.value })
+                  updateEntry(index, { ugradjeneEmisije: e.target.value })
                 }
                 slotProps={{ htmlInput: { min: 0, step: 'any' } }}
                 sx={textFieldSx}
@@ -275,8 +251,8 @@ export function PrecursorInputStep({
           variant="outlined"
           size="medium"
           startIcon={<Add sx={{ fontSize: '18px !important' }} />}
-          onClick={addPrecursorEntry}
-          disabled={dataLoading}
+          onClick={addEntry}
+          disabled={countriesLoading}
           sx={{
             mb: 2,
             fontFamily: T.font.body,
@@ -319,7 +295,7 @@ export function PrecursorInputStep({
             disableElevation
             endIcon={<ArrowForward sx={{ fontSize: '18px !important' }} />}
             onClick={onNext}
-            disabled={!allValid || dataLoading}
+            disabled={!allValid || countriesLoading}
             sx={{
               fontFamily: T.font.body,
               fontWeight: 600,

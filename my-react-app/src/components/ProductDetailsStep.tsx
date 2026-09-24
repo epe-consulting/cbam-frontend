@@ -23,6 +23,7 @@ const T = {
     mintDark: '#C3E6D5',
     warmWhite: '#FFFEF9',
     ink: '#1A2B25',
+    inkSoft: '#3D5A50',
     muted: '#6B8F82',
     line: '#D6E5DD',
     lineFaint: '#EAF0EC',
@@ -57,6 +58,18 @@ export interface ProductDetailsStepProps {
   onNext: () => void;
 }
 
+const cnCodeInfo: Array<{ code: string; description: string }> = [
+  { code: '7601', description: 'Neobrađeni aluminij (ingoti, blokovi i slični oblici).' },
+  { code: '7604', description: 'Šipke, profilne šipke i profili od aluminija.' },
+  { code: '7605', description: 'Žica od aluminija.' },
+  { code: '7606', description: 'Ploče, limovi i trake od aluminija debljine veće od 0,2 mm.' },
+  { code: '7607', description: 'Folije od aluminija (debljine do 0,2 mm).' },
+  { code: '7608', description: 'Cijevi od aluminija.' },
+  { code: '7609', description: 'Spojnice (fitingi) za cijevi od aluminija.' },
+  { code: '7610', description: 'Konstrukcije i dijelovi konstrukcija od aluminija.' },
+  { code: '7616', description: 'Ostali proizvodi od aluminija.' },
+];
+
 export function ProductDetailsStep({
   title,
   entries,
@@ -68,30 +81,14 @@ export function ProductDetailsStep({
 }: ProductDetailsStepProps) {
   const [cnInfoOpen, setCnInfoOpen] = useState(false);
 
-  const cnCodeInfo: Array<{ code: string; description: string }> = [
-    { code: '7601', description: 'Neobrađeni aluminij (ingoti, blokovi i slični oblici).' },
-    { code: '7603', description: 'Aluminijski prah i ljuspice.' },
-    { code: '7604', description: 'Aluminijske šipke, štapovi i profili.' },
-    { code: '7605', description: 'Aluminijska žica.' },
-    { code: '7606', description: 'Aluminijske ploče, limovi i trake debljine preko 0,2 mm.' },
-    { code: '7607', description: 'Aluminijska folija debljine do 0,2 mm (sa ili bez podloge, bez uračunate podloge).' },
-    { code: '7608', description: 'Aluminijske cijevi.' },
-    { code: '7609 00 00', description: 'Spojni elementi za aluminijske cijevi (npr. spojnice, koljena, rukavci).' },
-    { code: '7610', description: 'Aluminijske konstrukcije i dijelovi konstrukcija (npr. vrata, prozori, okviri).' },
-    { code: '7611 00 00', description: 'Aluminijski rezervoari, cisterne i slični spremnici, zapremine preko 300 litara.' },
-    { code: '7612', description: 'Aluminijski bačvasti spremnici, limenke, kutije i slični kontejneri, zapremine do 300 litara.' },
-    { code: '7613 00 00', description: 'Aluminijski spremnici za komprimirani ili ukapljeni gas.' },
-    { code: '7614', description: 'Užad, kablovi, pletene trake i slično od aluminija, bez električne izolacije.' },
-    { code: '7616', description: 'Ostali proizvodi od aluminija.' },
-  ];
-
-  const allValid = entries.length > 0 && entries.every(
-    (e) =>
-      e.productName.trim() !== '' &&
-      e.cnCode.trim() !== '' &&
-      e.quantity.trim() !== '' &&
-      e.countryOfOrigin.trim() !== ''
-  );
+  const allValid = entries.length > 0
+    && entries.every(
+      (e: ProductDetailEntry) =>
+        e.productName.trim() !== ''
+        && e.cnCode.trim() !== ''
+        && e.quantity.trim() !== ''
+        && e.countryOfOrigin.trim() !== ''
+    );
 
   return (
     <Grid container spacing={3} sx={{ width: '100%', maxWidth: '100%', fontFamily: T.font.body }}>
@@ -113,13 +110,14 @@ export function ProductDetailsStep({
         </Grid>
       )}
 
-      {entries.map((entry, index) => (
+      {entries.map((entry: ProductDetailEntry, index: number) => (
         <Grid
           container
           key={entry.id}
           spacing={2}
           sx={{
-            mb: 3, p: 2.5,
+            mb: 3,
+            p: 2.5,
             border: `1px solid ${T.color.lineFaint}`,
             borderRadius: T.radius.md,
             bgcolor: T.color.warmWhite,
@@ -132,7 +130,7 @@ export function ProductDetailsStep({
               size="small"
               onClick={() => removeEntry(index)}
               sx={{ position: 'absolute', top: 8, right: 8, color: T.color.muted, '&:hover': { bgcolor: T.color.errorLight, color: T.color.error } }}
-              aria-label="Remove product entry"
+              aria-label="Remove entry"
             >
               <Delete fontSize="small" />
             </IconButton>
@@ -159,9 +157,10 @@ export function ProductDetailsStep({
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
-              label="Quantity (t)"
+              label="Quantity (tonnes)"
               value={entry.quantity}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateEntry(index, { quantity: e.target.value })}
+              slotProps={{ htmlInput: { min: 0, step: 'any' } }}
               sx={textFieldSx}
             />
           </Grid>
@@ -179,12 +178,19 @@ export function ProductDetailsStep({
 
       <Grid size={12}>
         <Button
-          type="button" variant="outlined" size="medium"
+          type="button"
+          variant="outlined"
+          size="medium"
           startIcon={<Add sx={{ fontSize: '18px !important' }} />}
           onClick={addEntry}
           sx={{
-            mb: 2, fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', borderRadius: T.radius.pill,
-            borderColor: T.color.line, color: T.color.forest,
+            mb: 2,
+            fontFamily: T.font.body,
+            fontWeight: 600,
+            textTransform: 'none',
+            borderRadius: T.radius.pill,
+            borderColor: T.color.line,
+            color: T.color.forest,
             '&:hover': { bgcolor: T.color.mint, borderColor: T.color.mintDark },
           }}
         >
@@ -195,25 +201,38 @@ export function ProductDetailsStep({
       <Grid size={12}>
         <Box display="flex" justifyContent="space-between" sx={{ mt: 3 }}>
           <Button
-            type="button" variant="outlined" size="large"
+            type="button"
+            variant="outlined"
+            size="large"
             startIcon={<ArrowBack sx={{ fontSize: '18px !important' }} />}
             onClick={onBack}
             sx={{
-              fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', borderRadius: T.radius.pill,
-              borderColor: T.color.line, color: T.color.muted,
+              fontFamily: T.font.body,
+              fontWeight: 600,
+              textTransform: 'none',
+              borderRadius: T.radius.pill,
+              borderColor: T.color.line,
+              color: T.color.inkSoft,
               '&:hover': { bgcolor: T.color.mint, borderColor: T.color.mintDark, color: T.color.forest },
             }}
           >
             Back
           </Button>
           <Button
-            type="button" variant="contained" size="large" disableElevation
+            type="button"
+            variant="contained"
+            size="large"
+            disableElevation
             endIcon={<ArrowForward sx={{ fontSize: '18px !important' }} />}
             onClick={onNext}
             disabled={!allValid}
             sx={{
-              fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', borderRadius: T.radius.pill,
-              bgcolor: T.color.forest, '&:hover': { bgcolor: T.color.ctaHover },
+              fontFamily: T.font.body,
+              fontWeight: 600,
+              textTransform: 'none',
+              borderRadius: T.radius.pill,
+              bgcolor: T.color.forest,
+              '&:hover': { bgcolor: T.color.ctaHover },
             }}
           >
             Next
@@ -222,27 +241,34 @@ export function ProductDetailsStep({
       </Grid>
 
       <Dialog open={cnInfoOpen} onClose={() => setCnInfoOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ fontFamily: T.font.display, fontWeight: 600, color: T.color.ink, pr: 6 }}>
+        <DialogTitle sx={{ fontFamily: T.font.display, fontWeight: 600, color: T.color.ink, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           Informacije o CN kodovima
-          <IconButton
-            aria-label="Zatvori"
-            onClick={() => setCnInfoOpen(false)}
-            sx={{ position: 'absolute', right: 12, top: 10, color: T.color.muted }}
-          >
+          <IconButton onClick={() => setCnInfoOpen(false)} size="small" aria-label="Close">
             <Close fontSize="small" />
           </IconButton>
         </DialogTitle>
         <DialogContent dividers>
-          <Typography sx={{ mb: 2, fontFamily: T.font.body, color: T.color.muted }}>
-            U nastavku su najčešći CN kodovi za aluminij i pripadajući opisi:
+          <Typography sx={{ fontFamily: T.font.body, color: T.color.inkSoft, mb: 2 }}>
+            Odaberite odgovarajući CN kod prema tipu proizvoda koji unosite:
           </Typography>
           <Box display="grid" gap={1.25}>
             {cnCodeInfo.map((item) => (
-              <Box key={item.code} sx={{ p: 1.25, borderRadius: T.radius.sm, border: `1px solid ${T.color.lineFaint}` }}>
-                <Typography sx={{ fontFamily: T.font.body, fontWeight: 700, color: T.color.ink }}>
+              <Box
+                key={item.code}
+                sx={{
+                  p: 1.25,
+                  border: `1px solid ${T.color.lineFaint}`,
+                  borderRadius: T.radius.sm,
+                  bgcolor: T.color.warmWhite,
+                  display: 'grid',
+                  gridTemplateColumns: '80px 1fr',
+                  gap: 1.5,
+                }}
+              >
+                <Typography sx={{ fontFamily: T.font.body, fontWeight: 700, color: T.color.forest }}>
                   {item.code}
                 </Typography>
-                <Typography sx={{ fontFamily: T.font.body, color: T.color.muted }}>
+                <Typography sx={{ fontFamily: T.font.body, color: T.color.inkSoft }}>
                   {item.description}
                 </Typography>
               </Box>
