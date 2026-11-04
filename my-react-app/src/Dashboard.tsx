@@ -60,9 +60,7 @@ import {
   Help,
   ArrowBack,
   ArrowForward,
-  East,
   Shield,
-  CompareArrows,
 } from '@mui/icons-material';
 
 /* ─── Design tokens (shared across Panonia) ─── */
@@ -545,34 +543,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         <Box sx={{ pt: 11, pb: 5 }}>
           {location.pathname === '/dashboard' && (
             <Container maxWidth="lg">
-              {/* Cost calculator CTA */}
-              <Box
-                onClick={() => navigate('/cost-calculator')}
-                sx={{
-                  mb: 3,
-                  px: { xs: 2, md: 2.5 },
-                  py: 1.5,
-                  borderRadius: T.radius.md,
-                  bgcolor: T.color.forest,
-                  color: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 2,
-                  cursor: 'pointer',
-                  transition: 'background 0.2s ease',
-                  '&:hover': { bgcolor: T.color.ctaHover },
-                }}
-              >
-                <Box display="flex" alignItems="center" gap={1.5}>
-                  <CompareArrows sx={{ fontSize: 22 }} />
-                  <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: { xs: '0.9rem', sm: '1rem' } }}>
-                    Compare CBAM costs
-                  </Typography>
-                </Box>
-                <East sx={{ fontSize: 18, opacity: 0.9 }} />
-              </Box>
-
               {/* Welcome */}
               <Box mb={4}>
                 <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: { xs: '1.6rem', md: '2.2rem' }, color: T.color.ink, letterSpacing: '-0.02em', mb: 0.5 }}>
@@ -649,7 +619,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                   Quick Actions
                 </Typography>
                 <Grid container spacing={2}>
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     {newCalcError && (
                       <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: '#C0392B', mb: 1 }}>
                         {newCalcError}
@@ -667,20 +637,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                       {newCalcLoading ? 'Creating…' : 'New Calculation'}
                     </Button>
                   </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <Button
-                      variant="outlined" startIcon={<CompareArrows />} fullWidth size="large"
-                      onClick={() => navigate('/cost-calculator')}
-                      sx={{
-                        py: 2, fontFamily: T.font.body, fontWeight: 600, fontSize: '0.95rem', textTransform: 'none',
-                        borderColor: T.color.line, color: T.color.inkSoft, borderRadius: T.radius.md,
-                        '&:hover': { borderColor: T.color.forest, bgcolor: T.color.mint, color: T.color.forest },
-                      }}
-                    >
-                      Compare CBAM costs
-                    </Button>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Button
                       variant="outlined" startIcon={<Description />} fullWidth size="large"
                       onClick={handleGenerateReport}
@@ -693,7 +650,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                       Generate Report
                     </Button>
                   </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Button
                       variant="outlined" startIcon={<Send />} fullWidth size="large"
                       onClick={handleShareWithClient}
