@@ -43,12 +43,14 @@ import About from './About';
 import Privacy from './Privacy';
 import Support from './Support';
 import Features from './Features';
+import CostCalculator from './CostCalculator';
 import UnifiedFooter from './components/UnifiedFooter';
 import {
   Shield,
   Language,
   KeyboardArrowDown,
   Calculate,
+  CompareArrows,
   Description,
   Send,
   CheckCircle,
@@ -77,6 +79,8 @@ interface Translations {
     subtitle: string;
     scheduleDemo: string;
     learnMore: string;
+    costCalculator: string;
+    startCalculation: string;
   };
   features: {
     title: string;
@@ -185,6 +189,8 @@ const translations: Record<Language, Translations> = {
         'Calculate product emissions accurately, generate compliant reports, and seamlessly share them with your EU clients. All in one platform.',
       scheduleDemo: 'Schedule a Demo',
       learnMore: 'Learn More',
+      costCalculator: 'Compare CBAM Costs',
+      startCalculation: 'Start a New Calculation',
     },
     features: {
       title: 'Everything You Need for CBAM Compliance',
@@ -302,6 +308,8 @@ const translations: Record<Language, Translations> = {
         'Precizno izračunajte emisije proizvoda, generirajte usklađena izvješća i jednostavno ih podijelite sa svojim EU klijentima. Sve na jednoj platformi.',
       scheduleDemo: 'Zakažite Demo',
       learnMore: 'Saznajte Više',
+      costCalculator: 'Uporedite CBAM troškove',
+      startCalculation: 'Započnite novi izračun',
     },
     features: {
       title: 'Sve Što Vam Treba za CBAM Usklađenost',
@@ -420,6 +428,8 @@ const translations: Record<Language, Translations> = {
         'Ürün emisyonlarınızı hesaplayın, uyumlu raporlar oluşturun ve AB müşterilerinizle güvenle paylaşın. Hepsi tek platformda.',
       scheduleDemo: 'Demo Planla',
       learnMore: 'Daha Fazla Bilgi',
+      costCalculator: 'CBAM maliyetini karşılaştır',
+      startCalculation: 'Yeni hesaplama başlat',
     },
     features: {
       title: 'CBAM Uyumu İçin İhtiyacınız Olan Her Şey',
@@ -1216,12 +1226,11 @@ const CBAMLandingPage: React.FC = () => {
       {/* ── Hero Section ── */}
       <Box
         sx={{
-          pt: { xs: 16, md: 20 },
+          pt: { xs: 14, md: 18 },
           pb: { xs: 10, md: 14 },
           px: { xs: 2, sm: 4 },
           position: 'relative',
           overflow: 'hidden',
-          /* Subtle radial background glow */
           '&::before': {
             content: '""',
             position: 'absolute',
@@ -1234,7 +1243,6 @@ const CBAMLandingPage: React.FC = () => {
             pointerEvents: 'none',
             opacity: 0.7,
           },
-          /* Decorative dots grid */
           '&::after': {
             content: '""',
             position: 'absolute',
@@ -1251,7 +1259,6 @@ const CBAMLandingPage: React.FC = () => {
       >
         <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
           <Box textAlign="center">
-            {/* Badge */}
             <Box className="anim-fade-in delay-1">
               <Chip
                 icon={<Shield sx={{ fontSize: 16 }} />}
@@ -1265,7 +1272,6 @@ const CBAMLandingPage: React.FC = () => {
               />
             </Box>
 
-            {/* Title */}
             <Typography
               component="h1"
               className="anim-fade-up delay-2"
@@ -1303,7 +1309,6 @@ const CBAMLandingPage: React.FC = () => {
               {' '}Reporting
             </Typography>
 
-            {/* Subtitle */}
             <Typography
               className="anim-fade-up delay-3"
               sx={{
@@ -1313,41 +1318,105 @@ const CBAMLandingPage: React.FC = () => {
                 lineHeight: 1.7,
                 maxWidth: 620,
                 mx: 'auto',
-                mb: 5,
+                mb: 4,
               }}
             >
               {t.hero.subtitle}
             </Typography>
 
-            {/* CTA Buttons */}
+            {/* Primary actions — main focus of the page */}
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
               spacing={2}
               justifyContent="center"
               className="anim-fade-up delay-4"
+              sx={{ mb: 2.5 }}
             >
               <Button
                 variant="contained"
                 size="large"
                 disableElevation
+                startIcon={<CompareArrows />}
                 endIcon={<East />}
+                onClick={() => navigate('/cost-calculator')}
+                sx={{
+                  fontFamily: T.font.body,
+                  fontWeight: 700,
+                  fontSize: { xs: '1.05rem', md: '1.15rem' },
+                  textTransform: 'none',
+                  bgcolor: T.color.forest,
+                  color: '#fff',
+                  borderRadius: T.radius.pill,
+                  px: { xs: 3.5, md: 5 },
+                  py: 1.85,
+                  boxShadow: `0 10px 28px -4px rgba(11,79,62,0.4)`,
+                  transition: 'all 0.3s cubic-bezier(.22,1,.36,1)',
+                  '&:hover': {
+                    bgcolor: T.color.ctaHover,
+                    transform: 'translateY(-2px)',
+                    boxShadow: `0 14px 36px -4px rgba(11,79,62,0.45)`,
+                  },
+                }}
+              >
+                {t.hero.costCalculator}
+              </Button>
+              <Button
+                variant="outlined"
+                size="large"
+                startIcon={<Calculate />}
+                onClick={() =>
+                  navigate('/login', { state: { from: '/dashboard/new-calculation' } })
+                }
+                sx={{
+                  fontFamily: T.font.body,
+                  fontWeight: 700,
+                  fontSize: { xs: '1.05rem', md: '1.15rem' },
+                  textTransform: 'none',
+                  color: T.color.forest,
+                  borderColor: T.color.forest,
+                  borderWidth: 2,
+                  borderRadius: T.radius.pill,
+                  px: { xs: 3.5, md: 5 },
+                  py: 1.75,
+                  bgcolor: T.color.warmWhite,
+                  transition: 'all 0.25s ease',
+                  '&:hover': {
+                    borderWidth: 2,
+                    borderColor: T.color.ctaHover,
+                    bgcolor: T.color.mint,
+                    transform: 'translateY(-2px)',
+                  },
+                }}
+              >
+                {t.hero.startCalculation}
+              </Button>
+            </Stack>
+
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={2}
+              justifyContent="center"
+              className="anim-fade-up delay-5"
+            >
+              <Button
+                variant="contained"
+                size="large"
+                disableElevation
                 onClick={handleOpenDemoDialog}
                 sx={{
                   fontFamily: T.font.body,
                   fontWeight: 600,
                   fontSize: '1rem',
                   textTransform: 'none',
-                  bgcolor: T.color.forest,
+                  bgcolor: T.color.sage,
                   color: '#fff',
                   borderRadius: T.radius.pill,
                   px: 4,
-                  py: 1.6,
-                  boxShadow: `0 8px 24px -4px rgba(11,79,62,0.35)`,
-                  transition: 'all 0.3s cubic-bezier(.22,1,.36,1)',
+                  py: 1.5,
+                  transition: 'all 0.25s ease',
                   '&:hover': {
-                    bgcolor: T.color.ctaHover,
+                    bgcolor: T.color.forest,
                     transform: 'translateY(-2px)',
-                    boxShadow: `0 12px 32px -4px rgba(11,79,62,0.4)`,
                   },
                 }}
               >
@@ -1362,15 +1431,18 @@ const CBAMLandingPage: React.FC = () => {
                   fontWeight: 600,
                   fontSize: '1rem',
                   textTransform: 'none',
-                  color: T.color.forest,
+                  color: T.color.inkSoft,
                   borderColor: T.color.line,
                   borderRadius: T.radius.pill,
                   px: 4,
-                  py: 1.6,
+                  py: 1.5,
+                  bgcolor: T.color.warmWhite,
                   transition: 'all 0.25s ease',
                   '&:hover': {
                     borderColor: T.color.forest,
                     bgcolor: T.color.mint,
+                    color: T.color.forest,
+                    transform: 'translateY(-2px)',
                   },
                 }}
               >
@@ -1963,9 +2035,13 @@ const CBAMLandingPage: React.FC = () => {
 
 const App: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleBackToHome = () => navigate('/');
-  const handleLoginSuccess = () => navigate('/dashboard');
+  const handleLoginSuccess = () => {
+    const from = (location.state as { from?: string } | null)?.from;
+    navigate(from && from !== '/login' ? from : '/dashboard');
+  };
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -1984,6 +2060,7 @@ const App: React.FC = () => {
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/support" element={<Support />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/cost-calculator" element={<CostCalculator />} />
         <Route
           path="/login"
           element={
