@@ -1,5 +1,4 @@
-const BLOB_CONTAINER_URL = import.meta.env.VITE_BLOB_CONTAINER_URL || '';
-const BLOB_SAS_TOKEN = import.meta.env.VITE_BLOB_SAS_TOKEN || '';
+import { API_BASE_URL, apiRequest } from './api';
 
 export interface BlobUploadResult {
   success: boolean;
@@ -9,6 +8,7 @@ export interface BlobUploadResult {
 
 export interface BlobReportItem {
   name: string;
+  fileName?: string;
   url: string;
   lastModified: string;
   contentLength: number;
@@ -20,80 +20,125 @@ export interface BlobListResult {
   error?: string;
 }
 
+/**
+ * Upload HTML report via backend (Railway Volume / local disk).
+ * Replaces direct Azure Blob uploads.
+ */
 export async function uploadReportToBlob(
   companyId: number,
   fileName: string,
   htmlContent: string,
 ): Promise<BlobUploadResult> {
-  const blobPath = `${companyId}/${fileName}`;
-  const url = `${BLOB_CONTAINER_URL}/${blobPath}?${BLOB_SAS_TOKEN}`;
+  const result = await apiRequest<{
+    success: boolean;
+    message?: string;
+    report?: { url?: string; name?: string };
+  }>('/reports/upload', {
+    method: 'POST',
+    body: JSON.stringify({ companyId, fileName, htmlContent }),
+  });
 
-  try {
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        'x-ms-blob-type': 'BlockBlob',
-        'Content-Type': 'text/html; charset=utf-8',
-      },
-      body: htmlContent,
-    });
+  if (!result) {
+    return { success: false, blobUrl: '', error: 'Session expired. Please log in again.' };
+  }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      return {
-        success: false,
-        blobUrl: '',
-        error: `Upload failed (${response.status}): ${errorText}`,
-      };
-    }
-
-    return { success: true, blobUrl: `${BLOB_CONTAINER_URL}/${blobPath}` };
-  } catch (err) {
+  if (!result.data.success) {
     return {
       success: false,
       blobUrl: '',
-      error: err instanceof Error ? err.message : 'Unknown error',
+      error: result.data.message || `Upload failed (${result.response.status})`,
     };
   }
+
+  const path = result.data.report?.url || '';
+  return { success: true, blobUrl: path ? `${API_BASE_URL}${path}` : '' };
 }
 
 export async function listCompanyReports(companyId: number): Promise<BlobListResult> {
-  const url = `${BLOB_CONTAINER_URL}?restype=container&comp=list&prefix=${companyId}/&${BLOB_SAS_TOKEN}`;
+  const result = await apiRequest<{
+    success: boolean;
+    message?: string;
+    reports?: BlobReportItem[];
+  }>(`/reports/company/${companyId}`);
 
-  try {
-    const response = await fetch(url, { method: 'GET' });
+  if (!result) {
+    return { success: false, reports: [], error: 'Session expired. Please log in again.' };
+  }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      return { success: false, reports: [], error: `List failed (${response.status}): ${errorText}` };
-    }
-
-    const xmlText = await response.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xmlText, 'application/xml');
-    const blobs = doc.querySelectorAll('Blob');
-    const reports: BlobReportItem[] = [];
-
-    blobs.forEach((blob) => {
-      const name = blob.querySelector('Name')?.textContent ?? '';
-      const lastModified = blob.querySelector('Properties > Last-Modified')?.textContent ?? '';
-      const contentLength = parseInt(blob.querySelector('Properties > Content-Length')?.textContent ?? '0', 10);
-      reports.push({
-        name,
-        url: `${BLOB_CONTAINER_URL}/${name}`,
-        lastModified,
-        contentLength,
-      });
-    });
-
-    reports.sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
-
-    return { success: true, reports };
-  } catch (err) {
+  if (!result.data.success) {
     return {
       success: false,
       reports: [],
-      error: err instanceof Error ? err.message : 'Unknown error',
+      error: result.data.message || 'Failed to list reports',
     };
   }
+
+  const reports = (result.data.reports || []).map((r) => ({
+    ...r,
+    url: r.url?.startsWith('http') ? r.url : `${API_BASE_URL}${r.url}`,
+  }));
+
+  return { success: true, reports };
+}
+
+/** Fetch report HTML with JWT and open/download via blob URL. */
+export async function openReportAuthenticated(report: BlobReportItem): Promise<void> {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+
+  const url = report.url.startsWith('http')
+    ? report.url
+    : `${API_BASE_URL}${report.url}`;
+
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (response.status === 401) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    throw new Error('Session expired');
+  }
+
+  if (!response.ok) {
+    throw new Error(`Failed to open report (${response.status})`);
+  }
+
+  const html = await response.text();
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const objectUrl = URL.createObjectURL(blob);
+  window.open(objectUrl, '_blank');
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+}
+
+export async function downloadReportAuthenticated(report: BlobReportItem): Promise<void> {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+
+  const url = report.url.startsWith('http')
+    ? report.url
+    : `${API_BASE_URL}${report.url}`;
+
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to download report (${response.status})`);
+  }
+
+  const html = await response.text();
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = objectUrl;
+  a.download = report.fileName || report.name.split('/').pop() || 'report.html';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 }

@@ -18,7 +18,12 @@ import {
   Tooltip,
 } from '@mui/material';
 import { ArrowBack, OpenInNew, Download } from '@mui/icons-material';
-import { listCompanyReports, type BlobReportItem } from './utils/blobStorage';
+import {
+  downloadReportAuthenticated,
+  listCompanyReports,
+  openReportAuthenticated,
+  type BlobReportItem,
+} from './utils/blobStorage';
 import { apiRequest } from './utils/api';
 
 /* ─── Design tokens (shared across Panonia) ─── */
@@ -67,13 +72,12 @@ const tableCellSx = {
   borderBottom: `1px solid ${T.color.lineFaint}`,
 };
 
-const BLOB_SAS_TOKEN = import.meta.env.VITE_BLOB_SAS_TOKEN || '';
-
 const ReportsList: React.FC = () => {
   const navigate = useNavigate();
   const [reports, setReports] = useState<BlobReportItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -117,8 +121,22 @@ const ReportsList: React.FC = () => {
     return parts[parts.length - 1];
   };
 
-  const getSignedUrl = (report: BlobReportItem) => {
-    return `${report.url}?${BLOB_SAS_TOKEN}`;
+  const handleOpen = async (report: BlobReportItem) => {
+    try {
+      setActionError(null);
+      await openReportAuthenticated(report);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Failed to open report');
+    }
+  };
+
+  const handleDownload = async (report: BlobReportItem) => {
+    try {
+      setActionError(null);
+      await downloadReportAuthenticated(report);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Failed to download report');
+    }
   };
 
   return (
@@ -152,6 +170,11 @@ const ReportsList: React.FC = () => {
       {error && (
         <Alert severity="error" sx={{ mb: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>
           {error}
+        </Alert>
+      )}
+      {actionError && (
+        <Alert severity="error" sx={{ mb: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>
+          {actionError}
         </Alert>
       )}
 
@@ -199,7 +222,7 @@ const ReportsList: React.FC = () => {
                         <Tooltip title="Open in new tab">
                           <IconButton
                             size="small"
-                            onClick={() => window.open(getSignedUrl(report), '_blank')}
+                            onClick={() => handleOpen(report)}
                             sx={{ color: T.color.muted, '&:hover': { bgcolor: T.color.mint, color: T.color.forest } }}
                           >
                             <OpenInNew sx={{ fontSize: 20 }} />
@@ -208,9 +231,7 @@ const ReportsList: React.FC = () => {
                         <Tooltip title="Download">
                           <IconButton
                             size="small"
-                            component="a"
-                            href={getSignedUrl(report)}
-                            download={getDisplayName(report.name)}
+                            onClick={() => handleDownload(report)}
                             sx={{ color: T.color.muted, '&:hover': { bgcolor: T.color.mint, color: T.color.forest } }}
                           >
                             <Download sx={{ fontSize: 20 }} />
