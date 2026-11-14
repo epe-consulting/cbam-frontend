@@ -112,11 +112,12 @@ export default function Seo() {
           operatingSystem: 'Web',
           url: `${SITE_URL}/cost-calculator`,
           description:
-            'Free CBAM cost calculator comparing actual embedded emissions versus EU default values, including verifier and platform costs.',
+            'CBAM cost calculator comparing actual embedded emissions versus EU default values, including verifier and platform costs.',
           offers: {
             '@type': 'Offer',
-            price: '0',
-            priceCurrency: 'EUR',
+            priceCurrency: 'BAM',
+            availability: 'https://schema.org/InStock',
+            url: `${SITE_URL}/pricing`,
           },
           provider: { '@id': `${SITE_URL}/#organization` },
         },

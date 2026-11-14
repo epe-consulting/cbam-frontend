@@ -12,7 +12,7 @@ export const PAGE_META: Record<string, PageMeta> = {
     path: '/',
     title: 'Panonia — CBAM Calculator & Compliance Helper for Exporters',
     description:
-      'Free CBAM cost calculator and compliance platform. Compare CBAM actual emissions vs EU default values, calculate embedded emissions, and generate EU-ready reports for aluminium, steel, cement and more.',
+      'Panonia CBAM calculator platform and on-site emissions assessment. Compare actual emissions vs EU default values, calculate embedded emissions, and prepare CBAM reports for EU clients.',
     keywords:
       'CBAM calculator, CBAM helper, CBAM compliance, CBAM cost calculator, CBAM default values, embedded emissions, EU CBAM software',
   },
@@ -20,7 +20,7 @@ export const PAGE_META: Record<string, PageMeta> = {
     path: '/cost-calculator',
     title: 'CBAM Cost Calculator — Actual Emissions vs Default Values | Panonia',
     description:
-      'Use the free CBAM calculator to compare measuring actual embedded emissions versus EU default values. Include verifier costs and see if CBAM reporting with Panonia saves you money.',
+      'Use the Panonia CBAM cost calculator to compare actual embedded emissions versus EU default values, including verifier and platform costs.',
     keywords:
       'CBAM calculator, CBAM cost calculator, CBAM default values vs actual, CBAM certificate cost, CBAM helper',
   },

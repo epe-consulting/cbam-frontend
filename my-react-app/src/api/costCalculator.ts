@@ -7,6 +7,7 @@ export interface ProductCategoryCostDefaults {
   suggestedDefaultSee: number;
   suggestedActualSee: number;
   suggestedVerificationCostBam: number;
+  productBenchmark?: number;
   markupPercent: number;
   notes: string;
 }
@@ -17,6 +18,8 @@ export interface CostCalculatorDefaults {
   bamToEurRate: number;
   certificatePriceEur: number;
   certificatePriceLabel: string;
+  cbamFactor?: number;
+  cbamFactorYear?: number;
   defaultMarkupPercent: number;
   quantityUnitHint: string;
   categories: ProductCategoryCostDefaults[];
@@ -30,7 +33,8 @@ export interface CostCalculatorRequestPayload {
   defaultSpecificEmbeddedEmissions?: number | null;
   verificationCostBam?: number | null;
   certificatePriceEur?: number | null;
-  /** Honeypot — always send empty string from the UI. */
+  productBenchmark?: number | null;
+  applyFreeAllocation?: boolean;
   website?: string;
 }
 
@@ -42,6 +46,11 @@ export interface CostCalculatorResult {
   quantityUnit: string;
   defaultSpecificEmbeddedEmissions: number;
   actualSpecificEmbeddedEmissions: number;
+  productBenchmark?: number;
+  cbamFactor?: number;
+  freeAllocationPerUnit?: number;
+  defaultNetSeeAfterFreeAllocation?: number;
+  actualNetSeeAfterFreeAllocation?: number;
   certificatePriceEur: number;
   defaultPathCertificates: number;
   actualPathCertificates: number;

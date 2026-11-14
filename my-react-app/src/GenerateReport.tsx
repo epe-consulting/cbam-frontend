@@ -527,6 +527,7 @@ const GenerateReport: React.FC = () => {
 
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   const [productInfo, setProductInfo] = useState<ProductInfoSummary>({
     productCategory: null,
@@ -979,12 +980,77 @@ ${methodsBlock}
 </body></html>`;
   };
 
-  const handleDownloadPdf = () => {
-    const w = window.open('', '_blank');
-    if (!w) return;
-    w.document.write(buildReportHtml(reportTab));
-    w.document.close();
-    setTimeout(() => { w.print(); }, 400);
+  const handleDownloadPdf = async () => {
+    setPdfBusy(true);
+    try {
+      const html = buildReportHtml(reportTab);
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.left = '-10000px';
+      iframe.style.top = '0';
+      iframe.style.width = '794px';
+      iframe.style.height = '1123px';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!doc) {
+        document.body.removeChild(iframe);
+        throw new Error('Unable to create PDF document');
+      }
+      doc.open();
+      doc.write(html);
+      doc.close();
+
+      await new Promise((r) => setTimeout(r, 350));
+
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
+
+      const body = doc.body;
+      const canvas = await html2canvas(body, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        windowWidth: body.scrollWidth,
+        windowHeight: body.scrollHeight,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = 0;
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      while (heightLeft > 0) {
+        position -= pageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      const kind = reportTab === 'full' ? 'Operator-Emissions-Report' : 'Summary-Emissions-Report';
+      const fileName = `CBAM-${kind}-${reportingYear}.pdf`;
+      pdf.save(fileName);
+      document.body.removeChild(iframe);
+    } catch (err) {
+      console.error('PDF generation failed, falling back to print:', err);
+      const w = window.open('', '_blank');
+      if (w) {
+        w.document.write(buildReportHtml(reportTab));
+        w.document.close();
+        setTimeout(() => { w.print(); }, 400);
+      }
+    } finally {
+      setPdfBusy(false);
+    }
   };
 
   const handleUploadReport = async () => {
@@ -1706,13 +1772,14 @@ ${methodsBlock}
         <Button
           variant="contained" size="large" disableElevation startIcon={<PictureAsPdf />}
           onClick={handleDownloadPdf}
+          disabled={pdfBusy}
           sx={{
             py: 1.5, px: 5, fontFamily: T.font.body, fontWeight: 600, fontSize: '1rem', textTransform: 'none',
             bgcolor: T.color.forest, borderRadius: T.radius.pill,
             '&:hover': { bgcolor: T.color.ctaHover },
           }}
         >
-          Download {reportTab === 'full' ? 'full' : 'summary'} PDF
+          {pdfBusy ? 'Preparing PDF…' : `Download ${reportTab === 'full' ? 'full' : 'summary'} PDF`}
         </Button>
         <Button
           variant="contained" size="large" disableElevation startIcon={<CloudUpload />}

@@ -43,6 +43,8 @@ import About from './About';
 import Privacy from './Privacy';
 import Support from './Support';
 import Features from './Features';
+import Pricing from './Pricing';
+import Terms from './Terms';
 import CostCalculator from './CostCalculator';
 import Seo from './seo/Seo';
 import UnifiedFooter from './components/UnifiedFooter';
@@ -168,6 +170,7 @@ interface Translations {
       about: string;
       contact: string;
       privacy: string;
+      terms: string;
     };
     copyright: string;
   };
@@ -201,7 +204,7 @@ const translations: Record<Language, Translations> = {
         calculate: {
           title: 'Accurate Calculations',
           description:
-            'Calculate embedded emissions using official CBAM methodologies and emission factors for all covered sectors.',
+            'Calculate embedded emissions using official CBAM methodologies and emission factors — with guided workflows for your products.',
         },
         reports: {
           title: 'Compliant Reports',
@@ -289,8 +292,9 @@ const translations: Record<Language, Translations> = {
         about: 'About',
         contact: 'Contact',
         privacy: 'Privacy',
+        terms: 'Terms',
       },
-      copyright: '© 2025 Panonia. All rights reserved.',
+      copyright: '© 2026 Panonia. All rights reserved.',
     },
   },
   ju: {
@@ -409,8 +413,9 @@ const translations: Record<Language, Translations> = {
         about: 'O Nama',
         contact: 'Kontakt',
         privacy: 'Privatnost',
+        terms: 'Uslovi',
       },
-      copyright: '© 2025 Panonia. Sva prava pridržana.',
+      copyright: '© 2026 Panonia. Sva prava pridržana.',
     },
   },
   tr: {
@@ -529,8 +534,9 @@ const translations: Record<Language, Translations> = {
         about: 'Hakkımızda',
         contact: 'İletişim',
         privacy: 'Gizlilik',
+        terms: 'Şartlar',
       },
-      copyright: '© 2025 Panonia. Tüm hakları saklıdır.',
+      copyright: '© 2026 Panonia. Tüm hakları saklıdır.',
     },
   },
 };
@@ -1863,6 +1869,7 @@ const CBAMLandingPage: React.FC = () => {
           companyAbout: t.footer.company.about,
           companyContact: t.footer.company.contact,
           companyPrivacy: t.footer.company.privacy,
+          companyTerms: t.footer.company.terms,
           copyright: t.footer.copyright,
         }}
       />
@@ -2060,6 +2067,8 @@ const App: React.FC = () => {
         <Route path="/contact" element={<Contact />} />
         <Route path="/about" element={<About />} />
         <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/pricing" element={<Pricing />} />
         <Route path="/support" element={<Support />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/cost-calculator" element={<CostCalculator />} />

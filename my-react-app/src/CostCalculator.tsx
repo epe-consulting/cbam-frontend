@@ -84,6 +84,7 @@ const CostCalculator: React.FC = () => {
   const [actualSee, setActualSee] = useState('');
   const [verificationCostBam, setVerificationCostBam] = useState('');
   const [certificatePriceEur, setCertificatePriceEur] = useState('');
+  const [productBenchmark, setProductBenchmark] = useState('');
   /** Honeypot — leave empty; bots that autofill get rejected server-side. */
   const [websiteHoneypot, setWebsiteHoneypot] = useState('');
 
@@ -110,6 +111,9 @@ const CostCalculator: React.FC = () => {
         setDefaultSee(String(first.suggestedDefaultSee));
         setActualSee(String(first.suggestedActualSee));
         setVerificationCostBam(String(first.suggestedVerificationCostBam));
+        setProductBenchmark(
+          first.productBenchmark != null ? String(first.productBenchmark) : ''
+        );
       }
       setCertificatePriceEur(String(res.defaults.certificatePriceEur));
       setLoadingDefaults(false);
@@ -124,6 +128,9 @@ const CostCalculator: React.FC = () => {
     setDefaultSee(String(selectedCategory.suggestedDefaultSee));
     setActualSee(String(selectedCategory.suggestedActualSee));
     setVerificationCostBam(String(selectedCategory.suggestedVerificationCostBam));
+    setProductBenchmark(
+      selectedCategory.productBenchmark != null ? String(selectedCategory.productBenchmark) : ''
+    );
   }, [selectedCategory]);
 
   useEffect(() => {
@@ -161,6 +168,8 @@ const CostCalculator: React.FC = () => {
       actualSpecificEmbeddedEmissions: actualSee ? Number(actualSee) : null,
       verificationCostBam: verificationCostBam ? Number(verificationCostBam) : null,
       certificatePriceEur: certificatePriceEur ? Number(certificatePriceEur) : null,
+      productBenchmark: productBenchmark ? Number(productBenchmark) : null,
+      applyFreeAllocation: true,
       website: websiteHoneypot,
     });
     setSubmitting(false);
@@ -392,6 +401,21 @@ const CostCalculator: React.FC = () => {
                 />
               </Stack>
 
+              <TextField
+                fullWidth
+                type="number"
+                label="Product benchmark (tCO₂e / unit)"
+                value={productBenchmark}
+                onChange={(e) => setProductBenchmark(e.target.value)}
+                inputProps={{ min: 0, step: 'any' }}
+                sx={textFieldSx}
+                helperText={
+                  defaults?.cbamFactor != null
+                    ? `Used for 2026 free-allocation adjustment: benchmark × CBAM factor ${defaults.cbamFactor} (${defaults.cbamFactorYear ?? 2026}).`
+                    : 'Used for free-allocation adjustment (benchmark × CBAM factor).'
+                }
+              />
+
               <Alert severity="info" sx={{ fontFamily: T.font.body }}>
                 Panonia platform fee included in the “actual CBAM” path:{' '}
                 <strong>{fmtMoney(defaults?.platformAnnualFeeBam, 'BAM')}</strong>
@@ -475,8 +499,13 @@ const CostCalculator: React.FC = () => {
               >
                 <Typography sx={{ fontWeight: 700, color: T.color.ink, mb: 1.5 }}>Default values</Typography>
                 <Typography sx={{ color: T.color.muted, fontSize: '0.9rem' }}>
-                  SEE: {fmtNum(result.defaultSpecificEmbeddedEmissions, 3)} · Certificates:{' '}
-                  {fmtNum(result.defaultPathCertificates, 2)}
+                  SEE: {fmtNum(result.defaultSpecificEmbeddedEmissions, 3)}
+                  {result.defaultNetSeeAfterFreeAllocation != null && (
+                    <> → net {fmtNum(result.defaultNetSeeAfterFreeAllocation, 3)} after free allocation</>
+                  )}
+                </Typography>
+                <Typography sx={{ color: T.color.muted, fontSize: '0.9rem', mt: 0.5 }}>
+                  Certificates: {fmtNum(result.defaultPathCertificates, 2)}
                 </Typography>
                 <Typography sx={{ mt: 1.5, fontFamily: T.font.display, fontSize: '1.5rem', fontWeight: 700 }}>
                   {fmtMoney(result.defaultPathCbamCostBam, 'BAM')}
@@ -499,8 +528,16 @@ const CostCalculator: React.FC = () => {
                   Actual CBAM (+ Panonia + verifier)
                 </Typography>
                 <Typography sx={{ color: T.color.muted, fontSize: '0.9rem' }}>
-                  SEE: {fmtNum(result.actualSpecificEmbeddedEmissions, 3)} · Certificates:{' '}
-                  {fmtNum(result.actualPathCertificates, 2)}
+                  SEE: {fmtNum(result.actualSpecificEmbeddedEmissions, 3)}
+                  {result.actualNetSeeAfterFreeAllocation != null && (
+                    <> → net {fmtNum(result.actualNetSeeAfterFreeAllocation, 3)} after free allocation</>
+                  )}
+                </Typography>
+                <Typography sx={{ color: T.color.muted, fontSize: '0.9rem', mt: 0.5 }}>
+                  Certificates: {fmtNum(result.actualPathCertificates, 2)}
+                  {result.freeAllocationPerUnit != null && result.cbamFactor != null && (
+                    <> · free alloc. {fmtNum(result.freeAllocationPerUnit, 4)}/unit</>
+                  )}
                 </Typography>
                 <Typography sx={{ mt: 1, color: T.color.muted, fontSize: '0.85rem' }}>
                   CBAM {fmtMoney(result.actualPathCbamCostBam, 'BAM')} + platform{' '}

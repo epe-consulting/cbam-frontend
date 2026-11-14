@@ -8,6 +8,8 @@ Allow: /about
 Allow: /contact
 Allow: /support
 Allow: /privacy
+Allow: /pricing
+Allow: /terms
 
 # Private / app areas
 Disallow: /dashboard

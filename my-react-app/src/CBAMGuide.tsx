@@ -230,7 +230,7 @@ const translations: Record<Lang, {
         contact: 'Contact',
         privacy: 'Privacy',
       },
-      copyright: '© 2025 Panonia. All rights reserved.',
+      copyright: '© 2026 Panonia. All rights reserved.',
     },
   },
 
@@ -350,7 +350,7 @@ const translations: Record<Lang, {
         contact: 'Kontakt',
         privacy: 'Privatnost',
       },
-      copyright: '© 2025 Panonia. Sva prava pridržana.',
+      copyright: '© 2026 Panonia. Sva prava pridržana.',
     },
   },
 
@@ -470,7 +470,7 @@ const translations: Record<Lang, {
         contact: 'İletişim',
         privacy: 'Gizlilik',
       },
-      copyright: '© 2025 Panonia. Tüm hakları saklıdır.',
+      copyright: '© 2026 Panonia. Tüm hakları saklıdır.',
     },
   },
 };

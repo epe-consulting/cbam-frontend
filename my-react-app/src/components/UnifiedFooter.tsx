@@ -15,6 +15,7 @@ type FooterLabels = {
   companyAbout: string;
   companyContact: string;
   companyPrivacy: string;
+  companyTerms?: string;
   copyright: string;
 };
 
@@ -32,6 +33,16 @@ const T = {
 interface UnifiedFooterProps {
   labels: FooterLabels;
 }
+
+const linkSx = {
+  fontFamily: T.font.body,
+  fontSize: '0.9rem',
+  color: 'rgba(255,255,255,0.55)',
+  textDecoration: 'none',
+  cursor: 'pointer',
+  transition: 'color 0.2s',
+  '&:hover': { color: '#fff' },
+} as const;
 
 const UnifiedFooter: React.FC<UnifiedFooterProps> = ({ labels }) => {
   const navigate = useNavigate();
@@ -110,38 +121,12 @@ const UnifiedFooter: React.FC<UnifiedFooterProps> = ({ labels }) => {
               {labels.productTitle}
             </Typography>
             <Stack spacing={1.5}>
-              <Typography
-                component="a"
-                onClick={() => navigateTop('/features')}
-                sx={{
-                  fontFamily: T.font.body,
-                  fontSize: '0.9rem',
-                  color: 'rgba(255,255,255,0.55)',
-                  textDecoration: 'none',
-                  cursor: 'pointer',
-                  transition: 'color 0.2s',
-                  '&:hover': { color: '#fff' },
-                }}
-              >
+              <Typography component="a" onClick={() => navigateTop('/features')} sx={linkSx}>
                 {labels.productFeatures}
               </Typography>
-              {[labels.productPricing].map((item) => (
-                <Typography
-                  key={item}
-                  component="a"
-                  href="#"
-                  sx={{
-                    fontFamily: T.font.body,
-                    fontSize: '0.9rem',
-                    color: 'rgba(255,255,255,0.55)',
-                    textDecoration: 'none',
-                    transition: 'color 0.2s',
-                    '&:hover': { color: '#fff' },
-                  }}
-                >
-                  {item}
-                </Typography>
-              ))}
+              <Typography component="a" onClick={() => navigateTop('/pricing')} sx={linkSx}>
+                {labels.productPricing}
+              </Typography>
             </Stack>
           </Grid>
 
@@ -160,34 +145,10 @@ const UnifiedFooter: React.FC<UnifiedFooterProps> = ({ labels }) => {
               {labels.resourcesTitle}
             </Typography>
             <Stack spacing={1.5}>
-              <Typography
-                component="a"
-                onClick={() => navigateTop('/cbam-guide')}
-                sx={{
-                  fontFamily: T.font.body,
-                  fontSize: '0.9rem',
-                  color: 'rgba(255,255,255,0.55)',
-                  textDecoration: 'none',
-                  cursor: 'pointer',
-                  transition: 'color 0.2s',
-                  '&:hover': { color: '#fff' },
-                }}
-              >
+              <Typography component="a" onClick={() => navigateTop('/cbam-guide')} sx={linkSx}>
                 {labels.resourcesGuide}
               </Typography>
-              <Typography
-                component="a"
-                onClick={() => navigateTop('/support')}
-                sx={{
-                  fontFamily: T.font.body,
-                  fontSize: '0.9rem',
-                  color: 'rgba(255,255,255,0.55)',
-                  textDecoration: 'none',
-                  cursor: 'pointer',
-                  transition: 'color 0.2s',
-                  '&:hover': { color: '#fff' },
-                }}
-              >
+              <Typography component="a" onClick={() => navigateTop('/support')} sx={linkSx}>
                 {labels.resourcesSupport}
               </Typography>
             </Stack>
@@ -208,51 +169,20 @@ const UnifiedFooter: React.FC<UnifiedFooterProps> = ({ labels }) => {
               {labels.companyTitle}
             </Typography>
             <Stack spacing={1.5}>
-              <Typography
-                component="a"
-                onClick={() => navigateTop('/about')}
-                sx={{
-                  fontFamily: T.font.body,
-                  fontSize: '0.9rem',
-                  color: 'rgba(255,255,255,0.55)',
-                  textDecoration: 'none',
-                  cursor: 'pointer',
-                  transition: 'color 0.2s',
-                  '&:hover': { color: '#fff' },
-                }}
-              >
+              <Typography component="a" onClick={() => navigateTop('/about')} sx={linkSx}>
                 {labels.companyAbout}
               </Typography>
-              <Typography
-                component="a"
-                onClick={() => navigateTop('/contact')}
-                sx={{
-                  fontFamily: T.font.body,
-                  fontSize: '0.9rem',
-                  color: 'rgba(255,255,255,0.55)',
-                  textDecoration: 'none',
-                  cursor: 'pointer',
-                  transition: 'color 0.2s',
-                  '&:hover': { color: '#fff' },
-                }}
-              >
+              <Typography component="a" onClick={() => navigateTop('/contact')} sx={linkSx}>
                 {labels.companyContact}
               </Typography>
-              <Typography
-                component="a"
-                onClick={() => navigateTop('/privacy')}
-                sx={{
-                  fontFamily: T.font.body,
-                  fontSize: '0.9rem',
-                  color: 'rgba(255,255,255,0.55)',
-                  textDecoration: 'none',
-                  cursor: 'pointer',
-                  transition: 'color 0.2s',
-                  '&:hover': { color: '#fff' },
-                }}
-              >
+              <Typography component="a" onClick={() => navigateTop('/privacy')} sx={linkSx}>
                 {labels.companyPrivacy}
               </Typography>
+              {labels.companyTerms && (
+                <Typography component="a" onClick={() => navigateTop('/terms')} sx={linkSx}>
+                  {labels.companyTerms}
+                </Typography>
+              )}
             </Stack>
           </Grid>
         </Grid>

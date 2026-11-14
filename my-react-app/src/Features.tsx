@@ -111,30 +111,30 @@ const featureSets: Record<Lang, FeatureItem[]> = {
     accentBg: "#E2F0EB",
   },
   {
-    tag: "Sharing",
-    title: "Client\u00A0Communication",
+    tag: "Services",
+    title: "On-site\u00A0Assessment",
     description:
-      "Share completed reports directly with EU importers. Compose a message, attach the report, and send — keeping your compliance chain transparent and documented.",
+      "Prefer not to run the calculator yourselves? Panonia specialists can visit your site, gather the required operational data, and calculate embedded emissions on your behalf.",
     details: [
-      "Direct email sharing",
-      "Custom cover messages",
-      "Audit-ready delivery log",
-      "Multi-stakeholder access",
+      "On-site data collection",
+      "Expert-led emissions calculation",
+      "Outputs ready for EU CBAM discussions",
+      "Minimal burden beyond providing data",
     ],
     icon: "share",
     accent: "#7C5CBA",
     accentBg: "#F0EBFA",
   },
   {
-    tag: "Compliance",
-    title: "Deadline\u00A0Intelligence",
+    tag: "Engagement",
+    title: "Two\u00A0Service Models",
     description:
-      "Stay ahead of the EU CBAM transitional and definitive phase timelines. Dashboard insights surface upcoming deadlines, missing data, and report status at a glance.",
+      "Engage Panonia as a calculator platform for your team, or as an on-site partner that performs the emissions work. Accounts are provisioned after agreement — contact us for a tailored proposal.",
     details: [
-      "Phase-aware timeline tracking",
-      "Missing-data alerts",
-      "Calculation status overview",
-      "Quarterly reporting reminders",
+      "CBAM Calculator Platform",
+      "On-site Emissions Assessment",
+      "Scoped commercial proposals",
+      "Professional delivery standards",
     ],
     icon: "compliance",
     accent: T.color.forestLight,
@@ -203,30 +203,30 @@ const featureSets: Record<Lang, FeatureItem[]> = {
     accentBg: "#E2F0EB",
   },
   {
-    tag: "Dijeljenje",
-    title: "Komunikacija sa klijentima",
+    tag: "Usluge",
+    title: "Procjena na lokaciji",
     description:
-      "Dijelite završene izvještaje direktno sa EU uvoznicima. Napišite poruku, dodajte izvještaj i pošaljite — uz transparentan i dokumentovan compliance lanac.",
+      "Ne želite sami voditi kalkulator? Panonia stručnjaci dolaze na vaš sajt, prikupljaju potrebne podatke i izračunavaju ugrađene emisije umjesto vas.",
     details: [
-      "Direktno slanje emailom",
-      "Prilagođene poruke",
-      "Audit-log isporuke",
-      "Pristup za više učesnika",
+      "Prikupljanje podataka na lokaciji",
+      "Stručni izračun emisija",
+      "Outputi spremni za EU CBAM razgovore",
+      "Minimalno opterećenje osim davanja podataka",
     ],
     icon: "share",
     accent: "#7C5CBA",
     accentBg: "#F0EBFA",
   },
   {
-    tag: "Usklađenost",
-    title: "Praćenje rokova",
+    tag: "Saradnja",
+    title: "Dva modela usluge",
     description:
-      "Budite ispred rokova EU CBAM tranzicione i definitivne faze. Dashboard prikazuje predstojeće rokove, nedostajuće podatke i status izvještaja.",
+      "Angažujte Panonia kao kalkulator platformu za vaš tim, ili kao partnera na lokaciji koji radi emisije. Nalozi se otvaraju nakon dogovora — kontaktirajte nas za ponudu.",
     details: [
-      "Praćenje rokova po fazama",
-      "Upozorenja za nedostajuće podatke",
-      "Pregled statusa izračuna",
-      "Podsjetnici za kvartalne izvještaje",
+      "CBAM kalkulator platforma",
+      "Procjena emisija na lokaciji",
+      "Prilagođene komercijalne ponude",
+      "Profesionalni standardi isporuke",
     ],
     icon: "compliance",
     accent: T.color.forestLight,
@@ -295,30 +295,30 @@ const featureSets: Record<Lang, FeatureItem[]> = {
     accentBg: "#E2F0EB",
   },
   {
-    tag: "Paylaşım",
-    title: "Müşteri iletişimi",
+    tag: "Hizmetler",
+    title: "Saha değerlendirmesi",
     description:
-      "Tamamlanan raporları AB ithalatçılarıyla doğrudan paylaşın. Mesaj yazın, raporu ekleyin ve gönderin — şeffaf ve kayıtlı bir uyumluluk zinciriyle.",
+      "Hesaplayıcıyı kendiniz çalıştırmak istemiyor musunuz? Panonia uzmanları tesisinize gelip gerekli verileri toplar ve gömülü emisyonları sizin yerinize hesaplar.",
     details: [
-      "Doğrudan e-posta paylaşımı",
-      "Özel mesajlar",
-      "Denetim için teslimat kaydı",
-      "Çok paydaşlı erişim",
+      "Sahada veri toplama",
+      "Uzman emisyon hesaplaması",
+      "AB CBAM görüşmeleri için hazır çıktılar",
+      "Personel yalnızca veri sağlar",
     ],
     icon: "share",
     accent: "#7C5CBA",
     accentBg: "#F0EBFA",
   },
   {
-    tag: "Uyumluluk",
-    title: "Son tarih zekası",
+    tag: "İş birliği",
+    title: "İki hizmet modeli",
     description:
-      "AB CBAM geçiş ve kesin faz zaman çizelgesinde önde kalın. Panel, yaklaşan son tarihleri, eksik verileri ve rapor durumlarını gösterir.",
+      "Panonia’yı ekibiniz için hesaplama platformu veya emisyon işini yapan saha ortağı olarak çalıştırın. Hesaplar anlaşmadan sonra açılır — özel teklif için bize ulaşın.",
     details: [
-      "Faz bazlı zaman çizelgesi takibi",
-      "Eksik veri uyarıları",
-      "Hesaplama durum görünümü",
-      "Çeyreklik raporlama hatırlatmaları",
+      "CBAM Hesaplama Platformu",
+      "Saha Emisyon Değerlendirmesi",
+      "Kapsama özel ticari teklifler",
+      "Profesyonel teslim standartları",
     ],
     icon: "compliance",
     accent: T.color.forestLight,
@@ -343,11 +343,11 @@ const uiText = {
     cta: {
       title: "Ready to simplify your CBAM workflow?",
       subtitle: "Join producers who've replaced spreadsheets and consultants with a purpose-built compliance platform.",
-      button: "Get Started — It's Free",
-      note: "No credit card required · Free during transitional phase",
+      button: "Discuss an engagement",
+      note: "Calculator platform or on-site emissions assessment · Contact for pricing",
     },
     footer: {
-      tagline: "Making CBAM compliance simple for businesses worldwide.",
+      tagline: "Professional CBAM calculation and on-site emissions support for exporters.",
       product: "Product",
       resources: "Resources",
       company: "Company",
@@ -361,8 +361,9 @@ const uiText = {
         about: "About",
         privacy: "Privacy",
         contact: "Contact",
+        terms: "Terms",
       },
-      copyright: "© 2025 Panonia. All rights reserved.",
+      copyright: "© 2026 Panonia. All rights reserved.",
     },
   },
   ju: {
@@ -380,11 +381,11 @@ const uiText = {
     cta: {
       title: "Spremni da pojednostavite CBAM tok?",
       subtitle: "Pridružite se proizvođačima koji su zamijenili tabele i konsultante namjenskom platformom za usklađenost.",
-      button: "Počni — Besplatno je",
-      note: "Bez kreditne kartice · Besplatno tokom tranzicione faze",
+      button: "Razgovarajmo o saradnji",
+      note: "Kalkulator platforma ili procjena emisija na lokaciji · Kontakt za cijenu",
     },
     footer: {
-      tagline: "Činimo CBAM usklađenost jednostavnom za kompanije širom svijeta.",
+      tagline: "Profesionalni CBAM izračuni i podrška emisijama na lokaciji za izvoznike.",
       product: "Proizvod",
       resources: "Resursi",
       company: "Kompanija",
@@ -398,8 +399,9 @@ const uiText = {
         about: "O nama",
         privacy: "Privatnost",
         contact: "Kontakt",
+        terms: "Uslovi",
       },
-      copyright: "© 2025 Panonia. Sva prava pridržana.",
+      copyright: "© 2026 Panonia. Sva prava pridržana.",
     },
   },
   tr: {
@@ -417,11 +419,11 @@ const uiText = {
     cta: {
       title: "CBAM sürecini sadeleştirmeye hazır mısınız?",
       subtitle: "Elektronik tabloları ve danışmanları, amaca yönelik bir uyumluluk platformuyla değiştiren üreticilere katılın.",
-      button: "Başla — Ücretsiz",
-      note: "Kredi kartı gerekmez · Geçiş döneminde ücretsiz",
+      button: "İş birliğini konuşalım",
+      note: "Hesaplama platformu veya saha emisyon değerlendirmesi · Fiyat için iletişime geçin",
     },
     footer: {
-      tagline: "CBAM uyumluluğunu dünya genelinde işletmeler için basitleştiriyoruz.",
+      tagline: "İhracatçılar için profesyonel CBAM hesaplama ve saha emisyon desteği.",
       product: "Ürün",
       resources: "Kaynaklar",
       company: "Şirket",
@@ -435,8 +437,9 @@ const uiText = {
         about: "Hakkımızda",
         privacy: "Gizlilik",
         contact: "İletişim",
+        terms: "Şartlar",
       },
-      copyright: "© 2025 Panonia. Tüm hakları saklıdır.",
+      copyright: "© 2026 Panonia. Tüm hakları saklıdır.",
     },
   },
 };
@@ -1260,7 +1263,7 @@ export default function Features() {
             }}
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = T.color.ctaHover)}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = T.color.forest)}
-            onClick={() => navigate("/login")}
+            onClick={() => navigate("/pricing")}
           >
             {t.cta.button}
           </button>
@@ -1291,6 +1294,7 @@ export default function Features() {
           companyAbout: t.footer.items.about,
           companyContact: t.footer.items.contact,
           companyPrivacy: t.footer.items.privacy,
+          companyTerms: t.footer.items.terms,
           copyright: t.footer.copyright,
         }}
       />
