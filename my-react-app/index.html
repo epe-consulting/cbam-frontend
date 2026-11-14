@@ -2,12 +2,75 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/panonia-logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Panonia</title>
+
+    <!-- Primary SEO (overridden per-route by Seo.tsx) -->
+    <title>Panonia — CBAM Calculator &amp; Compliance Helper for Exporters</title>
+    <meta
+      name="description"
+      content="Panonia CBAM calculator platform and on-site emissions assessment. Compare actual emissions vs EU default values and prepare CBAM reports for EU clients."
+    />
+    <meta
+      name="keywords"
+      content="CBAM, CBAM calculator, CBAM helper, CBAM compliance, Carbon Border Adjustment Mechanism, CBAM reporting, embedded emissions calculator, CBAM default values, EU CBAM"
+    />
+    <meta name="author" content="Panonia" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#0B4F3E" />
+    <meta name="application-name" content="Panonia" />
+    <link rel="canonical" href="https://panonia.io/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Panonia" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content="Panonia — CBAM Calculator &amp; Compliance Helper" />
+    <meta
+      property="og:description"
+      content="Compare CBAM costs, calculate embedded emissions, and share EU-ready reports. Built for exporters facing the Carbon Border Adjustment Mechanism."
+    />
+    <meta property="og:url" content="https://panonia.io/" />
+    <meta property="og:image" content="https://panonia.io/panonia-logo.png" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Panonia — CBAM Calculator &amp; Compliance Helper" />
+    <meta
+      name="twitter:description"
+      content="CBAM calculator and on-site emissions assessment from Panonia — compare costs and prepare EU CBAM reporting."
+    />
+    <meta name="twitter:image" content="https://panonia.io/panonia-logo.png" />
+
+    <link rel="icon" type="image/png" href="/panonia-logo.png" />
+    <link rel="apple-touch-icon" href="/panonia-logo.png" />
+
+    <!-- Preconnect for fonts used across the site -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Crawlable fallback content for bots that do not execute JS fully -->
+    <noscript>
+      <meta http-equiv="refresh" content="0;url=https://panonia.io/" />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>
+    <!-- Static SEO fallback visible before React hydrates / if JS fails -->
+    <noscript>
+      <main style="font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem;">
+        <h1>Panonia — CBAM Calculator &amp; Compliance Helper</h1>
+        <p>
+          Panonia helps exporters calculate CBAM embedded emissions, compare actual values vs EU default values,
+          and generate Carbon Border Adjustment Mechanism reports for EU clients.
+        </p>
+        <ul>
+          <li><a href="/cost-calculator">CBAM cost calculator</a></li>
+          <li><a href="/cbam-guide">CBAM guide</a></li>
+          <li><a href="/features">Features</a></li>
+          <li><a href="/contact">Contact</a></li>
+        </ul>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -111,7 +111,7 @@ const translations: Record<Lang, {
       product: { title: 'Product', features: 'Features', pricing: 'Pricing', documentation: 'Documentation' },
       resources: { title: 'Resources', guide: 'CBAM Guide', blog: 'Blog', support: 'Support' },
       company: { title: 'Company', about: 'About', contact: 'Contact', privacy: 'Privacy' },
-      copyright: '© 2025 Panonia. All rights reserved.',
+      copyright: '© 2026 Panonia. All rights reserved.',
     },
   },
   ju: {
@@ -167,7 +167,7 @@ const translations: Record<Lang, {
       product: { title: 'Proizvod', features: 'Značajke', pricing: 'Cijene', documentation: 'Dokumentacija' },
       resources: { title: 'Resursi', guide: 'CBAM Vodič', blog: 'Blog', support: 'Podrška' },
       company: { title: 'Tvrtka', about: 'O nama', contact: 'Kontakt', privacy: 'Privatnost' },
-      copyright: '© 2025 Panonia. Sva prava pridržana.',
+      copyright: '© 2026 Panonia. Sva prava pridržana.',
     },
   },
   tr: {
@@ -223,7 +223,7 @@ const translations: Record<Lang, {
       product: { title: 'Ürün', features: 'Özellikler', pricing: 'Fiyatlandırma', documentation: 'Dokümantasyon' },
       resources: { title: 'Kaynaklar', guide: 'CBAM Rehberi', blog: 'Blog', support: 'Destek' },
       company: { title: 'Şirket', about: 'Hakkımızda', contact: 'İletişim', privacy: 'Gizlilik' },
-      copyright: '© 2025 Panonia. Tüm hakları saklıdır.',
+      copyright: '© 2026 Panonia. Tüm hakları saklıdır.',
     },
   },
 };

@@ -34,6 +34,7 @@ jobs:
             VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}
             VITE_BLOB_CONTAINER_URL=${{ secrets.BLOB_CONTAINER_URL }}
             VITE_BLOB_SAS_TOKEN=${{ secrets.BLOB_SAS_TOKEN }}
+            VITE_SITE_URL=https://panonia.io
           tags: |
             cbamic.azurecr.io/cbam-front-prod:${{ github.sha }}
             cbamic.azurecr.io/cbam-front-prod:latest

@@ -1,0 +1,21 @@
+# Panonia — CBAM calculator & compliance helper
+User-agent: *
+Allow: /
+Allow: /cost-calculator
+Allow: /cbam-guide
+Allow: /features
+Allow: /about
+Allow: /contact
+Allow: /support
+Allow: /privacy
+Allow: /pricing
+Allow: /terms
+
+# Private / app areas
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /login
+Disallow: /admin
+Disallow: /admin/
+
+Sitemap: https://panonia.io/sitemap.xml

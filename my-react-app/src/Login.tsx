@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -76,6 +77,10 @@ const textFieldSx = {
 };
 
 const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
+  const location = useLocation();
+  const redirectFrom = (location.state as { from?: string } | null)?.from;
+  const loginPrompt = redirectFrom ? 'Log in to continue.' : null;
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -174,6 +179,11 @@ const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
             <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: '1.5rem', color: T.color.ink, mb: 0.5 }}>
               Welcome Back
             </Typography>
+            {loginPrompt && (
+              <Alert severity="info" sx={{ mb: 2, textAlign: 'left', fontFamily: T.font.body }}>
+                {loginPrompt}
+              </Alert>
+            )}
             <Typography sx={{ fontFamily: T.font.body, fontSize: '0.95rem', color: T.color.muted, lineHeight: 1.6 }}>
               Sign in to your CBAM compliance account
             </Typography>
