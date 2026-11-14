@@ -1066,7 +1066,7 @@ ${methodsBlock}
     const fileName = `CBAM-${kind}-${reportingYear}-${timestamp}.html`;
     const result = await uploadReportToBlob(companyId, fileName, html);
     if (result.success) {
-      setUploadResult({ success: true, message: 'Report uploaded to cloud storage.' });
+      setUploadResult({ success: true, message: 'Report saved to storage.' });
     } else {
       setUploadResult({ success: false, message: result.error || 'Upload failed.' });
     }
