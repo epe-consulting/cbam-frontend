@@ -46,7 +46,7 @@ import {
   ListItemText,
   Divider,
   Stack,
-  TextField,
+  LinearProgress,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -55,12 +55,15 @@ import {
   Settings,
   Calculate,
   Description,
-  Send,
-  Notifications,
   Help,
-  ArrowBack,
   ArrowForward,
   Shield,
+  CompareArrows,
+  MenuBook,
+  CheckCircleOutline,
+  HourglassEmpty,
+  EditNote,
+  TrendingUp,
 } from '@mui/icons-material';
 
 /* ─── Design tokens (shared across Panonia) ─── */
@@ -106,17 +109,40 @@ const sectionPaperSx = {
   overflow: 'hidden' as const,
 };
 
-const textFieldSx = {
-  '& .MuiOutlinedInput-root': { borderRadius: T.radius.sm, fontFamily: T.font.body },
-  '& .MuiInputLabel-root': { fontFamily: T.font.body },
-};
-
 /* Card accent colors mapped to design system */
 const cardAccents = [
   { bg: T.color.mint, border: T.color.mintDark, fg: T.color.forest, icon: T.color.forest },
   { bg: '#EBF2FF', border: '#C5D6F7', fg: '#1A4B8E', icon: '#2563EB' },
-  { bg: '#F3EEFF', border: '#D8C9F5', fg: '#5B2E91', icon: '#7C3AED' },
+  { bg: T.color.accentLight, border: '#E5D4A8', fg: '#8A6A20', icon: '#B8922A' },
 ];
+
+function formatRelativeDate(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const diffMs = Date.now() - d.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 14) return `${days}d ago`;
+  return d.toLocaleDateString();
+}
+
+function statusChip(status: DashboardCalculationItem['status']) {
+  switch (status) {
+    case 'COMPLETED':
+      return { label: 'Completed', bg: T.color.mint, color: T.color.forest };
+    case 'IN_PROGRESS':
+      return { label: 'In progress', bg: '#EBF2FF', color: '#1A4B8E' };
+    case 'CANCELLED':
+      return { label: 'Cancelled', bg: '#FDEDEC', color: '#C0392B' };
+    default:
+      return { label: 'Draft', bg: T.color.accentLight, color: '#8A6A20' };
+  }
+}
 
 interface DashboardProps {
   onLogout: () => void;
@@ -136,7 +162,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionExpired, setSessionExpired] = useState(false);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'calculation' | 'sharing'>('dashboard');
   const [newCalcError, setNewCalcError] = useState<string | null>(null);
   const [newCalcLoading, setNewCalcLoading] = useState(false);
   const [calculationsCount, setCalculationsCount] = useState<number | null>(null);
@@ -144,9 +169,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [calculationsLoading, setCalculationsLoading] = useState(false);
   const [calculationsError, setCalculationsError] = useState<string | null>(null);
   const [reportsCount, setReportsCount] = useState<number | null>(null);
+  const [companyName, setCompanyName] = useState<string>('');
   const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const completedCount = calculationsList.filter((c) => c.status === 'COMPLETED').length;
+  const inProgressCount = calculationsList.filter(
+    (c) => c.status === 'IN_PROGRESS' || c.status === 'DRAFT'
+  ).length;
+  const recentCalculations = [...calculationsList]
+    .sort((a, b) => {
+      const ta = new Date(b.modifiedAt || b.createdAt || 0).getTime();
+      const tb = new Date(a.modifiedAt || a.createdAt || 0).getTime();
+      return ta - tb;
+    })
+    .slice(0, 5);
 
   /* Inject fonts */
   useEffect(() => {
@@ -204,6 +242,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           if (data.success && data.user) {
             setUser(data.user);
             setUserName(data.user.username || 'User');
+            setCompanyName(data.user.companyName || '');
             setSessionExpired(false);
             const companyId = data.user.companyId;
             if (companyId != null) {
@@ -332,84 +371,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     }
   };
 
-  useEffect(() => {
-    setCurrentView('dashboard');
-  }, [location.pathname]);
-
   const handleGenerateReport = () => {
     navigate('/dashboard/generate-report');
   };
-
-  const handleShareWithClient = () => {
-    setCurrentView('sharing');
-  };
-
-  const handleBackToDashboard = () => {
-    setCurrentView('dashboard');
-  };
-
-  // Client Sharing Page Component
-  const SharingPage = () => (
-    <Container maxWidth="lg">
-      <Box mb={4}>
-        <Button
-          startIcon={<ArrowBack sx={{ fontSize: '18px !important' }} />}
-          onClick={handleBackToDashboard}
-          sx={{
-            mb: 2, fontFamily: T.font.body, fontWeight: 500, fontSize: '0.9rem',
-            color: T.color.muted, textTransform: 'none', borderRadius: T.radius.pill,
-            '&:hover': { bgcolor: T.color.mint, color: T.color.forest },
-          }}
-        >
-          Back to Dashboard
-        </Button>
-        <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: { xs: '1.6rem', md: '2rem' }, color: T.color.ink, letterSpacing: '-0.02em', mb: 1 }}>
-          Share with Client
-        </Typography>
-        <Typography sx={{ fontFamily: T.font.body, fontSize: '1.05rem', color: T.color.muted, lineHeight: 1.6 }}>
-          Send emissions data to your EU clients securely
-        </Typography>
-      </Box>
-
-      <Paper elevation={0} sx={{ ...sectionPaperSx, p: { xs: 3, md: 4 } }}>
-        <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.2rem', color: T.color.ink, mb: 3 }}>
-          Client Information
-        </Typography>
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <TextField fullWidth label="Client Company Name" variant="outlined" sx={textFieldSx} />
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <TextField fullWidth label="Contact Email" type="email" variant="outlined" sx={textFieldSx} />
-          </Grid>
-          <Grid size={12}>
-            <TextField fullWidth label="Subject" variant="outlined" sx={textFieldSx} />
-          </Grid>
-          <Grid size={12}>
-            <TextField fullWidth multiline rows={4} label="Message" variant="outlined" sx={textFieldSx} />
-          </Grid>
-          <Grid size={12}>
-            <Button
-              variant="contained" size="large" disableElevation startIcon={<Send />}
-              sx={{
-                mt: 1, fontFamily: T.font.body, fontWeight: 600, textTransform: 'none',
-                bgcolor: T.color.forest, borderRadius: T.radius.pill, px: 4, py: 1.4,
-                '&:hover': { bgcolor: T.color.ctaHover },
-              }}
-            >
-              Send to Client
-            </Button>
-          </Grid>
-        </Grid>
-      </Paper>
-    </Container>
-  );
 
   const dashboardCards: Array<{
     title: string;
     description: string;
     icon: React.ReactNode;
-    color: string;
     count: string;
     label: string;
     seeAllHref?: string;
@@ -417,32 +386,61 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   }> = [
     {
       title: 'CBAM Calculations',
-      description: 'Calculate emissions for your products',
+      description: 'All emissions calculations for your products',
       icon: <Calculate />,
-      color: '#059669',
       count: calculationsCount !== null ? String(calculationsCount) : '—',
-      label: 'Active Projects',
+      label: 'Total calculations',
       seeAllHref: '/dashboard/calculations',
       accentIdx: 0,
     },
     {
-      title: 'Reports Generated',
-      description: 'View and manage your reports',
+      title: 'Reports',
+      description: 'Generated CBAM reports ready to download',
       icon: <Description />,
-      color: '#2563eb',
       count: reportsCount !== null ? String(reportsCount) : '—',
-      label: 'Total Reports',
+      label: 'Stored reports',
       seeAllHref: '/dashboard/reports',
       accentIdx: 1,
     },
     {
-      title: 'Client Sharing',
-      description: 'Share data with EU clients',
-      icon: <Send />,
-      color: '#7c3aed',
-      count: '24',
-      label: 'Shared Reports',
+      title: 'Completed',
+      description: 'Calculations finished and ready for reporting',
+      icon: <CheckCircleOutline />,
+      count: calculationsCount !== null ? String(completedCount) : '—',
+      label: inProgressCount > 0 ? `${inProgressCount} still in progress` : 'No open drafts',
+      seeAllHref: '/dashboard/calculations',
       accentIdx: 2,
+    },
+  ];
+
+  const gettingStartedSteps = [
+    {
+      done: (calculationsCount ?? 0) > 0,
+      title: 'Start a CBAM calculation',
+      desc: 'Enter product and process data for your installation.',
+      action: () => handleNewCalculation(),
+      actionLabel: 'New calculation',
+    },
+    {
+      done: completedCount > 0,
+      title: 'Finish at least one calculation',
+      desc: 'Complete the wizard so embedded emissions are computed.',
+      action: () => navigate('/dashboard/calculations'),
+      actionLabel: 'View calculations',
+    },
+    {
+      done: (reportsCount ?? 0) > 0,
+      title: 'Generate a CBAM report',
+      desc: 'Turn completed calculations into a shareable report.',
+      action: handleGenerateReport,
+      actionLabel: 'Generate report',
+    },
+    {
+      done: Boolean(companyName),
+      title: 'Confirm company & installation details',
+      desc: 'Keep operator and installation data up to date in Settings.',
+      action: () => navigate('/dashboard/settings'),
+      actionLabel: 'Open settings',
     },
   ];
 
@@ -492,11 +490,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               />
             </Box>
 
-            <IconButton sx={{ mr: 0.5, color: T.color.muted, '&:hover': { bgcolor: T.color.mint, color: T.color.forest } }}>
-              <Notifications sx={{ fontSize: 22 }} />
-            </IconButton>
-
-            <IconButton sx={{ mr: 1, color: T.color.muted, '&:hover': { bgcolor: T.color.mint, color: T.color.forest } }}>
+            <IconButton
+              onClick={() => navigate('/cbam-guide')}
+              title="CBAM Guide"
+              sx={{ mr: 1, color: T.color.muted, '&:hover': { bgcolor: T.color.mint, color: T.color.forest } }}
+            >
               <Help sx={{ fontSize: 22 }} />
             </IconButton>
 
@@ -544,17 +542,66 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           {location.pathname === '/dashboard' && (
             <Container maxWidth="lg">
               {/* Welcome */}
-              <Box mb={4}>
-                <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: { xs: '1.6rem', md: '2.2rem' }, color: T.color.ink, letterSpacing: '-0.02em', mb: 0.5 }}>
-                  {loading ? 'Loading…' : `Welcome back, ${userName}!`}
-                </Typography>
-                <Typography sx={{ fontFamily: T.font.body, fontSize: '1.05rem', color: T.color.muted, lineHeight: 1.6 }}>
-                  Manage your CBAM compliance and emissions reporting
-                </Typography>
+              <Box
+                mb={4}
+                display="flex"
+                flexDirection={{ xs: 'column', md: 'row' }}
+                alignItems={{ md: 'flex-end' }}
+                justifyContent="space-between"
+                gap={2}
+              >
+                <Box>
+                  <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: { xs: '1.6rem', md: '2.2rem' }, color: T.color.ink, letterSpacing: '-0.02em', mb: 0.5 }}>
+                    {loading ? 'Loading…' : `Welcome back, ${userName}!`}
+                  </Typography>
+                  <Typography sx={{ fontFamily: T.font.body, fontSize: '1.05rem', color: T.color.muted, lineHeight: 1.6 }}>
+                    {companyName
+                      ? `${companyName} · CBAM calculations & reports`
+                      : 'Manage your CBAM calculations and emissions reports'}
+                  </Typography>
+                </Box>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ width: { xs: '100%', md: 'auto' } }}>
+                  <Button
+                    variant="contained"
+                    disableElevation
+                    startIcon={<Calculate />}
+                    onClick={handleNewCalculation}
+                    disabled={newCalcLoading}
+                    sx={{
+                      fontFamily: T.font.body, fontWeight: 600, textTransform: 'none',
+                      bgcolor: T.color.forest, borderRadius: T.radius.pill, px: 3, py: 1.2,
+                      '&:hover': { bgcolor: T.color.ctaHover },
+                    }}
+                  >
+                    {newCalcLoading ? 'Creating…' : 'New calculation'}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Description />}
+                    onClick={handleGenerateReport}
+                    sx={{
+                      fontFamily: T.font.body, fontWeight: 600, textTransform: 'none',
+                      borderColor: T.color.line, color: T.color.inkSoft, borderRadius: T.radius.pill, px: 3, py: 1.1,
+                      '&:hover': { borderColor: T.color.forest, bgcolor: T.color.mint, color: T.color.forest },
+                    }}
+                  >
+                    Generate report
+                  </Button>
+                </Stack>
               </Box>
 
-              {/* Dashboard Cards */}
-              <Grid container spacing={3} sx={{ mb: 4 }}>
+              {newCalcError && (
+                <Paper elevation={0} sx={{ ...sectionPaperSx, p: 2, mb: 3, borderColor: '#F5C6CB', bgcolor: '#FDEDEC' }}>
+                  <Typography sx={{ fontFamily: T.font.body, fontSize: '0.9rem', color: '#C0392B' }}>
+                    {newCalcError}
+                  </Typography>
+                </Paper>
+              )}
+
+              {calculationsLoading && <LinearProgress sx={{ mb: 2, borderRadius: 1, bgcolor: T.color.mint, '& .MuiLinearProgress-bar': { bgcolor: T.color.forest } }} />}
+
+              {/* Stats */}
+              <Grid container spacing={3} sx={{ mb: 3 }}>
                 {dashboardCards.map((card, index) => {
                   const accent = cardAccents[card.accentIdx] ?? cardAccents[0];
                   return (
@@ -565,40 +612,33 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                           height: '100%', borderRadius: T.radius.lg, bgcolor: T.color.warmWhite,
                           border: `1px solid ${T.color.lineFaint}`, position: 'relative', overflow: 'hidden',
                           transition: 'all 0.35s cubic-bezier(.22,1,.36,1)',
-                          '&:hover': { transform: 'translateY(-6px)', boxShadow: `0 20px 48px -12px rgba(11,79,62,0.10)`, borderColor: accent.border },
-                          '&::before': {
-                            content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: '3px',
-                            background: `linear-gradient(90deg, ${accent.fg}, ${accent.border})`,
-                            opacity: 0, transition: 'opacity 0.35s ease',
-                          },
-                          '&:hover::before': { opacity: 1 },
+                          '&:hover': { transform: 'translateY(-4px)', boxShadow: `0 20px 48px -12px rgba(11,79,62,0.10)`, borderColor: accent.border },
                         }}
                       >
-                        <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-                          <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
-                            <Box sx={{ width: 52, height: 52, borderRadius: T.radius.md, bgcolor: accent.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: accent.icon }}>
+                        <CardContent sx={{ p: { xs: 3, md: 3.5 } }}>
+                          <Box display="flex" alignItems="center" justifyContent="space-between" mb={2.5}>
+                            <Box sx={{ width: 48, height: 48, borderRadius: T.radius.md, bgcolor: accent.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: accent.icon }}>
                               {card.icon}
                             </Box>
-                            <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: '2.4rem', color: accent.fg, lineHeight: 1 }}>
+                            <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: '2.2rem', color: accent.fg, lineHeight: 1 }}>
                               {card.count}
                             </Typography>
                           </Box>
-                          <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.15rem', color: T.color.ink, mb: 0.5 }}>
+                          <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.1rem', color: T.color.ink, mb: 0.5 }}>
                             {card.title}
                           </Typography>
-                          <Typography sx={{ fontFamily: T.font.body, fontSize: '0.92rem', color: T.color.muted, mb: 1.5, lineHeight: 1.5 }}>
+                          <Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem', color: T.color.muted, mb: 1, lineHeight: 1.5 }}>
                             {card.description}
                           </Typography>
-                          <Typography sx={{ fontFamily: T.font.body, fontSize: '0.82rem', color: T.color.muted, fontWeight: 500 }}>
+                          <Typography sx={{ fontFamily: T.font.body, fontSize: '0.8rem', color: T.color.muted, fontWeight: 500 }}>
                             {card.label}
                           </Typography>
                           {card.seeAllHref && (
                             <Button
-                              component="span"
                               endIcon={<ArrowForward sx={{ fontSize: '16px !important' }} />}
                               onClick={() => navigate(card.seeAllHref!)}
                               sx={{
-                                mt: 2, px: 0, fontFamily: T.font.body, fontWeight: 600, fontSize: '0.88rem',
+                                mt: 1.5, px: 0, fontFamily: T.font.body, fontWeight: 600, fontSize: '0.88rem',
                                 textTransform: 'none', color: accent.fg,
                                 '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
                               }}
@@ -613,90 +653,212 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 })}
               </Grid>
 
-              {/* Quick Actions */}
-              <Paper elevation={0} sx={{ ...sectionPaperSx, p: { xs: 3, md: 4 } }}>
-                <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.2rem', color: T.color.ink, mb: 3 }}>
-                  Quick Actions
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                    {newCalcError && (
-                      <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: '#C0392B', mb: 1 }}>
-                        {newCalcError}
+              <Grid container spacing={3} sx={{ mb: 3 }}>
+                {/* Recent calculations — real data */}
+                <Grid size={{ xs: 12, md: 7 }}>
+                  <Paper elevation={0} sx={{ ...sectionPaperSx, p: { xs: 3, md: 3.5 }, height: '100%' }}>
+                    <Box display="flex" alignItems="center" justifyContent="space-between" mb={2.5}>
+                      <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.2rem', color: T.color.ink }}>
+                        Recent calculations
+                      </Typography>
+                      <Button
+                        onClick={() => navigate('/dashboard/calculations')}
+                        endIcon={<ArrowForward sx={{ fontSize: '16px !important' }} />}
+                        sx={{ fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', color: T.color.forest, fontSize: '0.85rem' }}
+                      >
+                        All
+                      </Button>
+                    </Box>
+
+                    {calculationsError && (
+                      <Typography sx={{ fontFamily: T.font.body, color: '#C0392B', fontSize: '0.9rem', mb: 2 }}>
+                        {calculationsError}
                       </Typography>
                     )}
-                    <Button
-                      variant="contained" disableElevation startIcon={<Calculate />} fullWidth size="large"
-                      onClick={handleNewCalculation} disabled={newCalcLoading}
-                      sx={{
-                        py: 2, fontFamily: T.font.body, fontWeight: 600, fontSize: '0.95rem', textTransform: 'none',
-                        bgcolor: T.color.forest, borderRadius: T.radius.md,
-                        '&:hover': { bgcolor: T.color.ctaHover },
-                      }}
-                    >
-                      {newCalcLoading ? 'Creating…' : 'New Calculation'}
-                    </Button>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                    <Button
-                      variant="outlined" startIcon={<Description />} fullWidth size="large"
-                      onClick={handleGenerateReport}
-                      sx={{
-                        py: 2, fontFamily: T.font.body, fontWeight: 600, fontSize: '0.95rem', textTransform: 'none',
-                        borderColor: T.color.line, color: T.color.inkSoft, borderRadius: T.radius.md,
-                        '&:hover': { borderColor: T.color.forest, bgcolor: T.color.mint, color: T.color.forest },
-                      }}
-                    >
-                      Generate Report
-                    </Button>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                    <Button
-                      variant="outlined" startIcon={<Send />} fullWidth size="large"
-                      onClick={handleShareWithClient}
-                      sx={{
-                        py: 2, fontFamily: T.font.body, fontWeight: 600, fontSize: '0.95rem', textTransform: 'none',
-                        borderColor: T.color.line, color: T.color.inkSoft, borderRadius: T.radius.md,
-                        '&:hover': { borderColor: T.color.forest, bgcolor: T.color.mint, color: T.color.forest },
-                      }}
-                    >
-                      Share with Client
-                    </Button>
-                  </Grid>
-                </Grid>
-              </Paper>
 
-              {/* Recent Activity */}
-              <Paper elevation={0} sx={{ ...sectionPaperSx, p: { xs: 3, md: 4 }, mt: 3 }}>
-                <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.2rem', color: T.color.ink, mb: 3 }}>
-                  Recent Activity
-                </Typography>
-                <Stack spacing={2.5}>
-                  {[
-                    { icon: <Calculate sx={{ fontSize: 18 }} />, bg: T.color.mint, color: T.color.forest, text: 'Completed calculation for Steel Products', time: '2 hours ago' },
-                    { icon: <Send sx={{ fontSize: 18 }} />, bg: '#EBF2FF', color: '#2563EB', text: 'Shared report with EU Client GmbH', time: '5 hours ago' },
-                    { icon: <Description sx={{ fontSize: 18 }} />, bg: '#F3EEFF', color: '#7C3AED', text: 'Generated monthly compliance report', time: '1 day ago' },
-                  ].map((item, i) => (
-                    <Box key={i} display="flex" alignItems="center" gap={2} sx={{ p: 1.5, borderRadius: T.radius.sm, transition: 'background 0.2s ease', '&:hover': { bgcolor: T.color.lineFaint } }}>
-                      <Box sx={{ width: 36, height: 36, borderRadius: T.radius.sm, bgcolor: item.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: item.color, flexShrink: 0 }}>
-                        {item.icon}
-                      </Box>
-                      <Box>
-                        <Typography sx={{ fontFamily: T.font.body, fontWeight: 500, fontSize: '0.92rem', color: T.color.ink }}>
-                          {item.text}
+                    {!calculationsLoading && recentCalculations.length === 0 ? (
+                      <Box sx={{ py: 4, textAlign: 'center' }}>
+                        <EditNote sx={{ fontSize: 40, color: T.color.mintDark, mb: 1 }} />
+                        <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, color: T.color.ink, mb: 0.5 }}>
+                          No calculations yet
                         </Typography>
-                        <Typography sx={{ fontFamily: T.font.body, fontSize: '0.78rem', color: T.color.muted }}>
-                          {item.time}
+                        <Typography sx={{ fontFamily: T.font.body, fontSize: '0.9rem', color: T.color.muted, mb: 2 }}>
+                          Start your first CBAM emissions calculation to see it here.
                         </Typography>
+                        <Button
+                          variant="contained"
+                          disableElevation
+                          startIcon={<Calculate />}
+                          onClick={handleNewCalculation}
+                          disabled={newCalcLoading}
+                          sx={{
+                            fontFamily: T.font.body, fontWeight: 600, textTransform: 'none',
+                            bgcolor: T.color.forest, borderRadius: T.radius.pill,
+                            '&:hover': { bgcolor: T.color.ctaHover },
+                          }}
+                        >
+                          Start calculation
+                        </Button>
                       </Box>
+                    ) : (
+                      <Stack spacing={1.25} divider={<Divider sx={{ borderColor: T.color.lineFaint }} />}>
+                        {recentCalculations.map((calc) => {
+                          const chip = statusChip(calc.status);
+                          return (
+                            <Box
+                              key={calc.id}
+                              onClick={() => navigate(`/dashboard/new-calculation/${calc.id}`)}
+                              sx={{
+                                display: 'flex', alignItems: 'center', gap: 2, py: 1.25, px: 1,
+                                borderRadius: T.radius.sm, cursor: 'pointer',
+                                '&:hover': { bgcolor: T.color.lineFaint },
+                              }}
+                            >
+                              <Box sx={{
+                                width: 40, height: 40, borderRadius: T.radius.sm, flexShrink: 0,
+                                bgcolor: calc.status === 'COMPLETED' ? T.color.mint : calc.status === 'IN_PROGRESS' ? '#EBF2FF' : T.color.accentLight,
+                                color: calc.status === 'COMPLETED' ? T.color.forest : calc.status === 'IN_PROGRESS' ? '#1A4B8E' : '#8A6A20',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              }}>
+                                {calc.status === 'COMPLETED' ? <CheckCircleOutline sx={{ fontSize: 20 }} /> :
+                                  calc.status === 'IN_PROGRESS' ? <HourglassEmpty sx={{ fontSize: 20 }} /> :
+                                  <EditNote sx={{ fontSize: 20 }} />}
+                              </Box>
+                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.95rem', color: T.color.ink }}>
+                                  Calculation #{calc.id}
+                                </Typography>
+                                <Typography sx={{ fontFamily: T.font.body, fontSize: '0.78rem', color: T.color.muted }}>
+                                  {calc.currentStep ? `Step: ${calc.currentStep.replace(/_/g, ' ')}` : 'No step saved'}
+                                  {calc.modifiedAt || calc.createdAt ? ` · ${formatRelativeDate(calc.modifiedAt || calc.createdAt)}` : ''}
+                                </Typography>
+                              </Box>
+                              <Chip
+                                size="small"
+                                label={chip.label}
+                                sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.72rem', bgcolor: chip.bg, color: chip.color }}
+                              />
+                            </Box>
+                          );
+                        })}
+                      </Stack>
+                    )}
+                  </Paper>
+                </Grid>
+
+                {/* Getting started / checklist */}
+                <Grid size={{ xs: 12, md: 5 }}>
+                  <Paper elevation={0} sx={{ ...sectionPaperSx, p: { xs: 3, md: 3.5 }, height: '100%' }}>
+                    <Box display="flex" alignItems="center" gap={1} mb={2.5}>
+                      <TrendingUp sx={{ color: T.color.forest, fontSize: 22 }} />
+                      <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.2rem', color: T.color.ink }}>
+                        Getting started
+                      </Typography>
                     </Box>
+                    <Stack spacing={2}>
+                      {gettingStartedSteps.map((step, i) => (
+                        <Box
+                          key={i}
+                          sx={{
+                            p: 1.75,
+                            borderRadius: T.radius.md,
+                            border: `1px solid ${step.done ? T.color.mintDark : T.color.lineFaint}`,
+                            bgcolor: step.done ? T.color.mint : T.color.cream,
+                          }}
+                        >
+                          <Box display="flex" alignItems="flex-start" gap={1.25} mb={step.done ? 0 : 1.25}>
+                            <CheckCircleOutline sx={{ fontSize: 20, color: step.done ? T.color.forest : T.color.line, mt: 0.15 }} />
+                            <Box>
+                              <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.92rem', color: T.color.ink }}>
+                                {step.title}
+                              </Typography>
+                              <Typography sx={{ fontFamily: T.font.body, fontSize: '0.8rem', color: T.color.muted, lineHeight: 1.45 }}>
+                                {step.desc}
+                              </Typography>
+                            </Box>
+                          </Box>
+                          {!step.done && (
+                            <Button
+                              size="small"
+                              onClick={step.action}
+                              sx={{
+                                ml: 4, fontFamily: T.font.body, fontWeight: 600, textTransform: 'none',
+                                color: T.color.forest, fontSize: '0.82rem',
+                              }}
+                            >
+                              {step.actionLabel} →
+                            </Button>
+                          )}
+                        </Box>
+                      ))}
+                    </Stack>
+                  </Paper>
+                </Grid>
+              </Grid>
+
+              {/* Tools & resources */}
+              <Paper elevation={0} sx={{ ...sectionPaperSx, p: { xs: 3, md: 3.5 } }}>
+                <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.2rem', color: T.color.ink, mb: 2.5 }}>
+                  Tools & resources
+                </Typography>
+                <Grid container spacing={2}>
+                  {[
+                    {
+                      icon: <CompareArrows />,
+                      title: 'CBAM cost calculator',
+                      desc: 'Compare actual emissions vs EU default values before you report.',
+                      onClick: () => navigate('/cost-calculator'),
+                    },
+                    {
+                      icon: <MenuBook />,
+                      title: 'CBAM guide',
+                      desc: 'Timelines, certificates, default values, and who CBAM affects.',
+                      onClick: () => navigate('/cbam-guide'),
+                    },
+                    {
+                      icon: <Settings />,
+                      title: 'Company settings',
+                      desc: 'Update company profile and installation details used in reports.',
+                      onClick: () => navigate('/dashboard/settings'),
+                    },
+                    {
+                      icon: <Description />,
+                      title: 'Report library',
+                      desc: 'Browse and download previously generated CBAM reports.',
+                      onClick: () => navigate('/dashboard/reports'),
+                    },
+                  ].map((tool) => (
+                    <Grid size={{ xs: 12, sm: 6 }} key={tool.title}>
+                      <Box
+                        onClick={tool.onClick}
+                        sx={{
+                          p: 2.25,
+                          height: '100%',
+                          borderRadius: T.radius.md,
+                          border: `1px solid ${T.color.lineFaint}`,
+                          bgcolor: T.color.cream,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          '&:hover': { borderColor: T.color.mintDark, bgcolor: T.color.mint },
+                        }}
+                      >
+                        <Box display="flex" alignItems="center" gap={1.5} mb={1}>
+                          <Box sx={{ color: T.color.forest, display: 'flex' }}>{tool.icon}</Box>
+                          <Typography sx={{ fontFamily: T.font.body, fontWeight: 700, fontSize: '0.98rem', color: T.color.ink }}>
+                            {tool.title}
+                          </Typography>
+                        </Box>
+                        <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted, lineHeight: 1.5 }}>
+                          {tool.desc}
+                        </Typography>
+                      </Box>
+                    </Grid>
                   ))}
-                </Stack>
+                </Grid>
               </Paper>
             </Container>
           )}
 
-          {currentView === 'sharing' && <SharingPage />}
           <Outlet />
         </Box>
       </Box>
