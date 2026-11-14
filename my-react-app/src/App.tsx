@@ -44,6 +44,7 @@ import Privacy from './Privacy';
 import Support from './Support';
 import Features from './Features';
 import CostCalculator from './CostCalculator';
+import Seo from './seo/Seo';
 import UnifiedFooter from './components/UnifiedFooter';
 import {
   Shield,
@@ -2050,6 +2051,7 @@ const App: React.FC = () => {
 
   return (
     <>
+      <Seo />
       <ScrollToTopOnRouteChange />
       <Routes>
         <Route path="/" element={<CBAMLandingPage />} />
