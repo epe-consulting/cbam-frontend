@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
 import { apiRequest } from '../utils/api';
+import { SteelResultView, type SteelResultWarning } from './steel/SteelResultView';
 
 const T = {
   font: {
@@ -71,6 +72,8 @@ interface CalcResult {
   reportYear: number;
   computedAt: string;
   items: ResultItem[];
+  /** Iron & steel only (steel-api-contract §4); empty for aluminium. */
+  warnings?: SteelResultWarning[];
 }
 
 export interface CalculationCompleteStepProps {
@@ -80,6 +83,8 @@ export interface CalculationCompleteStepProps {
   onBack: () => void;
   onBackToDashboard: () => void;
   onNewCalculation: () => void;
+  /** Iron & steel calculation: render the per-CN steel result view. */
+  isSteel?: boolean;
 }
 
 function humanizeFormulaCode(code: string): string {
@@ -106,6 +111,7 @@ export function CalculationCompleteStep({
   onBack,
   onBackToDashboard,
   onNewCalculation,
+  isSteel = false,
 }: CalculationCompleteStepProps) {
   const [result, setResult] = useState<CalcResult | null>(null);
   const [resultLoading, setResultLoading] = useState(false);
@@ -184,7 +190,11 @@ export function CalculationCompleteStep({
         </>
       )}
 
-      {!resultLoading && !resultError && result && (
+      {!resultLoading && !resultError && result && isSteel && (
+        <SteelResultView calculationId={calculationId} result={result} />
+      )}
+
+      {!resultLoading && !resultError && result && !isSteel && (
         <>
           {/* Total Emissions Hero Card */}
           <Paper

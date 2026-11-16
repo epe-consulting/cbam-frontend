@@ -46,6 +46,8 @@ export interface ProductDetailEntry {
   cnCode: string;
   quantity: string;
   countryOfOrigin: string;
+  /** Iron & steel only: PIG_IRON | IRON_STEEL_PRODUCTS for CN 7205 (spec §5.3). */
+  aggregatedCategory?: string;
 }
 
 export interface ProductDetailsStepProps {
