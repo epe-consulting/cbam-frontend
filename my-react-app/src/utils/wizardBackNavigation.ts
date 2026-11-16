@@ -1,3 +1,5 @@
+import { DATA_SOURCE, STEEL_STEP_PREVIOUS } from './steelSteps';
+
 /** Steps that auto-forward in the UI; never show as a Back destination. */
 export const HIDDEN_WIZARD_STEPS = new Set(['SABIRNA_TACKA']);
 
@@ -20,6 +22,8 @@ export const STEP_PREVIOUS_FALLBACK: Record<string, string> = {
   ALU_SECONDARY_EMBEDDED_EMISSIONS: 'ALU_SECONDARY_UNWROUGHT_QTY',
   ALU_SECONDARY_EMBEDDED_EMISSIONS_VALUE: 'ALU_SECONDARY_EMBEDDED_EMISSIONS',
   ALU_SECONDARY_ALLOYING_PERCENT: 'ALU_SECONDARY_ALLOYING_ELEMENTS',
+  // Iron & steel (IS_*) – static chain, spec §5.1
+  ...STEEL_STEP_PREVIOUS,
 };
 
 function resolveElectricityTerminalStep(lookup: WizardAnswerLookup): string {
@@ -92,6 +96,14 @@ export function inferPreviousStepFallback(
       return lookup.hasAnswerByCode('ALU_PRODUCTS_ALLOYING_PERCENT')
         ? 'ALU_PRODUCTS_ALLOYING_PERCENT'
         : 'ALU_PRODUCTS_ALLOYING';
+
+    case 'COMPLETE': {
+      // Iron & steel only (aluminium calculations have no IS_DATA_SOURCE answer → unchanged).
+      const source = lookup.getAnswerByCode('IS_DATA_SOURCE');
+      if (source === DATA_SOURCE.DEFAULT) return 'IS_GENERAL';
+      if (source === DATA_SOURCE.ACTUAL) return 'IS_REPORTING_PARAMS';
+      return null;
+    }
 
     default:
       return null;

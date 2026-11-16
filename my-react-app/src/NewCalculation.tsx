@@ -42,6 +42,17 @@ import {
   resolvePreviousStep,
   type WizardAnswerLookup,
 } from './utils/wizardBackNavigation';
+import {
+  isSteelCategory,
+  isSteelStepCode,
+  steelStepNumber,
+  steelPeriodError,
+  parseJsonRows,
+  type SteelProductRow,
+} from './utils/steelSteps';
+import { SteelWizardStep } from './components/steel/SteelWizardStep';
+import { SteelProductDetailsStep } from './components/steel/SteelProductDetailsStep';
+import { getAnswerValuesByCode, getQuestionIdsByCode } from './api/ironSteel';
 
 /* ─── Design tokens (shared across Panonia) ─── */
 const T = {
@@ -158,7 +169,10 @@ const NewCalculation: React.FC = () => {
     [currentStepCode]
   );
   const { questions: questionsFromApi, loading: questionsLoading, error: questionsError } = useQuestionsByStep(stepCodeForQuestions);
-  const { answers, getAnswer, setAnswer, saveAnswer, clearAllLocalAnswers, deleteAnswersForQuestions } = useCalculationAnswers(calculationId);
+  const { answers, getAnswer, setAnswer, saveAnswer, clearAllLocalAnswers, deleteAnswersForQuestions, refetch: refetchAnswers } = useCalculationAnswers(calculationId);
+  const isSteel = isSteelCategory(category);
+  const [steelSaving, setSteelSaving] = useState(false);
+  const [steelSaveError, setSteelSaveError] = useState<string | null>(null);
 
   const stepFromCurrentStepCode = (code: string): number => {
     switch (code) {
@@ -204,7 +218,7 @@ const NewCalculation: React.FC = () => {
       case 'ALU_PPA_CONSUMPTION_ONLY': return 11;
       case 'SABIRNA_TACKA': return 99;
       case 'COMPLETE': return 12;
-      default: return 1;
+      default: return steelStepNumber(code) ?? 1;
     }
   };
 
@@ -446,6 +460,34 @@ const NewCalculation: React.FC = () => {
     });
   }, [answers, questionIdToCode]);
 
+  // Iron & steel: reload all product rows (the answers map keeps only one value per question) on resume.
+  const steelProductsHydratedRef = useRef(false);
+  useEffect(() => {
+    if (calculationId == null || !isSteel || steelProductsHydratedRef.current) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const ids = await getQuestionIdsByCode();
+        const values = await getAnswerValuesByCode(calculationId, ids);
+        const rows = parseJsonRows<SteelProductRow>(values.CBAM_PRODUCT_ENTRY);
+        if (cancelled) return;
+        steelProductsHydratedRef.current = true;
+        if (rows.length === 0) return;
+        setProductDetailEntries(rows.map((r, i) => ({
+          id: i + 1,
+          productName: r.product_name ?? '',
+          cnCode: r.cn_code ?? '',
+          quantity: r.quantity ?? '',
+          countryOfOrigin: r.country_of_origin ?? '',
+          aggregatedCategory: r.aggregated_category,
+        })));
+      } catch {
+        // keep in-session entries
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [calculationId, isSteel]);
+
   const getLocalStateForQuestionCode = (code: string): string => {
     switch (code) {
       case 'ALU_DECLARATION_PRODUCT': return aluminumProductType;
@@ -658,7 +700,7 @@ const NewCalculation: React.FC = () => {
   };
 
   const handleNext = async () => {
-    if (calculationId != null && questionsFromApi?.length && !(step === 5 && (currentStepCode === 'FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT')) && step !== 13) {
+    if (calculationId != null && questionsFromApi?.length && !isSteelStepCode(currentStepCode) && !(step === 5 && (currentStepCode === 'FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT')) && step !== 13) {
       const questionIds = questionsFromApi.map((q: QuestionWithOptions) => q.id);
       const valuesToSave: { questionId: number; value: string }[] = [];
       const anodeTypeQuestion = questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_ANODE_TYPE');
@@ -686,6 +728,13 @@ const NewCalculation: React.FC = () => {
       if (new Date(reportingPeriodFrom) > new Date(reportingPeriodTo)) {
         setReportingPeriodError('"Od" datum ne može biti nakon "Do" datuma.');
         return;
+      }
+      if (isSteelCategory(category)) {
+        const periodError = steelPeriodError(reportingPeriodFrom, reportingPeriodTo);
+        if (periodError) {
+          setReportingPeriodError(periodError);
+          return;
+        }
       }
       setReportingPeriodError(null);
       if (calculationId == null) {
@@ -723,7 +772,7 @@ const NewCalculation: React.FC = () => {
         await saveAnswer(Number(reportingFromQuestionId), reportingPeriodFrom);
         await saveAnswer(Number(reportingToQuestionId), reportingPeriodTo);
 
-        const nextStep = category === 'Aluminium' ? 'CBAM_PRODUCT_DETAILS' : 'FUEL_INPUT';
+        const nextStep = category === 'Aluminium' || isSteelCategory(category) ? 'CBAM_PRODUCT_DETAILS' : 'FUEL_INPUT';
         await patchCalculationWizard(calculationId, { currentStep: nextStep });
         stepStackRef.current.push('PRODUCT_INFO');
         setCurrentStepCode(nextStep);
@@ -755,6 +804,40 @@ const NewCalculation: React.FC = () => {
           return;
         }
         const productEntryQuestionIdNum = Number(productEntryQuestionId);
+        if (isSteelCategory(category)) {
+          // Iron & steel: spec §5.3 row shape, then backend routing (cross-step rule → IS_GENERAL).
+          setSteelSaving(true);
+          setSteelSaveError(null);
+          try {
+            await deleteAnswersForQuestions([productEntryQuestionIdNum]);
+            for (const entry of productDetailEntries) {
+              const row: SteelProductRow = {
+                product_name: entry.productName.trim(),
+                cn_code: entry.cnCode.trim(),
+                quantity: entry.quantity.trim(),
+                country_of_origin: entry.countryOfOrigin,
+              };
+              if (entry.cnCode.replace(/\s+/g, '').startsWith('7205')) {
+                row.aggregated_category = entry.aggregatedCategory || 'IRON_STEEL_PRODUCTS';
+              }
+              await saveAnswer(productEntryQuestionIdNum, JSON.stringify(row));
+            }
+            const { toStepCode } = await getNextStep(calculationId, currentStepCode);
+            stepStackRef.current.push(currentStepCode);
+            if (toStepCode === 'COMPLETE') {
+              await patchCalculationWizard(calculationId, { status: 'COMPLETED' });
+            } else {
+              await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+            }
+            setCurrentStepCode(toStepCode);
+            setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode } : null));
+          } catch (err) {
+            setSteelSaveError(err instanceof Error ? err.message : 'Spremanje nije uspjelo');
+          } finally {
+            setSteelSaving(false);
+          }
+          return;
+        }
         await deleteAnswersForQuestions([productEntryQuestionIdNum]);
         for (const entry of productDetailEntries) {
           await saveAnswer(productEntryQuestionIdNum, JSON.stringify({
@@ -1061,6 +1144,21 @@ const NewCalculation: React.FC = () => {
     }
   };
 
+  /** Iron & steel: after a step saved its answers, route via the backend (spec §5.1/§5.2). */
+  const advanceSteelStep = async () => {
+    if (calculationId == null) return;
+    const { toStepCode } = await getNextStep(calculationId, currentStepCode);
+    if (toStepCode === 'COMPLETE') {
+      await patchCalculationWizard(calculationId, { status: 'COMPLETED' });
+    } else {
+      await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+    }
+    stepStackRef.current.push(currentStepCode);
+    await refetchAnswers();
+    setCurrentStepCode(toStepCode);
+    setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode, status: toStepCode === 'COMPLETE' ? 'COMPLETED' : c.status } : null));
+  };
+
   const handleBack = async () => {
     const previousStepCode = resolvePreviousStep(
       stepStackRef.current,
@@ -1077,7 +1175,10 @@ const NewCalculation: React.FC = () => {
       returningToElectricityStepRef.current = true;
     }
 
-    if (previousStepCode !== 'PRODUCT_INFO') {
+    // Iron & steel keeps saved answers on Back so the step reloads its rows (spec §5.5); they are replaced on Next.
+    const keepSteelAnswers = isSteelStepCode(previousStepCode)
+      || (previousStepCode === 'CBAM_PRODUCT_DETAILS' && isSteelCategory(category));
+    if (previousStepCode !== 'PRODUCT_INFO' && !keepSteelAnswers) {
       try {
         const prevQuestions = await getQuestionsWithOptions(previousStepCode);
         const prevQuestionIds = prevQuestions.map((q) => q.id);
@@ -1159,7 +1260,37 @@ const NewCalculation: React.FC = () => {
           />
         )}
 
-        {step === 2 && currentStepCode === 'CBAM_PRODUCT_DETAILS' && (
+        {step === 2 && currentStepCode === 'CBAM_PRODUCT_DETAILS' && isSteel && (
+          <SteelProductDetailsStep
+            entries={productDetailEntries}
+            updateEntry={(index: number, updates: Partial<ProductDetailEntry>) =>
+              setProductDetailEntries((prev: ProductDetailEntry[]) =>
+                prev.map((e: ProductDetailEntry, i: number) => (i === index ? { ...e, ...updates } : e))
+              )
+            }
+            addEntry={() =>
+              setProductDetailEntries((prev: ProductDetailEntry[]) => [
+                ...prev,
+                {
+                  id: prev.length > 0 ? Math.max(...prev.map((e: ProductDetailEntry) => e.id)) + 1 : 1,
+                  productName: '',
+                  cnCode: '',
+                  quantity: '',
+                  countryOfOrigin: '',
+                },
+              ])
+            }
+            removeEntry={(index: number) =>
+              setProductDetailEntries((prev: ProductDetailEntry[]) => prev.filter((_: ProductDetailEntry, i: number) => i !== index))
+            }
+            onBack={handleBack}
+            onNext={handleNext}
+            saving={steelSaving}
+            saveError={steelSaveError}
+          />
+        )}
+
+        {step === 2 && currentStepCode === 'CBAM_PRODUCT_DETAILS' && !isSteel && (
           <ProductDetailsStep
             title="Product details"
             entries={productDetailEntries}
@@ -1461,6 +1592,17 @@ const NewCalculation: React.FC = () => {
           />
         )}
 
+        {isSteelStepCode(currentStepCode) && calculationId != null && (
+          <SteelWizardStep
+            calculationId={calculationId}
+            stepCode={currentStepCode}
+            questions={questionsFromApi}
+            questionsLoading={questionsLoading}
+            onBack={handleBack}
+            onAdvance={advanceSteelStep}
+          />
+        )}
+
         {step === 12 && currentStepCode === 'COMPLETE' && (
           <CalculationCompleteStep
             calculationId={calculationId}
@@ -1469,6 +1611,7 @@ const NewCalculation: React.FC = () => {
             onBack={handleBack}
             onBackToDashboard={() => navigate('/dashboard')}
             onNewCalculation={() => navigate('/dashboard/new-calculation')}
+            isSteel={isSteel}
           />
         )}
       </Paper>
