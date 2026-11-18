@@ -22,6 +22,7 @@ import { SteelEnergyFlowsStep } from './SteelEnergyFlowsStep';
 import { SteelElectricityStep } from './SteelElectricityStep';
 import { SteelPrecursorsStep } from './SteelPrecursorsStep';
 import { SteelReportingParamsStep } from './SteelReportingParamsStep';
+import { useTranslation } from 'react-i18next';
 
 export interface SteelWizardStepProps {
   calculationId: number;
@@ -38,6 +39,7 @@ export interface SteelWizardStepProps {
  * reloaded on Back / resume), and saves each repeatable question as delete-then-insert (spec §5.4).
  */
 export function SteelWizardStep({ calculationId, stepCode, questions, questionsLoading, onBack, onAdvance }: SteelWizardStepProps) {
+  const { t } = useTranslation();
   const [qIds, setQIds] = useState<Record<string, number> | null>(null);
   const [data, setData] = useState<SteelWizardData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -77,7 +79,7 @@ export function SteelWizardStep({ calculationId, stepCode, questions, questionsL
           installationCountry: selected?.country?.trim() || (values[IS_Q.INSTALLATION_COUNTRY_LEGACY]?.at(-1) ?? ''),
         });
       } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Učitavanje podataka nije uspjelo');
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : t('steel.wizard.loadFailed'));
       }
     })();
     return () => { cancelled = true; };
@@ -92,7 +94,7 @@ export function SteelWizardStep({ calculationId, stepCode, questions, questionsL
     try {
       const missing = [...Object.keys(payload.rows ?? {}), ...Object.keys(payload.values ?? {})].filter((c) => qIds[c] == null);
       if (missing.length > 0) {
-        throw new Error(`Pitanja nisu pronađena u bazi (${missing.join(', ')}). Pokrenite nove migracije pa pokušajte ponovo.`);
+        throw new Error(t('steel.wizard.questionsMissing', { codes: missing.join(', ') }));
       }
       for (const [code, rows] of Object.entries(payload.rows ?? {})) {
         await replaceRowAnswers(calculationId, qIds[code], rows);
@@ -102,11 +104,11 @@ export function SteelWizardStep({ calculationId, stepCode, questions, questionsL
       }
       await onAdvance();
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : 'Spremanje nije uspjelo');
+      setSaveError(e instanceof Error ? e.message : t('steel.wizard.saveFailed'));
     } finally {
       setSaving(false);
     }
-  }, [qIds, calculationId, onAdvance]);
+  }, [qIds, calculationId, onAdvance, t]);
 
   if (loadError) {
     return <Alert severity="error" sx={{ borderRadius: T.radius.sm, fontFamily: T.font.body }}>{loadError}</Alert>;
@@ -125,7 +127,7 @@ export function SteelWizardStep({ calculationId, stepCode, questions, questionsL
     return (
       <Box>
         <Alert severity="warning" sx={{ borderRadius: T.radius.sm, fontFamily: T.font.body, mb: 2 }}>
-          Nema definisanih proizvodnih procesa. Vratite se na korak „Proizvodni procesi“.
+          {t('steel.wizard.noProcesses')}
         </Alert>
         <NavButtons onBack={onBack} onNext={() => {}} nextDisabled />
       </Box>

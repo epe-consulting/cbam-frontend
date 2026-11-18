@@ -18,20 +18,23 @@ import { T } from './steelTheme';
 import { IssueList, NavButtons, SelectField, StepHeader, TextInput } from './SteelUi';
 import { Link as RouterLink } from 'react-router-dom';
 import { questionMeta, type SteelStepProps } from './types';
-import { DATA_SOURCE, IS_Q, NOT_SUPPORTED_BS, type StepIssue } from '../../utils/steelSteps';
+import { DATA_SOURCE, IS_Q, notSupportedList, type StepIssue } from '../../utils/steelSteps';
+import { useTranslation } from 'react-i18next';
 
+/** Shown only when the DB options are missing (labels from locale files). */
 const FALLBACK_OPTIONS = [
-  { code: DATA_SOURCE.DEFAULT, label: 'Zadane (default) vrijednosti EU – Uredba (EU) 2025/2621' },
-  { code: DATA_SOURCE.ACTUAL, label: 'Stvarni podaci postrojenja (monitoring)' },
+  { code: DATA_SOURCE.DEFAULT, labelKey: 'steel.general.optDefault' },
+  { code: DATA_SOURCE.ACTUAL, labelKey: 'steel.general.optActual' },
 ];
 
 export function SteelGeneralStep({ data, questions, saving, saveError, onBack, onSubmit }: SteelStepProps) {
-  const yearMeta = questionMeta(questions, IS_Q.IMPORT_YEAR, 'Godina uvoza robe u EU');
-  const sourceMeta = questionMeta(questions, IS_Q.DATA_SOURCE, 'Na osnovu kojih podataka računate ugrađene emisije?');
+  const { t } = useTranslation();
+  const yearMeta = questionMeta(questions, IS_Q.IMPORT_YEAR, t('steel.general.yearLabel'));
+  const sourceMeta = questionMeta(questions, IS_Q.DATA_SOURCE, t('steel.general.sourceLabel'));
   const [importYear, setImportYear] = useState(() => data.values[IS_Q.IMPORT_YEAR]?.at(-1) ?? (data.yRep ? String(data.yRep) : ''));
   const [dataSource, setDataSource] = useState(() => data.values[IS_Q.DATA_SOURCE]?.at(-1) ?? '');
-  const installationMeta = questionMeta(questions, IS_Q.INSTALLATION_REF, 'Postrojenje u kojem je roba proizvedena',
-    'Odaberite postrojenje iz postavki firme. Država postrojenja koristi se za zadani emisioni faktor mreže i provjeru porijekla robe.');
+  const installationMeta = questionMeta(questions, IS_Q.INSTALLATION_REF, t('steel.general.installationLabel'),
+    t('steel.general.installationHelp'));
   const installations = data.installations;
   const [installationRef, setInstallationRef] = useState(() => {
     const saved = data.values[IS_Q.INSTALLATION_REF]?.at(-1) ?? '';
@@ -49,10 +52,10 @@ export function SteelGeneralStep({ data, questions, saving, saveError, onBack, o
     const list: StepIssue[] = [];
     const y = importYear.trim();
     if (y !== '' && (!/^\d{4}$/.test(y) || Number(y) < 2026)) {
-      list.push({ code: 'IS_E_PERIOD', message: 'Godina uvoza mora biti cijeli broj ≥ 2026 (definitivni period).' });
+      list.push({ code: 'IS_E_PERIOD', message: t('steel.general.yearError') });
     }
     return list;
-  }, [importYear]);
+  }, [importYear, t]);
 
   const missingOptions = !options;
   const installationOk = !isActual || selectedInstallation != null;
@@ -60,14 +63,14 @@ export function SteelGeneralStep({ data, questions, saving, saveError, onBack, o
 
   return (
     <Box sx={{ fontFamily: T.font.body }}>
-      <StepHeader title="Željezo i čelik – opšti podaci" />
+      <StepHeader title={t('steel.general.title')} />
 
       <Typography sx={{ mb: 1, fontFamily: T.font.body, fontWeight: 500, fontSize: '0.95rem', color: T.color.ink }}>{yearMeta.label}</Typography>
       {yearMeta.help && (
         <Typography sx={{ mb: 1.5, fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>{yearMeta.help}</Typography>
       )}
       <Box sx={{ maxWidth: 260, mb: 3 }}>
-        <TextInput label="Godina uvoza" value={importYear} onChange={(v) => setImportYear(v.replace(/\D/g, '').slice(0, 4))} required />
+        <TextInput label={t('steel.general.yearInput')} value={importYear} onChange={(v) => setImportYear(v.replace(/\D/g, '').slice(0, 4))} required />
       </Box>
 
       <FormControl component="fieldset" fullWidth>
@@ -78,7 +81,7 @@ export function SteelGeneralStep({ data, questions, saving, saveError, onBack, o
           <Typography sx={{ mb: 1, fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>{sourceMeta.help}</Typography>
         )}
         <RadioGroup value={dataSource} onChange={(e) => setDataSource(e.target.value)}>
-          {(options ?? FALLBACK_OPTIONS.map((o, i) => ({ id: i, code: o.code, label: o.label, sortOrder: i }))).map((opt) => (
+          {(options ?? FALLBACK_OPTIONS.map((o, i) => ({ id: i, code: o.code, label: t(o.labelKey), sortOrder: i }))).map((opt) => (
             <FormControlLabel
               key={opt.code}
               value={opt.code}
@@ -99,18 +102,18 @@ export function SteelGeneralStep({ data, questions, saving, saveError, onBack, o
           )}
           {installations.length === 0 ? (
             <Alert severity="warning" sx={{ borderRadius: T.radius.sm, fontFamily: T.font.body }}>
-              Vaša firma nema unesenih postrojenja. Dodajte postrojenje u{' '}
-              <Link component={RouterLink} to="/dashboard/settings">postavkama (Settings)</Link>, pa se vratite na ovaj korak.
+              {t('steel.general.noInstallationsBefore')}
+              <Link component={RouterLink} to="/dashboard/settings">{t('steel.general.settingsLinkFull')}</Link>{t('steel.general.noInstallationsAfter')}
             </Alert>
           ) : (
             <>
               <Box sx={{ maxWidth: 480 }}>
                 <SelectField
-                  label="Postrojenje"
+                  label={t('steel.general.installation')}
                   value={installationRef}
                   onChange={setInstallationRef}
                   required
-                  emptyLabel="Odaberite postrojenje"
+                  emptyLabel={t('steel.general.selectInstallation')}
                   options={installations.map((i) => ({
                     value: String(i.id),
                     label: [i.installationName, i.country].filter(Boolean).join(' – '),
@@ -119,15 +122,15 @@ export function SteelGeneralStep({ data, questions, saving, saveError, onBack, o
               </Box>
               {selectedInstallation && (
                 <Typography sx={{ mt: 1, fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>
-                  Država: {selectedInstallation.country || '—'}
+                  {t('steel.general.country')}: {selectedInstallation.country || '—'}
                   {' · '}UN/LOCODE: {selectedInstallation.unLocode || '—'}
-                  {' · '}CBAM ID postrojenja: {selectedInstallation.cbamRegistryInstallationId || '—'}
+                  {' · '}{t('steel.general.cbamInstallationId')}: {selectedInstallation.cbamRegistryInstallationId || '—'}
                 </Typography>
               )}
               {selectedInstallation && !selectedInstallation.country?.trim() && (
                 <Alert severity="warning" sx={{ mt: 1, borderRadius: T.radius.sm, fontFamily: T.font.body }}>
-                  Odabrano postrojenje nema unesenu državu. Dopunite je u{' '}
-                  <Link component={RouterLink} to="/dashboard/settings">postavkama</Link>.
+                  {t('steel.general.noCountryBefore')}
+                  <Link component={RouterLink} to="/dashboard/settings">{t('steel.general.settingsLink')}</Link>.
                 </Alert>
               )}
             </>
@@ -137,12 +140,12 @@ export function SteelGeneralStep({ data, questions, saving, saveError, onBack, o
 
       <Accordion elevation={0} sx={{ mt: 2, border: `1px solid ${T.color.lineFaint}`, borderRadius: `${T.radius.md} !important`, '&:before': { display: 'none' } }}>
         <AccordionSummary expandIcon={<ExpandMore />}>
-          <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.9rem', color: T.color.inkSoft }}>Nije podržano</Typography>
+          <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.9rem', color: T.color.inkSoft }}>{t('steel.general.notSupported')}</Typography>
         </AccordionSummary>
         <AccordionDetails>
-          {NOT_SUPPORTED_BS.map((t, i) => (
-            <Typography key={t} sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted, mb: 0.5 }}>
-              {i + 1}. {t}
+          {notSupportedList().map((item, i) => (
+            <Typography key={item} sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted, mb: 0.5 }}>
+              {i + 1}. {item}
             </Typography>
           ))}
         </AccordionDetails>
@@ -150,7 +153,7 @@ export function SteelGeneralStep({ data, questions, saving, saveError, onBack, o
 
       <IssueList
         errors={missingOptions && !sourceMeta.question ? [] : errors}
-        infos={missingOptions ? ['Opcije za izbor izvora podataka nisu učitane iz baze. Pokrenite nove migracije pa pokušajte ponovo.'] : undefined}
+        infos={missingOptions ? [t('steel.general.optionsMissing')] : undefined}
       />
       <NavButtons
         onBack={onBack}

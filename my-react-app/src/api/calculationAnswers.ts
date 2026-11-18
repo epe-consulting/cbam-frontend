@@ -1,4 +1,5 @@
 import { apiRequest } from '../utils/api';
+import { tr } from '../i18n';
 
 export interface CalculationAnswerDto {
   id: number;
@@ -39,7 +40,7 @@ export async function getCalculationAnswersByCalculation(
     `/calculation-answers/by-calculation?calculationId=${calculationId}`
   );
   if (result === null || !result.data.success) {
-    throw new Error(result?.data?.message ?? 'Failed to fetch calculation answers');
+    throw new Error(result?.data?.message ?? tr('err.answers'));
   }
   return result.data.calculationAnswers ?? [];
 }
@@ -59,7 +60,7 @@ export async function upsertCalculationAnswer(payload: {
     body: JSON.stringify(payload),
   });
   if (result === null || !result.data.success || !result.data.calculationAnswer) {
-    throw new Error(result?.data?.message ?? 'Failed to save calculation answer');
+    throw new Error(result?.data?.message ?? tr('err.saveAnswer'));
   }
   return result.data.calculationAnswer;
 }
@@ -78,7 +79,7 @@ export async function deleteCalculationAnswersByCalculationAndQuestions(
     { method: 'DELETE', body: JSON.stringify({ calculationId, questionIds }) }
   );
   if (result === null || !result.data.success) {
-    throw new Error(result?.data?.message ?? 'Failed to delete calculation answers');
+    throw new Error(result?.data?.message ?? tr('err.deleteAnswers'));
   }
   return { deleted: result.data.deleted ?? 0 };
 }
@@ -118,7 +119,7 @@ export async function getProductInfoByCalculation(
     `/calculation-answers/product-info/by-calculation?calculationId=${calculationId}`
   );
   if (result === null || !result.data.success || !result.data.productInfo) {
-    throw new Error(result?.data?.message ?? 'Failed to fetch product info');
+    throw new Error(result?.data?.message ?? tr('err.productInfo'));
   }
   return result.data.productInfo;
 }

@@ -15,6 +15,7 @@ import {
 import { Add, ArrowBack, ArrowForward, Delete } from '@mui/icons-material';
 import { useCountries } from '../hooks/useCountries';
 import { CountrySelect } from './CountrySelect';
+import { useTranslation } from 'react-i18next';
 
 const T = {
   font: {
@@ -92,6 +93,7 @@ export function ExternalUnwroughtInputStep({
   onBack,
   onNext,
 }: ExternalUnwroughtInputStepProps) {
+  const { t } = useTranslation();
   const { countries, loading: countriesLoading, error: countriesError } = useCountries();
   const allValid = entries.length > 0 && entries.every(isEntryValid);
 
@@ -145,7 +147,7 @@ export function ExternalUnwroughtInputStep({
                 color: T.color.muted,
                 '&:hover': { bgcolor: T.color.errorLight, color: T.color.error },
               }}
-              aria-label="Remove entry"
+              aria-label={t('common.removeEntry')}
             >
               <Delete fontSize="small" />
             </IconButton>
@@ -171,7 +173,7 @@ export function ExternalUnwroughtInputStep({
           <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               fullWidth
-              label="Količina (kg)"
+              label={t('alu.ext.qtyKg')}
               value={entry.kolicina}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 updateEntry(index, { kolicina: e.target.value })
@@ -184,7 +186,7 @@ export function ExternalUnwroughtInputStep({
           <Grid size={12}>
             <FormControl component="fieldset" sx={{ width: '100%' }} required>
               <Typography sx={{ fontFamily: T.font.body, fontSize: '0.95rem', fontWeight: 600, color: T.color.ink, mb: 1 }}>
-                Da li je ova država članica EU?
+                {t('alu.ext.isEu')}
               </Typography>
               <RadioGroup
                 row
@@ -198,8 +200,8 @@ export function ExternalUnwroughtInputStep({
                   });
                 }}
               >
-                <FormControlLabel value="EU_MEMBER" control={<Radio />} label="Članica EU" sx={{ fontFamily: T.font.body }} />
-                <FormControlLabel value="NON_EU_MEMBER" control={<Radio />} label="Nije članica EU" sx={{ fontFamily: T.font.body }} />
+                <FormControlLabel value="EU_MEMBER" control={<Radio />} label={t('alu.ext.euMember')} sx={{ fontFamily: T.font.body }} />
+                <FormControlLabel value="NON_EU_MEMBER" control={<Radio />} label={t('alu.ext.nonEu')} sx={{ fontFamily: T.font.body }} />
               </RadioGroup>
             </FormControl>
           </Grid>
@@ -208,7 +210,7 @@ export function ExternalUnwroughtInputStep({
             <Grid size={12}>
               <FormControl component="fieldset" sx={{ width: '100%' }}>
                 <Typography sx={{ fontFamily: T.font.body, fontSize: '0.95rem', color: T.color.inkSoft, mb: 1 }}>
-                  Da li su poznate ugrađene emisije?
+                  {t('alu.ext.emissionsKnown')}
                 </Typography>
                 <RadioGroup
                   row
@@ -221,8 +223,8 @@ export function ExternalUnwroughtInputStep({
                     });
                   }}
                 >
-                  <FormControlLabel value="YES" control={<Radio />} label="DA" sx={{ fontFamily: T.font.body }} />
-                  <FormControlLabel value="NO" control={<Radio />} label="NE" sx={{ fontFamily: T.font.body }} />
+                  <FormControlLabel value="YES" control={<Radio />} label={t('common.yes')} sx={{ fontFamily: T.font.body }} />
+                  <FormControlLabel value="NO" control={<Radio />} label={t('common.no')} sx={{ fontFamily: T.font.body }} />
                 </RadioGroup>
               </FormControl>
             </Grid>
@@ -232,7 +234,7 @@ export function ExternalUnwroughtInputStep({
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
-                label="Ugrađene emisije (kgCO2e/kg)"
+                label={t('alu.ext.embedded')}
                 value={entry.ugradjeneEmisije}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   updateEntry(index, { ugradjeneEmisije: e.target.value })
@@ -264,7 +266,7 @@ export function ExternalUnwroughtInputStep({
             '&:hover': { bgcolor: T.color.mint, borderColor: T.color.mintDark },
           }}
         >
-          + Add Another
+          {t('common.addAnother')}
         </Button>
       </Grid>
 
@@ -286,7 +288,7 @@ export function ExternalUnwroughtInputStep({
               '&:hover': { bgcolor: T.color.mint, borderColor: T.color.mintDark, color: T.color.forest },
             }}
           >
-            Back
+            {t('common.back')}
           </Button>
           <Button
             type="button"
@@ -305,7 +307,7 @@ export function ExternalUnwroughtInputStep({
               '&:hover': { bgcolor: T.color.ctaHover },
             }}
           >
-            Next
+            {t('common.next')}
           </Button>
         </Box>
       </Grid>

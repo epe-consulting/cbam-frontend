@@ -1,4 +1,5 @@
 import { apiRequest } from '../utils/api';
+import { tr } from '../i18n';
 
 export type QuestionType = 'VALUE' | 'SINGLE_CHOICE' | 'MULTI_CHOICE';
 
@@ -55,7 +56,7 @@ interface QuestionOptionsResponse {
 export async function getAllQuestions(): Promise<Question[]> {
   const result = await apiRequest<QuestionsAllResponse>('/questions/all');
   if (result === null || !result.data.success || !result.data.questions) {
-    throw new Error(result?.data?.message ?? 'Failed to fetch questions');
+    throw new Error(result?.data?.message ?? tr('err.questions'));
   }
   return result.data.questions;
 }
@@ -67,7 +68,7 @@ export async function getQuestionsByStep(stepCode: string): Promise<Question[]> 
   const encoded = encodeURIComponent(stepCode);
   const result = await apiRequest<QuestionsByStepResponse>(`/questions/by-step?stepCode=${encoded}`);
   if (result === null || !result.data.success || !result.data.questions) {
-    throw new Error(result?.data?.message ?? 'Failed to fetch questions');
+    throw new Error(result?.data?.message ?? tr('err.questions'));
   }
   return result.data.questions;
 }
@@ -80,7 +81,7 @@ export async function getQuestionOptions(questionId: number): Promise<QuestionOp
     `/question-options/by-question?questionId=${questionId}`
   );
   if (result === null || !result.data.success) {
-    throw new Error(result?.data?.message ?? 'Failed to fetch question options');
+    throw new Error(result?.data?.message ?? tr('err.options'));
   }
   return result.data.questionOptions ?? [];
 }
@@ -99,7 +100,7 @@ export async function getQuestionsWithOptions(stepCode: string): Promise<Questio
   const encoded = encodeURIComponent(stepCode);
   const result = await apiRequest<QuestionsWithOptionsResponse>(`/questions/with-options?stepCode=${encoded}`);
   if (result === null || !result.data.success || !result.data.questions) {
-    throw new Error(result?.data?.message ?? 'Failed to fetch questions');
+    throw new Error(result?.data?.message ?? tr('err.questions'));
   }
   return result.data.questions;
 }
@@ -125,7 +126,7 @@ export async function getNextStep(
     `/questions/next-step?calculationId=${calculationId}&fromStepCode=${encodeURIComponent(fromStepCode)}`
   );
   if (result === null || !result.data.success) {
-    throw new Error(result?.data?.message ?? 'Failed to get next step');
+    throw new Error(result?.data?.message ?? tr('err.nextStep'));
   }
   return {
     toStepCode: result.data.toStepCode ?? 'COMPLETE',

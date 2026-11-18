@@ -1,5 +1,6 @@
 import { FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 import type { CountryDto } from '../hooks/useCountries';
+import { useTranslation } from 'react-i18next';
 
 const fieldSx = {
   '& .MuiOutlinedInput-root': { borderRadius: '8px', fontFamily: "'DM Sans', system-ui, sans-serif" },
@@ -17,19 +18,21 @@ export interface CountrySelectProps {
 
 /** Dropdown-only country picker (no free-text entry). */
 export function CountrySelect({
-  label = 'Država porijekla',
+  label,
   countries,
   value,
   onChange,
   disabled = false,
   required = true,
 }: CountrySelectProps) {
+  const { t } = useTranslation();
+  const fieldLabel = label ?? t('country.origin');
   return (
     <FormControl fullWidth required={required} disabled={disabled || countries.length === 0} sx={fieldSx}>
-      <InputLabel id="country-select-label">{label}</InputLabel>
+      <InputLabel id="country-select-label">{fieldLabel}</InputLabel>
       <Select
         labelId="country-select-label"
-        label={label}
+        label={fieldLabel}
         value={value ?? ''}
         onChange={(e) => {
           const raw = e.target.value as number | '';
@@ -43,7 +46,7 @@ export function CountrySelect({
         }}
       >
         <MenuItem value="">
-          <em>Odaberite državu</em>
+          <em>{t('country.select')}</em>
         </MenuItem>
         {countries.map((c) => (
           <MenuItem key={c.id} value={c.id}>

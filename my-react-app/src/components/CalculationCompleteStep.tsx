@@ -17,7 +17,9 @@ import {
 } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
 import { apiRequest } from '../utils/api';
+import { DEFAULT_TOTAL_UNIT, formatEmissionsNumber, formatResultItem, unitLabel } from '../utils/formatEmissions';
 import { SteelResultView, type SteelResultWarning } from './steel/SteelResultView';
+import { useTranslation } from 'react-i18next';
 
 const T = {
   font: {
@@ -61,6 +63,8 @@ interface ResultItem {
   expression: string;
   inputSnapshot: string;
   resultValue: number;
+  /** "t CO2e" | "t CO2e/t" | "t" | "%" — optional, older backends omit it. */
+  unit?: string | null;
   computedAt: string;
 }
 
@@ -68,6 +72,8 @@ interface CalcResult {
   id: number;
   calculationId: number;
   totalEmissions: number | null;
+  /** "t CO2e" — optional, older backends omit it (fallback: t CO2e). */
+  totalEmissionsUnit?: string | null;
   status: string;
   reportYear: number;
   computedAt: string;
@@ -113,6 +119,7 @@ export function CalculationCompleteStep({
   onNewCalculation,
   isSteel = false,
 }: CalculationCompleteStepProps) {
+  const { t } = useTranslation();
   const [result, setResult] = useState<CalcResult | null>(null);
   const [resultLoading, setResultLoading] = useState(false);
   const [resultError, setResultError] = useState<string | null>(null);
@@ -129,12 +136,12 @@ export function CalculationCompleteStep({
         );
         if (cancelled) return;
         if (res === null || !res.data.success || !res.data.result) {
-          setResultError(res?.data?.message ?? 'Failed to load results');
+          setResultError(res?.data?.message ?? t('complete.loadFailed'));
         } else {
           setResult(res.data.result);
         }
       } catch (e) {
-        if (!cancelled) setResultError(e instanceof Error ? e.message : 'Failed to load results');
+        if (!cancelled) setResultError(e instanceof Error ? e.message : t('complete.loadFailed'));
       } finally {
         if (!cancelled) setResultLoading(false);
       }
@@ -142,22 +149,21 @@ export function CalculationCompleteStep({
     return () => {
       cancelled = true;
     };
-  }, [calculationId]);
+  }, [calculationId, t]);
 
+  // Aluminium: only direct emissions count; the indirect question was removed (backend post-027,
+  // Guidance 05e pp. 8-9, p. 26: indirect emissions of electricity are not included).
   const directQ = questionsFromApi.find((q) => q.code === 'ALU_TOTAL_DIRECT_EMISSIONS');
-  const indirectQ = questionsFromApi.find((q) => q.code === 'ALU_TOTAL_INDIRECT_EMISSIONS');
   const directVal = directQ ? getAnswer(directQ.id) : '';
-  const indirectVal = indirectQ ? getAnswer(indirectQ.id) : '';
-  const fallbackTotal =
-    (Number.parseFloat(String(directVal)) || 0) + (Number.parseFloat(String(indirectVal)) || 0);
+  const fallbackTotal = Number.parseFloat(String(directVal)) || 0;
 
   return (
     <Box sx={{ py: 4, fontFamily: T.font.body }}>
       <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: '1.5rem', color: T.color.ink, letterSpacing: '-0.02em', mb: 1 }}>
-        Calculation complete
+        {t('complete.title')}
       </Typography>
       <Typography sx={{ fontFamily: T.font.body, color: T.color.muted, lineHeight: 1.6, mb: 3 }}>
-        Your emissions have been computed and saved.
+        {t('complete.subtitle')}
       </Typography>
 
       {resultLoading && (
@@ -169,21 +175,18 @@ export function CalculationCompleteStep({
       {resultError && !resultLoading && (
         <>
           <Alert severity="warning" sx={{ mb: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>
-            Could not load detailed results: {resultError}
+            {t('complete.detailsFailed', { error: resultError })}
           </Alert>
-          {questionsFromApi.length >= 2 && (directVal || indirectVal) && (
+          {directVal && (
             <Paper elevation={0} sx={{ p: 3, mb: 3, bgcolor: T.color.warmWhite, border: `1px solid ${T.color.lineFaint}`, borderRadius: T.radius.md }}>
               <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1rem', color: T.color.ink, mb: 2 }}>
-                Summary (from answers)
+                {t('complete.summary')}
               </Typography>
               <Typography sx={{ fontFamily: T.font.body, fontSize: '0.95rem', color: T.color.inkSoft, mb: 0.5 }}>
-                Total direct emissions: {String(directVal || '—')} tonnes CO₂e
-              </Typography>
-              <Typography sx={{ fontFamily: T.font.body, fontSize: '0.95rem', color: T.color.inkSoft, mb: 0.5 }}>
-                Total indirect emissions: {String(indirectVal || '—')} tonnes CO₂e
+                {t('complete.totalDirect', { value: String(directVal || '—') })}
               </Typography>
               <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.95rem', color: T.color.forest }}>
-                Total: {fallbackTotal.toFixed(2)} tonnes CO₂e
+                {t('complete.total', { value: fallbackTotal.toFixed(2) })}
               </Typography>
             </Paper>
           )}
@@ -206,20 +209,23 @@ export function CalculationCompleteStep({
             <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
               <Box>
                 <Typography sx={{ fontFamily: T.font.body, fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: T.color.muted, mb: 0.5 }}>
-                  Total Emissions
+                  {t('complete.totalEmissions')}
                 </Typography>
                 <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: '2rem', color: T.color.forest, letterSpacing: '-0.02em' }}>
-                  {result.totalEmissions != null ? Number(result.totalEmissions).toFixed(4) : '—'}{' '}
-                  <Typography component="span" sx={{ fontFamily: T.font.body, fontSize: '1rem', fontWeight: 500, color: T.color.muted }}>
-                    tonnes CO₂e
-                  </Typography>
+                  {/* Detail view: 1 decimal (docs/steel-implementation-spec.md §0.2; IR 2025/2547 Annex II A.1 pt 6, p.28) */}
+                  {formatEmissionsNumber(result.totalEmissions)}{' '}
+                  {result.totalEmissions != null && (
+                    <Typography component="span" sx={{ fontFamily: T.font.body, fontSize: '1rem', fontWeight: 500, color: T.color.muted }}>
+                      {unitLabel(result.totalEmissionsUnit || DEFAULT_TOTAL_UNIT)}
+                    </Typography>
+                  )}
                 </Typography>
               </Box>
               <Box textAlign="right">
                 <Chip label={result.status} size="small"
                   sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.78rem', bgcolor: T.color.forest, color: '#fff', mb: 0.5 }} />
                 <Typography sx={{ fontFamily: T.font.body, fontSize: '0.82rem', color: T.color.muted }} display="block">
-                  Report year: {result.reportYear}
+                  {t('complete.reportYear', { year: result.reportYear })}
                 </Typography>
               </Box>
             </Box>
@@ -227,7 +233,7 @@ export function CalculationCompleteStep({
 
           {/* Breakdown Table */}
           <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.1rem', color: T.color.ink, mb: 2 }}>
-            Emission Breakdown
+            {t('complete.breakdown')}
           </Typography>
           <TableContainer component={Paper} elevation={0}
             sx={{ mb: 3, borderRadius: T.radius.lg, border: `1px solid ${T.color.lineFaint}`, bgcolor: T.color.warmWhite, overflow: 'hidden' }}>
@@ -235,19 +241,19 @@ export function CalculationCompleteStep({
               <TableHead>
                 <TableRow>
                   <TableCell sx={tableHeadCellSx}>#</TableCell>
-                  <TableCell sx={tableHeadCellSx}>Formula</TableCell>
-                  <TableCell sx={tableHeadCellSx}>Pass</TableCell>
-                  <TableCell sx={tableHeadCellSx}>Entry</TableCell>
-                  <TableCell sx={tableHeadCellSx}>Expression</TableCell>
-                  <TableCell sx={tableHeadCellSx}>Inputs</TableCell>
-                  <TableCell sx={{ ...tableHeadCellSx, textAlign: 'right' }}>Result (tonnes CO₂e)</TableCell>
+                  <TableCell sx={tableHeadCellSx}>{t('complete.colFormula')}</TableCell>
+                  <TableCell sx={tableHeadCellSx}>{t('complete.colPass')}</TableCell>
+                  <TableCell sx={tableHeadCellSx}>{t('complete.colEntry')}</TableCell>
+                  <TableCell sx={tableHeadCellSx}>{t('complete.colExpression')}</TableCell>
+                  <TableCell sx={tableHeadCellSx}>{t('complete.colInputs')}</TableCell>
+                  <TableCell sx={{ ...tableHeadCellSx, textAlign: 'right' }}>{t('complete.colResult')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {result.items.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} align="center" sx={{ ...tableCellSx, py: 4, color: T.color.muted }}>
-                      No computed items found.
+                      {t('complete.noItems')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -299,7 +305,7 @@ export function CalculationCompleteStep({
                         </TableCell>
                         <TableCell sx={{ ...tableCellSx, textAlign: 'right' }}>
                           <Typography sx={{ fontFamily: T.font.mono, fontWeight: 600, fontSize: '0.88rem', color: T.color.forest }}>
-                            {Number(item.resultValue).toFixed(4)}
+                            {formatResultItem(item.resultValue, item.unit)}
                           </Typography>
                         </TableCell>
                       </TableRow>
@@ -321,14 +327,14 @@ export function CalculationCompleteStep({
             borderColor: T.color.line, color: T.color.inkSoft,
             '&:hover': { bgcolor: T.color.mint, borderColor: T.color.mintDark, color: T.color.forest },
           }}>
-          Back
+          {t('common.back')}
         </Button>
         <Button variant="contained" size="large" disableElevation onClick={onBackToDashboard}
           sx={{
             fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', borderRadius: T.radius.pill,
             bgcolor: T.color.forest, '&:hover': { bgcolor: T.color.ctaHover },
           }}>
-          Back to Dashboard
+          {t('complete.backToDashboard')}
         </Button>
         <Button variant="outlined" size="large" onClick={onNewCalculation}
           sx={{
@@ -336,7 +342,7 @@ export function CalculationCompleteStep({
             borderColor: T.color.line, color: T.color.inkSoft,
             '&:hover': { bgcolor: T.color.mint, borderColor: T.color.mintDark, color: T.color.forest },
           }}>
-          New calculation
+          {t('complete.newCalculation')}
         </Button>
       </Box>
     </Box>

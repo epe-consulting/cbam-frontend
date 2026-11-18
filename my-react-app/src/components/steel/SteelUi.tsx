@@ -18,6 +18,7 @@ import { Add, ArrowBack, ArrowForward, Delete } from '@mui/icons-material';
 import { T, outlinedButtonSx, textFieldSx } from './steelTheme';
 import type { StepIssue } from '../../utils/steelSteps';
 import { normNum } from '../../utils/steelSteps';
+import { useTranslation } from 'react-i18next';
 
 export function StepHeader({ title, help }: { title?: string | null; help?: string | null }) {
   return (
@@ -45,6 +46,7 @@ export function SectionTitle({ children }: { children: ReactNode }) {
 }
 
 export function RowCard({ title, onRemove, children }: { title?: ReactNode; onRemove?: () => void; children: ReactNode }) {
+  const { t } = useTranslation();
   return (
     <Box
       sx={{
@@ -61,7 +63,7 @@ export function RowCard({ title, onRemove, children }: { title?: ReactNode; onRe
             <IconButton
               size="small"
               onClick={onRemove}
-              aria-label="Ukloni red"
+              aria-label={t('common.removeRow')}
               sx={{ color: T.color.muted, '&:hover': { bgcolor: T.color.errorLight, color: T.color.error } }}
             >
               <Delete fontSize="small" />
@@ -187,6 +189,7 @@ export function CheckField({ label, checked, onChange, disabled }: { label: stri
 }
 
 export function IssueList({ errors, warnings, infos }: { errors?: StepIssue[]; warnings?: StepIssue[]; infos?: string[] }) {
+  const { t } = useTranslation();
   const dedupe = (list: StepIssue[] = []) => list.filter((x, i, arr) => arr.findIndex((y) => y.message === x.message) === i);
   const e = dedupe(errors);
   const w = dedupe(warnings);
@@ -195,10 +198,10 @@ export function IssueList({ errors, warnings, infos }: { errors?: StepIssue[]; w
     <Box sx={{ mt: 2, display: 'grid', gap: 1 }}>
       {e.length > 0 && (
         <Alert severity="error" sx={{ borderRadius: T.radius.sm, fontFamily: T.font.body }}>
-          <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.88rem', mb: 0.5 }}>Ispravite prije nastavka:</Typography>
+          <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.88rem', mb: 0.5 }}>{t('steel.ui.fixBeforeContinue')}</Typography>
           {e.map((x) => (
             <Typography key={x.message} sx={{ fontFamily: T.font.body, fontSize: '0.85rem' }}>
-              • {x.message} {x.code && <span style={{ opacity: 0.6 }}>({x.code})</span>}
+              • {x.message}
             </Typography>
           ))}
         </Alert>
@@ -207,7 +210,7 @@ export function IssueList({ errors, warnings, infos }: { errors?: StepIssue[]; w
         <Alert severity="warning" sx={{ borderRadius: T.radius.sm, fontFamily: T.font.body }}>
           {w.map((x) => (
             <Typography key={x.message} sx={{ fontFamily: T.font.body, fontSize: '0.85rem' }}>
-              • {x.message} {x.code && <span style={{ opacity: 0.6 }}>({x.code})</span>}
+              • {x.message}
             </Typography>
           ))}
         </Alert>
@@ -226,6 +229,7 @@ export function IssueList({ errors, warnings, infos }: { errors?: StepIssue[]; w
 export function NavButtons({
   onBack, onNext, nextDisabled, saving, saveError,
 }: { onBack: () => void; onNext: () => void; nextDisabled?: boolean; saving?: boolean; saveError?: string | null }) {
+  const { t } = useTranslation();
   return (
     <>
       {saveError && (
@@ -239,7 +243,7 @@ export function NavButtons({
           disabled={saving}
           sx={{ ...outlinedButtonSx, color: T.color.inkSoft }}
         >
-          Nazad
+          {t('common.back')}
         </Button>
         <Button
           type="button" variant="contained" size="large" disableElevation
@@ -251,7 +255,7 @@ export function NavButtons({
             bgcolor: T.color.forest, '&:hover': { bgcolor: T.color.ctaHover },
           }}
         >
-          Dalje
+          {t('common.next')}
         </Button>
       </Box>
     </>

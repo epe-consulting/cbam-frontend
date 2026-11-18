@@ -11,6 +11,7 @@ import {
   Typography,
 } from '@mui/material';
 import { Add, ArrowBack, ArrowForward } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 
 const T = {
   font: {
@@ -68,6 +69,8 @@ export interface FuelInputStepProps {
   subsectorsCache: Record<string, string[]>;
   subsubsectorsCache: Record<string, string[]>;
   emissionFactorNamesCache: Record<string, string[]>;
+  /** Lookup value -> localized label (sector, subsector, fuel name); values stay unchanged. */
+  fuelLabels?: Record<string, string>;
   denominatorsCache: Record<string, string[]>;
   fuelLookupLoading: boolean;
   fuelLookupError: string | null;
@@ -77,7 +80,7 @@ export interface FuelInputStepProps {
 
 export function FuelInputStep({
   title,
-  addButtonLabel = 'Add more fuels',
+  addButtonLabel,
   fuelEntries,
   updateFuelEntry,
   resolveEmissionFactorId,
@@ -86,12 +89,15 @@ export function FuelInputStep({
   subsectorsCache,
   subsubsectorsCache,
   emissionFactorNamesCache,
+  fuelLabels,
   denominatorsCache,
   fuelLookupLoading,
   fuelLookupError,
   onBack,
   onNext,
 }: FuelInputStepProps) {
+  const labelOf = (value: string) => fuelLabels?.[value] || value;
+  const { t } = useTranslation();
   return (
     <Grid container spacing={3} sx={{ width: '100%', maxWidth: '100%', fontFamily: T.font.body }}>
       {title && (
@@ -123,10 +129,10 @@ export function FuelInputStep({
         >
           <Grid size={4}>
             <FormControl fullWidth disabled={fuelLookupLoading} sx={selectSx}>
-              <InputLabel>Sector</InputLabel>
+              <InputLabel>{t('fuel.sector')}</InputLabel>
               <Select
                 value={entry.sector}
-                label="Sector"
+                label={t('fuel.sector')}
                 onChange={(e: { target: { value: string } }) =>
                   updateFuelEntry(index, {
                     sector: e.target.value,
@@ -141,7 +147,7 @@ export function FuelInputStep({
               >
                 {fuelSectors.map((s: string) => (
                   <MenuItem key={s} value={s} sx={{ fontFamily: T.font.body }}>
-                    {s}
+                    {labelOf(s)}
                   </MenuItem>
                 ))}
               </Select>
@@ -149,10 +155,10 @@ export function FuelInputStep({
           </Grid>
           <Grid size={4}>
             <FormControl fullWidth disabled={fuelLookupLoading || !entry.sector} sx={selectSx}>
-              <InputLabel>Subsector</InputLabel>
+              <InputLabel>{t('fuel.subsector')}</InputLabel>
               <Select
                 value={entry.subsector}
-                label="Subsector"
+                label={t('fuel.subsector')}
                 onChange={(e: { target: { value: string } }) =>
                   updateFuelEntry(index, {
                     subsector: e.target.value,
@@ -166,7 +172,7 @@ export function FuelInputStep({
               >
                 {(subsectorsCache[entry.sector] ?? []).map((s: string) => (
                   <MenuItem key={s} value={s} sx={{ fontFamily: T.font.body }}>
-                    {s}
+                    {labelOf(s)}
                   </MenuItem>
                 ))}
               </Select>
@@ -174,10 +180,10 @@ export function FuelInputStep({
           </Grid>
           <Grid size={4}>
             <FormControl fullWidth disabled={fuelLookupLoading || !entry.subsector} sx={selectSx}>
-              <InputLabel>Subsubsector</InputLabel>
+              <InputLabel>{t('fuel.subsubsector')}</InputLabel>
               <Select
                 value={entry.subsubsector}
-                label="Subsubsector"
+                label={t('fuel.subsubsector')}
                 onChange={(e: { target: { value: string } }) =>
                   updateFuelEntry(index, {
                     subsubsector: e.target.value,
@@ -194,7 +200,7 @@ export function FuelInputStep({
                   ] ?? []
                 ).map((s: string) => (
                   <MenuItem key={s} value={s} sx={{ fontFamily: T.font.body }}>
-                    {s}
+                    {labelOf(s)}
                   </MenuItem>
                 ))}
               </Select>
@@ -202,10 +208,10 @@ export function FuelInputStep({
           </Grid>
           <Grid size={4}>
             <FormControl fullWidth disabled={fuelLookupLoading || !entry.subsector} sx={selectSx}>
-              <InputLabel>EmissionFactorName</InputLabel>
+              <InputLabel>{t('fuel.efName')}</InputLabel>
               <Select
                 value={entry.emissionFactorName}
-                label="EmissionFactorName"
+                label={t('fuel.efName')}
                 onChange={(e: { target: { value: string } }) =>
                   updateFuelEntry(index, {
                     emissionFactorName: e.target.value,
@@ -223,7 +229,7 @@ export function FuelInputStep({
                   ] ?? []
                 ).map((s: string) => (
                   <MenuItem key={s} value={s} sx={{ fontFamily: T.font.body }}>
-                    {s}
+                    {labelOf(s)}
                   </MenuItem>
                 ))}
               </Select>
@@ -231,10 +237,10 @@ export function FuelInputStep({
           </Grid>
           <Grid size={4}>
             <FormControl fullWidth disabled={fuelLookupLoading || !entry.emissionFactorName} sx={selectSx}>
-              <InputLabel>Denominator</InputLabel>
+              <InputLabel>{t('fuel.denominator')}</InputLabel>
               <Select
                 value={entry.denominator}
-                label="Denominator"
+                label={t('fuel.denominator')}
                 onChange={async (e: { target: { value: string } }) => {
                   const denom = e.target.value;
                   updateFuelEntry(index, { denominator: denom });
@@ -259,7 +265,7 @@ export function FuelInputStep({
           <Grid size={4}>
             <TextField
               fullWidth
-              label="Amount (Količina)"
+              label={t('fuel.amount')}
               value={entry.amount}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 updateFuelEntry(index, { amount: e.target.value })
@@ -281,7 +287,7 @@ export function FuelInputStep({
             '&:hover': { bgcolor: T.color.mint, borderColor: T.color.mintDark },
           }}
         >
-          {addButtonLabel}
+          {addButtonLabel ?? t('fuel.addMore')}
         </Button>
       </Grid>
       <Grid size={12}>
@@ -292,7 +298,7 @@ export function FuelInputStep({
               borderColor: T.color.line, color: T.color.inkSoft,
               '&:hover': { bgcolor: T.color.mint, borderColor: T.color.mintDark, color: T.color.forest },
             }}>
-            Back
+            {t('common.back')}
           </Button>
           <Button
             type="button" variant="contained" size="large" disableElevation
@@ -302,7 +308,7 @@ export function FuelInputStep({
               fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', borderRadius: T.radius.pill,
               bgcolor: T.color.forest, '&:hover': { bgcolor: T.color.ctaHover },
             }}>
-            Next
+            {t('common.next')}
           </Button>
         </Box>
       </Grid>

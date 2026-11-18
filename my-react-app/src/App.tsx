@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
+import { LANDING_LANGUAGES, type LandingLanguage } from './i18n';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import {
   AppBar,
@@ -45,7 +47,8 @@ import Support from './Support';
 import Features from './Features';
 import Pricing from './Pricing';
 import Terms from './Terms';
-import CostCalculator from './CostCalculator';
+// Lazy-loaded: the calculator ships ~1.3 MB of regulatory reference data that other pages do not need.
+const CostCalculator = lazy(() => import('./CostCalculator'));
 import Seo from './seo/Seo';
 import UnifiedFooter from './components/UnifiedFooter';
 import {
@@ -65,7 +68,8 @@ import {
 } from '@mui/icons-material';
 import { API_BASE_URL } from './utils/api';
 
-type Language = 'en' | 'ju' | 'tr';
+// Landing language shares the app-wide i18n language (src/i18n), so a choice here persists into the dashboard.
+type Language = LandingLanguage;
 
 interface Translations {
   nav: {
@@ -297,7 +301,7 @@ const translations: Record<Language, Translations> = {
       copyright: '© 2026 Panonia. All rights reserved.',
     },
   },
-  ju: {
+  bs: {
     nav: {
       features: 'Mogućnosti',
       howItWorks: 'Kako Funkcionira',
@@ -921,7 +925,10 @@ const BenefitRow: React.FC<BenefitRowProps> = ({
 /* ─── Main Landing Page ─── */
 
 const CBAMLandingPage: React.FC = () => {
-  const [language, setLanguage] = useState<Language>('en');
+  const { i18n } = useTranslation();
+  const language: Language = (LANDING_LANGUAGES as readonly string[]).includes(i18n.language)
+    ? (i18n.language as Language)
+    : 'bs';
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [demoDialogOpen, setDemoDialogOpen] = useState(false);
   const [demoName, setDemoName] = useState('');
@@ -955,7 +962,7 @@ const CBAMLandingPage: React.FC = () => {
 
   const languageOptions = [
     { code: 'en' as Language, label: 'English', flag: '🇬🇧' },
-    { code: 'ju' as Language, label: 'Bosanski', flag: '🇧🇦' },
+    { code: 'bs' as Language, label: 'Bosanski', flag: '🇧🇦' },
     { code: 'tr' as Language, label: 'Türkçe', flag: '🇹🇷' },
   ];
 
@@ -967,7 +974,7 @@ const CBAMLandingPage: React.FC = () => {
     setAnchorEl(event.currentTarget);
   const handleLanguageClose = () => setAnchorEl(null);
   const handleLanguageChange = (lang: Language) => {
-    setLanguage(lang);
+    void i18n.changeLanguage(lang);
     setAnchorEl(null);
   };
   const handleLoginClick = () => navigate('/login');
@@ -2071,7 +2078,14 @@ const App: React.FC = () => {
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/support" element={<Support />} />
         <Route path="/admin" element={<Admin />} />
-        <Route path="/cost-calculator" element={<CostCalculator />} />
+        <Route
+          path="/cost-calculator"
+          element={
+            <Suspense fallback={null}>
+              <CostCalculator />
+            </Suspense>
+          }
+        />
         <Route
           path="/login"
           element={

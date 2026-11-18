@@ -1,5 +1,6 @@
 import type { IsCnValidation } from '../../api/ironSteel';
 import { cnDigits, type StepIssue } from '../../utils/steelSteps';
+import { tr } from '../../i18n';
 
 export type CnCheck =
   | { state: 'ok'; result: IsCnValidation }
@@ -21,8 +22,8 @@ export function checkCn(
       issue: {
         code: 'IS_E_CN_FORMAT',
         message: allowShort
-          ? `${what}: CN kod mora imati 4, 6 ili 8 cifara.`
-          : `${what}: CN kod mora imati 8 cifara (npr. 7208 51 20).`,
+          ? tr('steel.cn.eLenShort', { what })
+          : tr('steel.cn.eLen8', { what }),
       },
     };
   }
@@ -31,12 +32,12 @@ export function checkCn(
   if (!r.ok) {
     const code = r.errorCode ?? 'IS_E_CN_NOT_CBAM_STEEL';
     const text = code === 'IS_E_CN_EXCLUDED'
-      ? 'kod je izričito isključen iz CBAM-a (npr. ferosilicij, otpad i lom 7204).'
+      ? tr('steel.cn.excluded')
       : code === 'IS_E_CN_NOT_CBAM_STEEL'
-        ? 'kod nije CBAM roba sektora željeza i čelika.'
+        ? tr('steel.cn.notSteel')
         : code === 'IS_E_CN_FORMAT'
-          ? 'neispravan format CN koda.'
-          : (r.message ?? 'provjera nije uspjela.');
+          ? tr('steel.cn.badFormat')
+          : (r.message ?? tr('steel.cn.checkFailed'));
     return { state: 'error', issue: { code, message: `${what} (${cn}): ${text}` } };
   }
   return { state: 'ok', result: r };

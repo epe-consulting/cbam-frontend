@@ -1,6 +1,7 @@
 import { Grid, Paper, Typography } from '@mui/material';
 import { DynamicQuestionStep } from './DynamicQuestionStep';
 import type { QuestionWithOptions } from '../hooks/useQuestionsByStep';
+import { useTranslation } from 'react-i18next';
 
 const T = {
   font: {
@@ -50,6 +51,7 @@ export function AnodeStep({
   onBack,
   onNext,
 }: AnodeStepProps) {
+  const { t } = useTranslation();
   if (currentStepCode === 'ALU_ANODES_INPUT') {
     const qtyQ = questionsFromApi.find((q: { code: string }) => q.code === 'ALU_ANODES_QTY');
     const hasCarbonQ = questionsFromApi.find((q: { code: string }) => q.code === 'ALU_HAS_CARBON_PERCENT');
@@ -64,7 +66,7 @@ export function AnodeStep({
     );
     if (prebakedQuestions.length === 0) {
       return (
-        <Typography sx={{ fontFamily: T.font.body, color: T.color.muted }}>No questions available for this step.</Typography>
+        <Typography sx={{ fontFamily: T.font.body, color: T.color.muted }}>{t('anode.noQuestions')}</Typography>
       );
     }
     const amount = Number.parseFloat(String(qtyVal)) || 0;
@@ -94,10 +96,10 @@ export function AnodeStep({
             <Grid size={12} sx={{ mt: 2 }}>
               <Paper elevation={0} sx={emissionsPaperSx}>
                 <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.95rem', color: T.color.forest }}>
-                  <strong>Izračunate emisije:</strong> {prebakedEmissions.toFixed(2)} tonnes CO₂e
+                  <strong>{t('anode.calculated')}</strong> {prebakedEmissions.toFixed(2)} {t('anode.tonnes')}
                   {showCarbonPercent
-                    ? ' (formula: amount × (percent/100) × (44/12))'
-                    : ' (formula: amount × (44/12) × 99%)'}
+                    ? t('anode.formulaPercent')
+                    : t('anode.formula99')}
                 </Typography>
               </Paper>
             </Grid>
@@ -125,7 +127,7 @@ export function AnodeStep({
     if (showCarbonPercent && carbonPercentQ) soderbergQuestions.push(carbonPercentQ);
     if (soderbergQuestions.length === 0) {
       return (
-        <Typography sx={{ fontFamily: T.font.body, color: T.color.muted }}>No questions available for this step.</Typography>
+        <Typography sx={{ fontFamily: T.font.body, color: T.color.muted }}>{t('anode.noQuestions')}</Typography>
       );
     }
     const amount = Number.parseFloat(String(pasteQtyVal)) || 0;
@@ -155,10 +157,10 @@ export function AnodeStep({
             <Grid size={12} sx={{ mt: 2 }}>
               <Paper elevation={0} sx={emissionsPaperSx}>
                 <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.95rem', color: T.color.forest }}>
-                  <strong>Izračunate emisije:</strong> {soderbergEmissions.toFixed(2)} tonnes CO₂e
+                  <strong>{t('anode.calculated')}</strong> {soderbergEmissions.toFixed(2)} {t('anode.tonnes')}
                   {showCarbonPercent
-                    ? ' (formula: amount × (percent/100) × (44/12))'
-                    : ' (formula: amount × (44/12) × 85%)'}
+                    ? t('anode.formulaPercent')
+                    : t('anode.formula85')}
                 </Typography>
               </Paper>
             </Grid>

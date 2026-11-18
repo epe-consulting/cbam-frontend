@@ -1,3 +1,5 @@
+import { getCurrentLanguage } from '../i18n';
+
 // Backend API base URL. Set VITE_API_BASE_URL during Docker build (via GitHub Actions build-args).
 // Falls back to localhost:8080 for local development if not set.
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
@@ -67,6 +69,8 @@ export const apiRequest = async <T = any>(
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
+      // Backend localizes question/option texts by this header (falls back to Bosnian).
+      'Accept-Language': getCurrentLanguage(),
       ...options.headers,
     },
   });

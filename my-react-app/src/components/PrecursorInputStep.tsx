@@ -17,6 +17,7 @@ import { Add, ArrowBack, ArrowForward, Delete } from '@mui/icons-material';
 import { useCnCodes, type CnCodeDto } from '../hooks/useCnCodes';
 import { useCountries } from '../hooks/useCountries';
 import { CountrySelect } from './CountrySelect';
+import { useTranslation } from 'react-i18next';
 
 const T = {
   font: {
@@ -95,6 +96,7 @@ export function PrecursorInputStep({
   onBack,
   onNext,
 }: PrecursorInputStepProps) {
+  const { t } = useTranslation();
   const { cnCodes, loading: cnCodesLoading, error: cnCodesError } = useCnCodes();
   const { countries, loading: countriesLoading, error: countriesError } = useCountries();
   const allValid = precursorEntries.length > 0 && precursorEntries.every(isEntryValid);
@@ -162,7 +164,7 @@ export function PrecursorInputStep({
                 color: T.color.muted,
                 '&:hover': { bgcolor: T.color.errorLight, color: T.color.error },
               }}
-              aria-label="Remove entry"
+              aria-label={t('common.removeEntry')}
             >
               <Delete fontSize="small" />
             </IconButton>
@@ -185,7 +187,7 @@ export function PrecursorInputStep({
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label="Vrsta"
+                  label={t('alu.pre.type')}
                   required
                   sx={textFieldSx}
                 />
@@ -196,7 +198,7 @@ export function PrecursorInputStep({
           <Grid size={{ xs: 12, md: 3 }}>
             <TextField
               fullWidth
-              label="CN Code"
+              label={t('product.details.cn')}
               value={entry.cnCode}
               slotProps={{ input: { readOnly: true } }}
               sx={readOnlyFieldSx}
@@ -220,7 +222,7 @@ export function PrecursorInputStep({
           <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               fullWidth
-              label="Količina (kg)"
+              label={t('alu.ext.qtyKg')}
               value={entry.kolicina}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 updatePrecursorEntry(index, { kolicina: e.target.value })
@@ -233,7 +235,7 @@ export function PrecursorInputStep({
           <Grid size={12}>
             <FormControl component="fieldset" sx={{ width: '100%' }} required>
               <Typography sx={{ fontFamily: T.font.body, fontSize: '0.95rem', color: T.color.inkSoft, mb: 1 }}>
-                Da li su poznate ugrađene emisije?
+                {t('alu.ext.emissionsKnown')}
               </Typography>
               <RadioGroup
                 row
@@ -246,8 +248,8 @@ export function PrecursorInputStep({
                   });
                 }}
               >
-                <FormControlLabel value="YES" control={<Radio />} label="DA" sx={{ fontFamily: T.font.body }} />
-                <FormControlLabel value="NO" control={<Radio />} label="NE" sx={{ fontFamily: T.font.body }} />
+                <FormControlLabel value="YES" control={<Radio />} label={t('common.yes')} sx={{ fontFamily: T.font.body }} />
+                <FormControlLabel value="NO" control={<Radio />} label={t('common.no')} sx={{ fontFamily: T.font.body }} />
               </RadioGroup>
             </FormControl>
           </Grid>
@@ -256,7 +258,7 @@ export function PrecursorInputStep({
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
-                label="Ugrađene emisije (kgCO2e/kg)"
+                label={t('alu.ext.embedded')}
                 value={entry.ugradjeneEmisije}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   updatePrecursorEntry(index, { ugradjeneEmisije: e.target.value })
@@ -288,7 +290,7 @@ export function PrecursorInputStep({
             '&:hover': { bgcolor: T.color.mint, borderColor: T.color.mintDark },
           }}
         >
-          + Add Another
+          {t('common.addAnother')}
         </Button>
       </Grid>
 
@@ -310,7 +312,7 @@ export function PrecursorInputStep({
               '&:hover': { bgcolor: T.color.mint, borderColor: T.color.mintDark, color: T.color.forest },
             }}
           >
-            Back
+            {t('common.back')}
           </Button>
           <Button
             type="button"
@@ -329,7 +331,7 @@ export function PrecursorInputStep({
               '&:hover': { bgcolor: T.color.ctaHover },
             }}
           >
-            Next
+            {t('common.next')}
           </Button>
         </Box>
       </Grid>

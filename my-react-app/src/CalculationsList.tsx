@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -25,6 +26,8 @@ import {
 import { ArrowBack, Edit, Close, Visibility, Delete, ListAlt, PlayArrow } from '@mui/icons-material';
 import { useDashboardCalculations, type DashboardCalculationItem } from './Dashboard';
 import { apiRequest } from './utils/api';
+import { DEFAULT_TOTAL_UNIT, formatEmissions, formatEmissionsNumber, formatResultItem, unitLabel } from './utils/formatEmissions';
+import { productCategoryLabel } from './i18n';
 
 /* ─── Design tokens (shared across Panonia) ─── */
 const T = {
@@ -144,6 +147,8 @@ interface ResultItem {
   expression: string;
   inputSnapshot: string;
   resultValue: number;
+  /** "t CO2e" | "t CO2e/t" | "t" | "%" — optional, older backends omit it. */
+  unit?: string | null;
   computedAt: string;
 }
 
@@ -151,6 +156,8 @@ interface CalcResult {
   id: number;
   calculationId: number;
   totalEmissions: number | null;
+  /** "t CO2e" — optional, older backends omit it (fallback: t CO2e). */
+  totalEmissionsUnit?: string | null;
   status: string;
   reportYear: number;
   computedAt: string;
@@ -175,6 +182,7 @@ function parseSnapshot(raw: string): Record<string, string> {
 }
 
 const CalculationsList: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const dashboardCalculations = useDashboardCalculations();
   const calculations = [...(dashboardCalculations?.calculations ?? [])].sort((a, b) => a.id - b.id);
@@ -198,7 +206,7 @@ const CalculationsList: React.FC = () => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const [emissionsMap, setEmissionsMap] = useState<Record<number, number | null>>({});
+  const [emissionsMap, setEmissionsMap] = useState<Record<number, { total: number | null; unit: string }>>({});
 
   useEffect(() => {
     const completedCalcs = calculations.filter((c) => c.status === 'COMPLETED');
@@ -206,7 +214,7 @@ const CalculationsList: React.FC = () => {
 
     let cancelled = false;
     (async () => {
-      const entries: [number, number | null][] = [];
+      const entries: [number, { total: number | null; unit: string }][] = [];
       await Promise.allSettled(
         completedCalcs.map(async (calc) => {
           try {
@@ -214,7 +222,10 @@ const CalculationsList: React.FC = () => {
               `/calculations/${calc.id}/result`
             );
             if (!cancelled && res?.data?.success && res.data.result) {
-              entries.push([calc.id, res.data.result.totalEmissions]);
+              entries.push([calc.id, {
+                total: res.data.result.totalEmissions,
+                unit: res.data.result.totalEmissionsUnit || DEFAULT_TOTAL_UNIT,
+              }]);
             }
           } catch {
             // skip
@@ -266,6 +277,24 @@ const CalculationsList: React.FC = () => {
       setAnswersLoading(false);
     }
   };
+
+  /** Display only: the stored category name ('Aluminium', 'Iron and Steel') is mapped to a localized label. */
+  const answerDisplay = (a: AnswerDetail): string => {
+    if (a.answerValue == null) return '—';
+    return a.questionCode === 'CBAM_PRODUCT_CATEGORY' ? productCategoryLabel(a.answerValue) : a.answerValue;
+  };
+
+  // Question/option labels in the answer details are localized by the backend (Accept-Language):
+  // reload the open answers dialog when the language changes. The dialog is read-only, nothing is lost.
+  const { i18n } = useTranslation();
+  const language = i18n.resolvedLanguage ?? i18n.language;
+  const lastLanguageRef = useRef(language);
+  useEffect(() => {
+    if (lastLanguageRef.current === language) return;
+    lastLanguageRef.current = language;
+    if (editOpen && editCalcId != null) void handleEdit(editCalcId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language]);
 
   const handleView = async (calcId: number) => {
     setViewCalcId(calcId);
@@ -359,7 +388,7 @@ const CalculationsList: React.FC = () => {
                   <TableCell sx={tableHeadCellSx}>ID</TableCell>
                   <TableCell sx={tableHeadCellSx}>Status</TableCell>
                   <TableCell sx={tableHeadCellSx}>Current Step</TableCell>
-                  <TableCell sx={tableHeadCellSx}>Emissions (t CO₂e)</TableCell>
+                  <TableCell sx={tableHeadCellSx}>Emissions</TableCell>
                   <TableCell sx={tableHeadCellSx}>Created</TableCell>
                   <TableCell sx={tableHeadCellSx}>Modified</TableCell>
                   <TableCell sx={tableHeadCellSx} align="center">Actions</TableCell>
@@ -394,7 +423,7 @@ const CalculationsList: React.FC = () => {
                           {calc.status === 'COMPLETED' ? (
                             emissionsMap[calc.id] != null ? (
                               <Typography sx={{ fontWeight: 600, fontFamily: "'DM Sans', monospace", fontSize: '0.88rem', color: T.color.ink }}>
-                                {Number(emissionsMap[calc.id]).toFixed(4)}
+                                {formatEmissions(emissionsMap[calc.id].total, emissionsMap[calc.id].unit)}
                               </Typography>
                             ) : (
                               <Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem', color: T.color.muted }}>
@@ -473,10 +502,10 @@ const CalculationsList: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell sx={tableHeadCellSx}>#</TableCell>
-                    <TableCell sx={tableHeadCellSx}>Question</TableCell>
-                    <TableCell sx={tableHeadCellSx}>Answer</TableCell>
-                    <TableCell sx={tableHeadCellSx}>Type</TableCell>
-                    <TableCell sx={tableHeadCellSx}>Emission Factor</TableCell>
+                    <TableCell sx={tableHeadCellSx}>{t('calcList.colQuestion')}</TableCell>
+                    <TableCell sx={tableHeadCellSx}>{t('calcList.colAnswer')}</TableCell>
+                    <TableCell sx={tableHeadCellSx}>{t('calcList.colType')}</TableCell>
+                    <TableCell sx={tableHeadCellSx}>{t('calcList.colEf')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -494,11 +523,11 @@ const CalculationsList: React.FC = () => {
                       <TableCell sx={tableCellSx}>
                         {a.answerType === 'OPTION' ? (
                           <Chip
-                            label={a.answerValue ?? '—'} size="small"
+                            label={answerDisplay(a)} size="small"
                             sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.72rem', bgcolor: T.color.mint, color: T.color.forest, border: `1px solid ${T.color.mintDark}` }}
                           />
                         ) : (
-                          <Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem', color: T.color.ink }}>{a.answerValue ?? '—'}</Typography>
+                          <Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem', color: T.color.ink }}>{answerDisplay(a)}</Typography>
                         )}
                         {a.answerCode && (
                           <Typography sx={{ fontFamily: T.font.body, fontSize: '0.72rem', color: T.color.muted, display: 'block' }}>
@@ -549,19 +578,19 @@ const CalculationsList: React.FC = () => {
       <Dialog open={deleteOpen} onClose={() => !deleteLoading && setDeleteOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: dialogPaperSx }}>
         <Box sx={{ height: 4, background: `linear-gradient(90deg, ${T.color.error}, #E74C3C, ${T.color.error})` }} />
         <DialogTitle sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: '1.25rem', color: T.color.ink, pt: 3 }}>
-          Delete Calculation #{deleteCalcId}?
+          {t('calcList.deleteTitle', { id: deleteCalcId })}
         </DialogTitle>
         <DialogContent>
           <Typography sx={{ fontFamily: T.font.body, color: T.color.inkSoft, mb: 1.5, lineHeight: 1.6 }}>
-            This will permanently delete the calculation and all associated data:
+            {t('calcList.deleteIntro')}
           </Typography>
           <Box component="ul" sx={{ fontFamily: T.font.body, fontSize: '0.9rem', color: T.color.muted, pl: 2.5, mb: 2, '& li': { mb: 0.5 } }}>
-            <li>All answers given</li>
-            <li>Computed emission results</li>
-            <li>Product associations</li>
+            <li>{t('calcList.deleteAnswers')}</li>
+            <li>{t('calcList.deleteResults')}</li>
+            <li>{t('calcList.deleteProducts')}</li>
           </Box>
           <Typography sx={{ fontFamily: T.font.body, fontSize: '0.9rem', color: T.color.error, fontWeight: 600 }}>
-            This action cannot be undone.
+            {t('calcList.deleteIrreversible')}
           </Typography>
           {deleteError && (
             <Alert severity="error" sx={{ mt: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>{deleteError}</Alert>
@@ -627,12 +656,13 @@ const CalculationsList: React.FC = () => {
                       Total Emissions
                     </Typography>
                     <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: { xs: '2rem', md: '2.5rem' }, color: T.color.forest, lineHeight: 1 }}>
-                      {viewResult.totalEmissions != null
-                        ? Number(viewResult.totalEmissions).toFixed(4)
-                        : '—'}{' '}
-                      <Typography component="span" sx={{ fontFamily: T.font.body, fontSize: '1rem', color: T.color.muted }}>
-                        tonnes CO₂e
-                      </Typography>
+                      {/* Detail view: 1 decimal (docs/steel-implementation-spec.md §0.2; IR 2025/2547 Annex II A.1 pt 6, p.28) */}
+                      {formatEmissionsNumber(viewResult.totalEmissions)}{' '}
+                      {viewResult.totalEmissions != null && (
+                        <Typography component="span" sx={{ fontFamily: T.font.body, fontSize: '1rem', color: T.color.muted }}>
+                          {unitLabel(viewResult.totalEmissionsUnit || DEFAULT_TOTAL_UNIT)}
+                        </Typography>
+                      )}
                     </Typography>
                   </Box>
                   <Box textAlign="right">
@@ -666,7 +696,7 @@ const CalculationsList: React.FC = () => {
                       <TableCell sx={tableHeadCellSx}>Entry</TableCell>
                       <TableCell sx={tableHeadCellSx}>Expression</TableCell>
                       <TableCell sx={tableHeadCellSx}>Inputs</TableCell>
-                      <TableCell sx={tableHeadCellSx} align="right">Result (t CO₂e)</TableCell>
+                      <TableCell sx={tableHeadCellSx} align="right">Result</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -726,7 +756,7 @@ const CalculationsList: React.FC = () => {
                             </TableCell>
                             <TableCell align="right" sx={tableCellSx}>
                               <Typography sx={{ fontWeight: 600, fontFamily: "'DM Sans', monospace", fontSize: '0.88rem', color: T.color.ink }}>
-                                {Number(item.resultValue).toFixed(4)}
+                                {formatResultItem(item.resultValue, item.unit)}
                               </Typography>
                             </TableCell>
                           </TableRow>

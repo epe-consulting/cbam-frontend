@@ -1,6 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from './utils/api';
+import { formatEmissions, formatResultItem, UNIT_T_CO2E, unitLabel, UNIT_SEE } from './utils/formatEmissions';
+import {
+  INDIRECT_FORMULA_CODES,
+  aluminiumToolTotals,
+  precursorKgToTonnesText,
+  specificDirectText,
+} from './utils/aluminiumReportTotals';
+import { isSteelCategory } from './utils/steelSteps';
 import { useDashboardCalculations, type DashboardCalculationItem } from './Dashboard';
 import {
   Container,
@@ -39,6 +47,7 @@ import {
   AutoAwesome,
 } from '@mui/icons-material';
 import { uploadReportToBlob } from './utils/blobStorage';
+import { useCnCodes } from './hooks/useCnCodes';
 
 /* ─── Design tokens ─── */
 const T = {
@@ -136,13 +145,6 @@ const sectionChipSx = {
 };
 
 /** Electricity / indirect formula codes — excluded for Annex II (aluminium). */
-const INDIRECT_FORMULA_CODES = new Set([
-  'ALU_GRID_ELECTRICITY_EMISSIONS',
-  'ALU_OWN_PLANT_ELECTRICITY_EMISSIONS',
-  'ALU_PPA_ELECTRICITY_EMISSIONS',
-  'ALU_PPA_ELECTRICITY_EMISSIONS_NO_EF',
-]);
-
 interface UserData {
   id: number;
   username: string;
@@ -175,6 +177,8 @@ interface ResultItem {
   expression: string;
   inputSnapshot: string;
   resultValue: number;
+  /** "t CO2e" | "t CO2e/t" | "t" | "%" — optional, older backends omit it. */
+  unit?: string | null;
   computedAt: string;
 }
 
@@ -182,6 +186,8 @@ interface CalcResult {
   id: number;
   calculationId: number;
   totalEmissions: number | null;
+  /** "t CO2e" — optional, older backends omit it. */
+  totalEmissionsUnit?: string | null;
   status: string;
   reportYear: number;
   computedAt: string;
@@ -216,6 +222,11 @@ interface ProductRow {
 interface PrecursorRow {
   cnCode: string;
   name: string;
+  /**
+   * Name as saved in the answer (`vrsta`, in the language active at entry). Used only to tell whether
+   * `name` is still the saved text, so it can be replaced by the current-language CN description.
+   */
+  savedName?: string;
   countryOfOrigin: string;
   quantity: string;
   valueType: 'actual' | 'default' | '';
@@ -311,10 +322,20 @@ function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function fmtNum(n: number | null | undefined, digits = 4): string {
-  if (n == null || Number.isNaN(n)) return '';
-  return Number(n).toFixed(digits);
+/**
+ * Period emission total for the generated report: full tonnes (IR 2025/2547 Annex II A.1 pt 6, p.28)
+ * plus the 1-decimal detail value (docs/steel-implementation-spec.md §0.2).
+ */
+function reportTotalText(t: number): string {
+  return `${formatEmissions(t, UNIT_T_CO2E, 'report')} (${formatEmissions(t, UNIT_T_CO2E, 'detail')})`;
 }
+
+/**
+ * Text shown for a precursor with unknown embedded emissions.
+ * NOTE: 10.49 is pre-existing and UNSOURCED (no source document cited) — kept unchanged pending review.
+ * Entered as kgCO2e/kg in the wizard; numerically identical in t CO2e/t.
+ */
+const PRECURSOR_DEFAULT_SEE_TEXT = `10.49 (default, ${unitLabel(UNIT_SEE)})`;
 
 function parseNum(v: string | null | undefined): number | null {
   if (v == null || String(v).trim() === '') return null;
@@ -416,10 +437,13 @@ function mapPrecursorRows(rows: CalculationAnswerDetailRow[]): PrecursorRow[] {
           ...emptyPrecursor(),
           cnCode: p.cn_code ?? '',
           name: p.vrsta ?? '',
+          savedName: p.vrsta ?? '',
           countryOfOrigin: p.drzava ?? '',
-          quantity: p.kolicina ?? '',
+          // kolicina is entered in kg ("Količina (kg)") -> shown in t
+          quantity: precursorKgToTonnesText(p.kolicina),
           valueType: known ? 'actual' : 'default',
-          specificDirectEmbedded: known ? (p.ugradjene_emisije ?? '') : '10.49 (default kgCO₂e/kg)',
+          // ugradjene_emisije entered in kgCO2e/kg == t CO2e/t numerically
+          specificDirectEmbedded: known ? (p.ugradjene_emisije ?? '') : PRECURSOR_DEFAULT_SEE_TEXT,
         });
       } catch {
         /* skip */
@@ -439,9 +463,11 @@ function mapPrecursorRows(rows: CalculationAnswerDetailRow[]): PrecursorRow[] {
           cnCode: '7601',
           name: 'Purchased unwrought aluminium (external)',
           countryOfOrigin: p.drzava ?? '',
-          quantity: p.kolicina ?? '',
+          // kolicina is entered in kg ("Količina (kg)") -> shown in t
+          quantity: precursorKgToTonnesText(p.kolicina),
           valueType: known ? 'actual' : 'default',
-          specificDirectEmbedded: known ? (p.ugradjene_emisije ?? '') : '10.49 (default kgCO₂e/kg)',
+          // ugradjene_emisije entered in kgCO2e/kg == t CO2e/t numerically
+          specificDirectEmbedded: known ? (p.ugradjene_emisije ?? '') : PRECURSOR_DEFAULT_SEE_TEXT,
         });
       } catch {
         /* skip */
@@ -481,23 +507,6 @@ function mapTopFuels(rows: CalculationAnswerDetailRow[]): FuelRow[] {
     seen.add(key);
     return true;
   }).slice(0, 5);
-}
-
-function splitEmissions(items: ResultItem[]): { direct: number; indirect: number } {
-  let direct = 0;
-  let indirect = 0;
-  for (const item of items) {
-    const v = Number(item.resultValue) || 0;
-    if (INDIRECT_FORMULA_CODES.has(item.formulaCode) || (item.outputCode ?? '').includes('ELECTRICITY')) {
-      indirect += v;
-    } else if (item.formulaCode === 'ALU_DIRECT_INDIRECT_SUM') {
-      // Combined path — handled separately via answers
-      direct += v;
-    } else {
-      direct += v;
-    }
-  }
-  return { direct, indirect };
 }
 
 function yesNoLabel(v: YesNoUnknown): string {
@@ -552,6 +561,30 @@ const GenerateReport: React.FC = () => {
 
   const [products, setProducts] = useState<ProductRow[]>([emptyProduct()]);
   const [precursors, setPrecursors] = useState<PrecursorRow[]>([]);
+
+  // Precursor names: show the CN description in the current language (GET /cn-codes/active, by cn_code)
+  // instead of the saved `vrsta`. Saved data is not changed; rows the user edited are left alone, and
+  // `vrsta` stays when the lookup has no match or fails.
+  const { cnCodes } = useCnCodes();
+  const cnDescriptionByCode = useMemo(() => {
+    const m: Record<string, string> = {};
+    cnCodes.forEach((c) => { if (c.description) m[c.cnCode.replace(/\s+/g, '')] = c.description; });
+    return m;
+  }, [cnCodes]);
+  useEffect(() => {
+    if (Object.keys(cnDescriptionByCode).length === 0) return;
+    setPrecursors((prev) => {
+      let changed = false;
+      const next = prev.map((r) => {
+        if (r.savedName === undefined || r.name !== r.savedName) return r;
+        const desc = cnDescriptionByCode[r.cnCode.replace(/\s+/g, '')];
+        if (!desc || desc === r.name) return r;
+        changed = true;
+        return { ...r, name: desc, savedName: desc };
+      });
+      return changed ? next : prev;
+    });
+  }, [cnDescriptionByCode, precursors]);
   const [topFuels, setTopFuels] = useState<FuelRow[]>([]);
   const [manual, setManual] = useState<ManualReportFields>(emptyManual());
 
@@ -701,13 +734,16 @@ const GenerateReport: React.FC = () => {
       if (res?.data?.success && res.data.result) {
         const result = res.data.result;
         setCalcResult(result);
-        const split = splitEmissions(result.items ?? []);
+        const category = productInfoRes?.data?.productInfo?.productCategory
+          ?? extractLatestAnswer(answers, 'CBAM_PRODUCT_CATEGORY');
+        // This report path is aluminium-only: never sum steel items (t CO2e/t, t, % mixed with t CO2e).
+        const totals = isSteelCategory(category) ? null : aluminiumToolTotals(result.items ?? []);
         // Prefer explicit direct answer when on HAS_EMISSIONS_ONLY path
         const directAnsNum = parseNum(directAns);
         if (directAnsNum != null && answers.some((a) => a.questionCode === 'ALU_TOTAL_DIRECT_EMISSIONS')) {
           setToolDirectTotal(directAnsNum);
-          const indirectAns = parseNum(extractLatestAnswer(answers, 'ALU_TOTAL_INDIRECT_EMISSIONS'));
-          setToolIndirectTotal(indirectAns);
+          // No indirect question on this path since backend post-027 (Guidance 05e pp. 8-9).
+          setToolIndirectTotal(null);
         } else {
           // If DIRECT_INDIRECT_SUM is the only item, don't double-count
           const hasSumOnly = (result.items ?? []).some((i) => i.formulaCode === 'ALU_DIRECT_INDIRECT_SUM')
@@ -717,10 +753,8 @@ const GenerateReport: React.FC = () => {
           if (hasSumOnly && directAnsNum != null) {
             setToolDirectTotal(directAnsNum);
           } else {
-            const withoutSum = (result.items ?? []).filter((i) => i.formulaCode !== 'ALU_DIRECT_INDIRECT_SUM');
-            const s = splitEmissions(withoutSum.length ? withoutSum : result.items ?? []);
-            setToolDirectTotal(s.direct || split.direct);
-            setToolIndirectTotal(s.indirect || split.indirect);
+            setToolDirectTotal(totals ? totals.direct : null);
+            setToolIndirectTotal(totals ? totals.indirect : null);
           }
         }
       } else {
@@ -748,7 +782,7 @@ const GenerateReport: React.FC = () => {
           const q = parseNum(p.quantity);
           if (q == null || q <= 0) return p;
           if (p.specificDirectEmbedded && p.specificDirectEmbedded.trim() !== '') return p;
-          return { ...p, specificDirectEmbedded: fmtNum(toolDirectTotal / q) };
+          return { ...p, specificDirectEmbedded: specificDirectText(toolDirectTotal, q) };
         });
       }
       // Multiple products: only fill if empty and we can use equal split by mass
@@ -759,7 +793,7 @@ const GenerateReport: React.FC = () => {
         if (q == null || q <= 0) return p;
         if (p.specificDirectEmbedded && p.specificDirectEmbedded.trim() !== '') return p;
         // Attribute proportionally by quantity (same SEE for all if one process)
-        return { ...p, specificDirectEmbedded: fmtNum(toolDirectTotal / totalQty) };
+        return { ...p, specificDirectEmbedded: specificDirectText(toolDirectTotal, totalQty) };
       });
     });
   }, [toolDirectTotal, selectedCalcId]);
@@ -857,12 +891,12 @@ const GenerateReport: React.FC = () => {
           <strong>Annex II — Aluminium:</strong> Only direct emissions are taken into account for CBAM.
           Indirect (electricity) emissions are <em>not applicable</em> and are excluded from embedded emissions in this report.
           ${toolIndirectTotal != null && toolIndirectTotal > 0
-            ? ` (Tool also computed ${fmtNum(toolIndirectTotal)} t CO₂e electricity-related figures for information only — not reported as CBAM embedded emissions.)`
+            ? ` (Tool also computed ${reportTotalText(toolIndirectTotal)} electricity-related figures for information only — not reported as CBAM embedded emissions.)`
             : ''}
         </p>`
       : '';
 
-    const directTotalDisplay = toolDirectTotal != null ? `${fmtNum(toolDirectTotal)} t CO₂e` : 'N/A';
+    const directTotalDisplay = toolDirectTotal != null ? reportTotalText(toolDirectTotal) : 'N/A';
 
     const monitoringFull = mode === 'full' ? `
 <h2>2. Monitoring plan summary</h2>
@@ -944,7 +978,7 @@ ${monitoringFull}
 <div class="field"><span class="field-label">Total direct emissions of the installation:</span> <span class="field-value">${esc(directTotalDisplay)}</span></div>
 ${isAnnexII
     ? `<div class="field"><span class="field-label">Indirect emissions:</span> <span class="field-value">Not applicable (Annex II)</span></div>`
-    : `<div class="field"><span class="field-label">Indirect emissions:</span> <span class="field-value">${toolIndirectTotal != null ? `${fmtNum(toolIndirectTotal)} t CO₂e` : 'N/A'}</span></div>`}
+    : `<div class="field"><span class="field-label">Indirect emissions:</span> <span class="field-value">${toolIndirectTotal != null ? esc(reportTotalText(toolIndirectTotal)) : 'N/A'}</span></div>`}
 
 <p style="font-weight:600;margin-top:12px;">Goods produced — specific embedded emissions</p>
 <table>
@@ -962,8 +996,8 @@ ${precursors.length ? `
 <p style="font-weight:600;margin-top:12px;">Precursors</p>
 <table>
 <thead><tr>
-  <th>CN</th><th>Name</th><th>Origin</th><th>Quantity</th><th>Actual/Default</th>
-  <th>Specific embedded</th><th>Reporting period</th><th>Origin operator / installation / ID</th>
+  <th>CN</th><th>Name</th><th>Origin</th><th>Quantity (t)</th><th>Actual/Default</th>
+  <th>Specific embedded (tCO₂e/t)</th><th>Reporting period</th><th>Origin operator / installation / ID</th>
 </tr></thead>
 <tbody>${precursorRowsHtml}</tbody>
 </table>` : ''}
@@ -1194,13 +1228,19 @@ ${methodsBlock}
                   <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.inkSoft }}>
                     Category: {productInfo.productCategory ?? '—'} · Period: {reportingPeriodText} · Year: {reportingYear}
                   </Typography>
+                  {isSteelCategory(productInfo.productCategory) && (
+                    <Alert severity="warning" sx={{ my: 1, borderRadius: T.radius.sm, fontFamily: T.font.body }}>
+                      This report template covers aluminium only. Iron &amp; steel results are not summed into the
+                      direct/indirect totals here — see the steel result view of the calculation.
+                    </Alert>
+                  )}
                   <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.inkSoft }}>
-                    Direct emissions (CBAM): {toolDirectTotal != null ? `${fmtNum(toolDirectTotal)} t CO₂e` : '—'}
+                    Direct emissions (CBAM): {toolDirectTotal != null ? formatEmissions(toolDirectTotal, UNIT_T_CO2E) : '—'}
                     {isAnnexII && (
                       <> · Indirect: <em>not applicable (Annex II)</em></>
                     )}
                     {!isAnnexII && toolIndirectTotal != null && (
-                      <> · Indirect: {fmtNum(toolIndirectTotal)} t CO₂e</>
+                      <> · Indirect: {formatEmissions(toolIndirectTotal, UNIT_T_CO2E)}</>
                     )}
                   </Typography>
                   {directFromAnswer && (
@@ -1426,7 +1466,7 @@ ${methodsBlock}
         <AccordionDetails sx={{ px: { xs: 2, md: 3 }, pb: 3 }}>
           <Box sx={{ p: 2, mb: 2, bgcolor: T.color.cream, borderRadius: T.radius.sm, border: `1px solid ${T.color.lineFaint}` }}>
             <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.9rem', color: T.color.ink }}>
-              Total direct emissions: {toolDirectTotal != null ? `${fmtNum(toolDirectTotal)} t CO₂e` : '—'}
+              Total direct emissions: {toolDirectTotal != null ? formatEmissions(toolDirectTotal, UNIT_T_CO2E) : '—'}
             </Typography>
             <Typography sx={{ fontFamily: T.font.body, fontSize: '0.82rem', color: T.color.muted }}>
               Specific direct embedded emissions are auto-calculated as direct total ÷ product quantity (tCO₂e/t) when quantity is available. Override if you need a different attribution.
@@ -1480,7 +1520,7 @@ ${methodsBlock}
                             return next.map((row) => {
                               const q = parseNum(row.quantity);
                               if (q == null || q <= 0) return row;
-                              return { ...row, specificDirectEmbedded: fmtNum(toolDirectTotal / totalQty) };
+                              return { ...row, specificDirectEmbedded: specificDirectText(toolDirectTotal, totalQty) };
                             });
                           });
                         }}
@@ -1545,9 +1585,9 @@ ${methodsBlock}
                       <TableCell sx={tableHeadCellSx}>CN</TableCell>
                       <TableCell sx={tableHeadCellSx}>Name</TableCell>
                       <TableCell sx={tableHeadCellSx}>Origin</TableCell>
-                      <TableCell sx={tableHeadCellSx}>Qty</TableCell>
+                      <TableCell sx={tableHeadCellSx}>Qty (t)</TableCell>
                       <TableCell sx={tableHeadCellSx}>Type</TableCell>
-                      <TableCell sx={tableHeadCellSx}>Specific embedded</TableCell>
+                      <TableCell sx={tableHeadCellSx}>Specific embedded (tCO₂e/t)</TableCell>
                       <TableCell sx={tableHeadCellSx}>Period</TableCell>
                       <TableCell sx={tableHeadCellSx}>Origin operator</TableCell>
                       <TableCell sx={tableHeadCellSx}>Origin installation</TableCell>
@@ -1729,7 +1769,7 @@ ${methodsBlock}
                   <TableRow>
                     <TableCell sx={tableHeadCellSx}>Formula</TableCell>
                     <TableCell sx={tableHeadCellSx}>Class</TableCell>
-                    <TableCell sx={{ ...tableHeadCellSx, textAlign: 'right' }}>Result (t CO₂e)</TableCell>
+                    <TableCell sx={{ ...tableHeadCellSx, textAlign: 'right' }}>Result</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -1745,7 +1785,7 @@ ${methodsBlock}
                             : 'Direct / attributed'}
                         </TableCell>
                         <TableCell sx={{ ...tableCellSx, textAlign: 'right' }}>
-                          {fmtNum(Number(item.resultValue))}
+                          {formatResultItem(item.resultValue, item.unit)}
                         </TableCell>
                       </TableRow>
                     );
