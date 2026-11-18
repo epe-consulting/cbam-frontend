@@ -5,6 +5,7 @@ import { formatEmissions, formatResultItem, UNIT_T_CO2E, unitLabel, UNIT_SEE } f
 import {
   INDIRECT_FORMULA_CODES,
   aluminiumToolTotals,
+  hasItemsBesidesEnteredTotal,
   precursorKgToTonnesText,
   specificDirectText,
 } from './utils/aluminiumReportTotals';
@@ -738,9 +739,12 @@ const GenerateReport: React.FC = () => {
           ?? extractLatestAnswer(answers, 'CBAM_PRODUCT_CATEGORY');
         // This report path is aluminium-only: never sum steel items (t CO2e/t, t, % mixed with t CO2e).
         const totals = isSteelCategory(category) ? null : aluminiumToolTotals(result.items ?? []);
-        // Prefer explicit direct answer when on HAS_EMISSIONS_ONLY path
+        // Prefer explicit direct answer when on HAS_EMISSIONS_ONLY path and nothing else was computed.
+        // Since post-043 that path continues (products stage / secondary module); then the entered total
+        // is one item among others and the summed totals (same as the backend total) are used.
         const directAnsNum = parseNum(directAns);
-        if (directAnsNum != null && answers.some((a) => a.questionCode === 'ALU_TOTAL_DIRECT_EMISSIONS')) {
+        const onlyEnteredTotal = !hasItemsBesidesEnteredTotal(result.items ?? []);
+        if (onlyEnteredTotal && directAnsNum != null && answers.some((a) => a.questionCode === 'ALU_TOTAL_DIRECT_EMISSIONS')) {
           setToolDirectTotal(directAnsNum);
           // No indirect question on this path since backend post-027 (Guidance 05e pp. 8-9).
           setToolIndirectTotal(null);

@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   aluminiumToolTotals,
+  hasItemsBesidesEnteredTotal,
   isAluminiumEmissionItem,
   precursorKgToTonnesText,
   specificDirect,
@@ -65,16 +66,23 @@ describe('aluminiumToolTotals', () => {
     expect(aluminiumToolTotals([item('IS_SEE_TOTAL', 2.0, 't CO2e/t'), item('IS_PROC_AL', 10, 't')])).toBeNull();
   });
 
-  it('ignores ALU_DIRECT_INDIRECT_SUM when other emission items exist (no double counting)', () => {
-    const totals = aluminiumToolTotals([
-      item('ALU_SECONDARY_FUEL_COMBUSTION', 3, 't CO2e'),
+  it('adds the entered unwrought-stage total to the products-stage items (post-043, same as backend total)', () => {
+    const items = [
       item('ALU_DIRECT_INDIRECT_SUM', 3, 't CO2e'),
-    ]);
-    expect(totals).toEqual({ direct: 3, indirect: 0 });
+      item('ALU_PRECURSOR_EMBEDDED_EMISSIONS', 1.5, 't CO2e'),
+      item('ALU_PRODUCTS_REMAINING_FUEL_COMBUSTION', 0.25, 't CO2e'),
+      item('ALU_FLUE_GAS_LIMESTONE', 0.44, 't CO2e'),
+    ];
+    const totals = aluminiumToolTotals(items);
+    expect(totals?.direct).toBeCloseTo(5.19, 10);
+    expect(totals?.indirect).toBe(0);
+    expect(hasItemsBesidesEnteredTotal(items)).toBe(true);
   });
 
   it('uses ALU_DIRECT_INDIRECT_SUM when it is the only emission item', () => {
-    expect(aluminiumToolTotals([item('ALU_DIRECT_INDIRECT_SUM', 4, 't CO2e')])).toEqual({ direct: 4, indirect: 0 });
+    const items = [item('ALU_DIRECT_INDIRECT_SUM', 4, 't CO2e')];
+    expect(aluminiumToolTotals(items)).toEqual({ direct: 4, indirect: 0 });
+    expect(hasItemsBesidesEnteredTotal(items)).toBe(false);
   });
 });
 
