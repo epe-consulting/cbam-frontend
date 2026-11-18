@@ -505,7 +505,15 @@
       "qty": "Količina (t)",
       "country": "Država porijekla",
       "cnInfoTitle": "Informacije o CN kodovima",
-      "cnInfoIntro": "Odaberite odgovarajući CN kod prema tipu proizvoda koji unosite:"
+      "cnInfoIntro": "Odaberite odgovarajući CN kod prema tipu proizvoda koji unosite:",
+      "what": "Proizvod {{n}}",
+      "cnHelp": "Izaberite iz liste ili upišite tačniji kod (npr. 7606 12 20)",
+      "eName": "{{what}}: unesite naziv proizvoda.",
+      "eCnEmpty": "{{what}}: izaberite CN kod.",
+      "eCnFormat": "{{what}}: CN kod mora imati 4 do 8 cifara.",
+      "eCnNotAlu": "{{what}} ({{cn}}): kod nije CBAM roba sektora aluminij (Prilog I Uredbe 2023/956).",
+      "eQty": "{{what}}: količina mora biti broj veći od 0.",
+      "eCountry": "{{what}}: izaberite državu porijekla."
     }
   },
   "fuel": {

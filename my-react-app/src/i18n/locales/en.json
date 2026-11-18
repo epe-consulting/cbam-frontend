@@ -505,7 +505,15 @@
       "qty": "Quantity (t)",
       "country": "Country of origin",
       "cnInfoTitle": "Information about CN codes",
-      "cnInfoIntro": "Select the CN code that matches the type of product you enter:"
+      "cnInfoIntro": "Select the CN code that matches the type of product you enter:",
+      "what": "Product {{n}}",
+      "cnHelp": "Pick from the list or type a more precise code (e.g. 7606 12 20)",
+      "eName": "{{what}}: enter the product name.",
+      "eCnEmpty": "{{what}}: pick a CN code.",
+      "eCnFormat": "{{what}}: the CN code must have 4 to 8 digits.",
+      "eCnNotAlu": "{{what}} ({{cn}}): the code is not a CBAM good of the aluminium sector (Annex I to Regulation (EU) 2023/956).",
+      "eQty": "{{what}}: the quantity must be a number greater than 0.",
+      "eCountry": "{{what}}: pick the country of origin."
     }
   },
   "fuel": {
