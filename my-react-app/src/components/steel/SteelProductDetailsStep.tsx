@@ -11,6 +11,7 @@ import { useCountries } from '../../hooks/useCountries';
 import { useIsCnMapping, useIsCnValidation, useIsExemptOrigins } from '../../hooks/useIronSteelRefData';
 import type { ProductDetailEntry } from '../ProductDetailsStep';
 import { categoryLabel, cnDigits, toNum, type StepIssue } from '../../utils/steelSteps';
+import { cnHelperText } from '../../utils/steelCnLabel';
 import { useTranslation } from 'react-i18next';
 
 export interface SteelProductDetailsStepProps {
@@ -85,13 +86,28 @@ export function SteelProductDetailsStep({
               freeSolo
               options={suggestions.map((m) => m.cnCode)}
               getOptionLabel={(o) => o}
+              filterOptions={(options, state) => {
+                // Search by code (with or without spaces) or by heading description.
+                const q = state.inputValue.trim().toLowerCase();
+                if (!q) return options;
+                const qDigits = cnDigits(q);
+                return options.filter((o) => {
+                  const m = suggestions.find((x) => x.cnCode === o);
+                  const d = m?.cnDigits ?? cnDigits(o);
+                  return (qDigits.length > 0 && (d.startsWith(qDigits) || qDigits.startsWith(d)))
+                    || (m?.description ?? '').toLowerCase().includes(q);
+                });
+              }}
               renderOption={(props, option) => {
                 const m = suggestions.find((x) => x.cnCode === option);
                 return (
                   <li {...props} key={option}>
                     <Box>
                       <Typography sx={{ fontWeight: 600, fontSize: '0.88rem' }}>{option}</Typography>
-                      <Typography sx={{ fontSize: '0.75rem', color: T.color.muted }}>{categoryLabel(m?.category)}</Typography>
+                      {m?.description && (
+                        <Typography sx={{ fontSize: '0.8rem', color: T.color.inkSoft }}>{m.description}</Typography>
+                      )}
+                      <Typography sx={{ fontSize: '0.72rem', color: T.color.muted }}>{categoryLabel(m?.category)}</Typography>
                     </Box>
                   </li>
                 );
@@ -104,7 +120,9 @@ export function SteelProductDetailsStep({
                   size="small"
                   required
                   label={t('steel.proc.cn8')}
-                  helperText={res?.ok ? categoryLabel(ambiguous ? (en.aggregatedCategory || 'IRON_STEEL_PRODUCTS') : res.category) : t('steel.pd.cnExample')}
+                  helperText={res?.ok
+                    ? cnHelperText(mapping, en.cnCode, categoryLabel(ambiguous ? (en.aggregatedCategory || 'IRON_STEEL_PRODUCTS') : res.category))
+                    : t('steel.pd.cnExample')}
                   sx={textFieldSx}
                 />
               )}
