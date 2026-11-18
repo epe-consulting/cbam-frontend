@@ -4,7 +4,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { IsCnMappingRow } from '../api/ironSteel';
-import { cnHeadingText, cnHelperText, findCnHeading } from './steelCnLabel';
+import { cnHeadingText, cnHelperText, cnOptions, filterCnOptions, findCnHeading, findCnLabel } from './steelCnLabel';
+import { checkCn } from '../components/steel/cnCheck';
 
 const row = (cnCode: string, category: string, description: string): IsCnMappingRow => ({
   cnCode, cnDigits: cnCode.replace(/\s/g, ''), category, categoryLabel: category, description,
@@ -50,5 +51,57 @@ describe('labels', () => {
     expect(cnHelperText(mapping, '7217 10 10', 'Iron or steel products'))
       .toBe('7217 – Wire of iron or non-alloy steel · Iron or steel products');
     expect(cnHelperText(mapping, '9999 99 99', 'Iron or steel products')).toBe('Iron or steel products');
+  });
+});
+
+// Sub-codes as printed in 2025/2621 Annex I (Other countries and territories), see backend /is/cn-mapping.
+const withSubs: IsCnMappingRow[] = [
+  { ...row('7318', 'IRON_STEEL_PRODUCTS', 'Screws, bolts, nuts … of iron or steel'), dvSpecific: false, subCodes: [
+    { cnCode: '7318 15', cnDigits: '731815', description: 'Threaded screws and bolts, of iron or steel', dvSpecific: true },
+    { cnCode: '7318 16', cnDigits: '731816', description: 'Nuts of iron or steel', dvSpecific: true },
+  ] },
+  { ...row('7208', 'IRON_STEEL_PRODUCTS', 'Flat-rolled products … hot-rolled'), dvSpecific: true, subCodes: [] },
+  { ...row('2804 10 00', 'HYDROGEN', 'Hydrogen'), precursorOnly: true },
+];
+
+describe('sub-codes', () => {
+  it('label uses the most specific printed row', () => {
+    expect(findCnLabel(withSubs, '7318 16 10')?.cnCode).toBe('7318 16');
+    expect(cnHeadingText(withSubs, '7318 16 10')).toBe('7318 16 – Nuts of iron or steel');
+    expect(findCnLabel(withSubs, '7318')?.cnCode).toBe('7318');
+  });
+
+  it('dropdown lists headings followed by their sub-codes, without precursor-only rows', () => {
+    const opts = cnOptions(withSubs);
+    expect(opts.map((o) => o.cnCode)).toEqual(['7318', '7318 15', '7318 16', '7208']);
+    expect(opts[0]).toMatchObject({ sub: false, dvSpecific: false });
+    expect(opts[1]).toMatchObject({ sub: true, dvSpecific: true, category: 'IRON_STEEL_PRODUCTS' });
+  });
+
+  it('search by code or by description', () => {
+    const opts = cnOptions(withSubs);
+    expect(filterCnOptions(opts, '7318 1').map((o) => o.cnCode)).toEqual(['7318', '7318 15', '7318 16']);
+    expect(filterCnOptions(opts, 'nuts').map((o) => o.cnCode)).toEqual(['7318', '7318 16']);
+    expect(filterCnOptions(opts, '').length).toBe(4);
+  });
+});
+
+describe('checkCn (4 to 8 digits, precision)', () => {
+  const ok = (dvSpecific: boolean) => ({ ok: true, category: 'IRON_STEEL_PRODUCTS', dvSpecific });
+  it('accepts a 4-digit heading that picks one default value', () => {
+    expect(checkCn('7208', { '7208': ok(true) }, 'Proizvod 1').state).toBe('ok');
+  });
+  it('rejects a code that is too short (from the backend error or the flag)', () => {
+    const fromError = checkCn('7318', { '7318': { ok: false, errorCode: 'IS_E_CN_TOO_SHORT' } }, 'P');
+    expect(fromError.state === 'error' && fromError.issue.code).toBe('IS_E_CN_TOO_SHORT');
+    const fromFlag = checkCn('7318', { '7318': ok(false) }, 'P');
+    expect(fromFlag.state === 'error' && fromFlag.issue.code).toBe('IS_E_CN_TOO_SHORT');
+  });
+  it('allowShort rows (no default value needed) ignore the precision flag', () => {
+    expect(checkCn('7318', { '7318': ok(false) }, 'P', true).state).toBe('ok');
+  });
+  it('fewer than 4 digits is still a format error', () => {
+    const r = checkCn('720', {}, 'P');
+    expect(r.state === 'error' && r.issue.code).toBe('IS_E_CN_FORMAT');
   });
 });

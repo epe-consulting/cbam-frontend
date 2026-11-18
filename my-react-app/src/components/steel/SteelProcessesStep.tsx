@@ -126,7 +126,7 @@ export function SteelProcessesStep({ data, questions, saving, saveError, onBack,
         const qty = toNum(o.kolicina);
         if (qty == null || qty <= 0) e.push({ code: 'IS_E_QTY', message: t('steel.msg.qty', { what }) });
         const d = cnDigits(o.cn_code);
-        if (/^\d{8}$/.test(d)) (cnToProcesses[d] ??= new Set()).add(p.process_id);
+        if (/^\d{4,8}$/.test(d)) (cnToProcesses[d] ??= new Set()).add(p.process_id);
       });
     });
     Object.entries(cnToProcesses).forEach(([d, set]) => {
