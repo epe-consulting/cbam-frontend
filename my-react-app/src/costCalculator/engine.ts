@@ -399,7 +399,15 @@ function actualScenario(line: ImportLine, M: number, prices: PriceAssumptions, p
     label: `Actual SEE (${line.actualSource === 'VERIFIED_SUPPLIER' ? 'verified supplier data' : 'preliminary estimate'})`,
     value: `${fmt(line.actualSee)} t CO2e/t`,
   });
-  base.steps.push({ label: "SEFA from supplier's emissions report", value: `${fmt(line.actualSefa, 6)} t CO2e/t`, source: SOURCES.sefaActual });
+  base.steps.push(
+    line.actualSource === 'VERIFIED_SUPPLIER'
+      ? { label: "SEFA from supplier's emissions report", value: `${fmt(line.actualSefa, 6)} t CO2e/t`, source: SOURCES.sefaActual }
+      : {
+          label: 'SEFA (planning value — replace with the figure from the supplier report)',
+          value: `${fmt(line.actualSefa, 6)} t CO2e/t`,
+          source: `Not verified. Required source: ${SOURCES.sefaActual}`,
+        },
+  );
   base.seeSource = line.actualSource === 'VERIFIED_SUPPLIER' ? 'Verified supplier data' : 'Preliminary estimate';
   base.sefaSource = SOURCES.sefaActual;
   return finish(base, line, line.actualSee, line.actualSefa, line.actualDeduction, 'ACTUAL', prices, pc);
@@ -707,6 +715,35 @@ export function compare(input: CompareInput): Comparison {
     if (d.totals.forecast || a.totals.forecast) conclusion += ' Based on an assumed certificate price — this is a forecast.';
   }
   return { ...base, breakEvenFirstYear: be1, breakEvenRecurring: be2, conclusion };
+}
+
+export interface YearComparison {
+  year: number;
+  input: CompareInput;
+  comparison: Comparison;
+  /** One-off cost items are counted only in the earliest import year. */
+  oneOffIncluded: boolean;
+}
+
+/**
+ * Compare each import year separately. Certificates are surrendered per calendar year
+ * (Reg. (EU) 2023/956 Art. 22(1)) and the 50 t threshold is assessed per calendar year
+ * (Art. 2a), so lines of different years must not be added into one annual figure.
+ * One-off costs belong to the first year only; later years carry recurring costs.
+ */
+export function compareByYear(input: CompareInput): YearComparison[] {
+  const years = [...new Set(input.lines.map((l) => l.importYear))].sort((a, b) => a - b);
+  // One-off set-up costs fall in the first year in which actual data is used (else the first year).
+  const withActual = years.filter((y) => input.lines.some((l) => l.importYear === y && l.actualSee != null));
+  const oneOffYear = withActual[0] ?? years[0];
+  return years.map((year) => {
+    const yInput: CompareInput = {
+      ...input,
+      lines: input.lines.filter((l) => l.importYear === year),
+      costItems: year === oneOffYear ? input.costItems : input.costItems.filter((c) => c.occurrence !== 'ONE_OFF'),
+    };
+    return { year, input: yInput, comparison: compare(yInput), oneOffIncluded: year === oneOffYear };
+  });
 }
 
 /** Sensitivity of the recurring and first-year net saving. */

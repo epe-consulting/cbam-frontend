@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { apiRequest } from '../utils/api';
+import { tr } from '../i18n';
+import { useAppLanguage } from '../i18n/useAppLanguage';
 
 export interface CnCodeDto {
   id: number;
   cnCode: string;
+  /** Localized by the backend (Accept-Language); display text only. */
   description: string;
   sortOrder: number;
   isActive: boolean;
@@ -24,20 +27,22 @@ export function useCnCodes(): {
   const [cnCodes, setCnCodes] = useState<CnCodeDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Descriptions come localized from the backend: reload when the language changes.
+  const language = useAppLanguage();
 
   useEffect(() => {
     let cancelled = false;
 
     async function fetchCnCodes() {
-      setLoading(true);
+      // Initial load only shows the loading state; a language switch keeps the list on screen.
       setError(null);
       const result = await apiRequest<CnCodesResponse>('/cn-codes/active');
       if (cancelled) return;
       if (result === null) {
-        setError('Session expired or not authenticated');
+        setError(tr('err.notAuthenticated'));
         setCnCodes([]);
       } else if (!result.data.success || !result.data.cnCodes) {
-        setError(result.data.message ?? 'Failed to load CN codes');
+        setError(result.data.message ?? tr('err.cnCodes'));
         setCnCodes([]);
       } else {
         setCnCodes(result.data.cnCodes);
@@ -49,7 +54,7 @@ export function useCnCodes(): {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [language]);
 
   return { cnCodes, loading, error };
 }

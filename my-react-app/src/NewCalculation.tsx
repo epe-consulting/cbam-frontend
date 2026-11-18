@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
 import { useProductCategories } from './hooks/useProductCategories';
+import { useAppLanguage } from './i18n/useAppLanguage';
 import { useQuestionsByStep, type QuestionWithOptions } from './hooks/useQuestionsByStep';
 import { useCalculationAnswers } from './hooks/useCalculationAnswers';
 import { apiRequest } from './utils/api';
@@ -26,6 +27,14 @@ import {
 } from './components/ExternalUnwroughtInputStep';
 import { AnodeStep } from './components/AnodeStep';
 import { FlueGasStep } from './components/FlueGasStep';
+import {
+  FLUE_GAS_LIMESTONE_QTY_Q,
+  FLUE_GAS_SODA_ASH_QTY_Q,
+  FLUE_GAS_TREATMENT_Q,
+  flueGasCode,
+  flueGasComplete,
+  flueGasSelection,
+} from './utils/flueGas';
 import { CalculationCompleteStep } from './components/CalculationCompleteStep';
 import { getAllQuestions, getQuestionsWithOptions, getNextStep } from './api/questions';
 import { getCalculation, patchCalculationWizard, type CalculationDto } from './api/calculations';
@@ -53,6 +62,7 @@ import {
 import { SteelWizardStep } from './components/steel/SteelWizardStep';
 import { SteelProductDetailsStep } from './components/steel/SteelProductDetailsStep';
 import { getAnswerValuesByCode, getQuestionIdsByCode } from './api/ironSteel';
+import { useTranslation } from 'react-i18next';
 
 /* ─── Design tokens (shared across Panonia) ─── */
 const T = {
@@ -82,6 +92,7 @@ const T = {
 };
 
 const NewCalculation: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { calculationId: calculationIdParam } = useParams<{ calculationId?: string }>();
@@ -89,7 +100,7 @@ const NewCalculation: React.FC = () => {
     const n = parseInt(calculationIdParam, 10);
     return Number.isNaN(n) ? null : n;
   })() : null;
-  const { categoryNames, loading: categoriesLoading, error: categoriesError } = useProductCategories();
+  const { categoryNames, categoryLabels, loading: categoriesLoading, error: categoriesError } = useProductCategories();
   const [category, setCategory] = useState('');
   const [reportingPeriodFrom, setReportingPeriodFrom] = useState('');
   const [reportingPeriodTo, setReportingPeriodTo] = useState('');
@@ -117,6 +128,20 @@ const NewCalculation: React.FC = () => {
   const [subsectorsCache, setSubsectorsCache] = useState<Record<string, string[]>>({});
   const [subsubsectorsCache, setSubsubsectorsCache] = useState<Record<string, string[]>>({});
   const [emissionFactorNamesCache, setEmissionFactorNamesCache] = useState<Record<string, string[]>>({});
+  /** Fuel lookup value -> localized label (backend `labels`); the values themselves are stored unchanged. */
+  const [fuelLabels, setFuelLabels] = useState<Record<string, string>>({});
+  // Fuel lookup labels are localized by the backend: on a language switch drop the cached lists so
+  // the effects below reload them in the new language. Entered fuel rows keep their stored values.
+  const language = useAppLanguage();
+  const lookupLanguageRef = useRef(language);
+  useEffect(() => {
+    if (lookupLanguageRef.current === language) return;
+    lookupLanguageRef.current = language;
+    setFuelLabels({});
+    setSubsectorsCache({});
+    setSubsubsectorsCache({});
+    setEmissionFactorNamesCache({});
+  }, [language]);
   const [denominatorsCache, setDenominatorsCache] = useState<Record<string, string[]>>({});
   const [fuelLookupLoading, setFuelLookupLoading] = useState(false);
   const [fuelLookupError, setFuelLookupError] = useState<string | null>(null);
@@ -557,11 +582,15 @@ const NewCalculation: React.FC = () => {
     setFuelLookupLoading(true);
     setFuelLookupError(null);
     getLookupSectors()
-      .then((list) => { if (!cancelled) setFuelSectors(list.filter((s: string) => s !== 'Energy')); })
-      .catch((e) => { if (!cancelled) setFuelLookupError(e instanceof Error ? e.message : 'Failed to load sectors'); setFuelSectors([]); })
+      .then((list) => {
+        if (cancelled) return;
+        setFuelLabels((prev: Record<string, string>) => ({ ...prev, ...list.labels }));
+        setFuelSectors(list.values.filter((s: string) => s !== 'Energy'));
+      })
+      .catch((e) => { if (!cancelled) setFuelLookupError(e instanceof Error ? e.message : t('wizard.sectorsFailed')); setFuelSectors([]); })
       .finally(() => { if (!cancelled) setFuelLookupLoading(false); });
     return () => { cancelled = true; };
-  }, [isFuelStepWithLookup]);
+  }, [isFuelStepWithLookup, t]);
 
   useEffect(() => {
     if (!isFuelStepWithLookup) return;
@@ -571,7 +600,11 @@ const NewCalculation: React.FC = () => {
     let cancelled = false;
     toFetch.forEach((sector: string) => {
       getLookupSubsectors(sector)
-        .then((list) => { if (!cancelled) setSubsectorsCache((prev: Record<string, string[]>) => ({ ...prev, [sector]: list })); })
+        .then((list) => {
+          if (cancelled) return;
+          setFuelLabels((prev: Record<string, string>) => ({ ...prev, ...list.labels }));
+          setSubsectorsCache((prev: Record<string, string[]>) => ({ ...prev, [sector]: list.values }));
+        })
         .catch(() => { if (!cancelled) setSubsectorsCache((prev: Record<string, string[]>) => ({ ...prev, [sector]: [] })); });
     });
     return () => { cancelled = true; };
@@ -586,7 +619,11 @@ const NewCalculation: React.FC = () => {
     toFetch.forEach((key: string) => {
       const [sector, subsector] = key.split('|');
       getLookupSubsubsectors(sector, subsector)
-        .then((list) => { if (!cancelled) setSubsubsectorsCache((prev: Record<string, string[]>) => ({ ...prev, [key]: list })); })
+        .then((list) => {
+          if (cancelled) return;
+          setFuelLabels((prev: Record<string, string>) => ({ ...prev, ...list.labels }));
+          setSubsubsectorsCache((prev: Record<string, string[]>) => ({ ...prev, [key]: list.values }));
+        })
         .catch(() => { if (!cancelled) setSubsubsectorsCache((prev: Record<string, string[]>) => ({ ...prev, [key]: [] })); });
     });
     return () => { cancelled = true; };
@@ -604,7 +641,11 @@ const NewCalculation: React.FC = () => {
       const subsector = parts[1];
       const subsubsector = parts[2] || null;
       getLookupEmissionFactorNames(sector, subsector, subsubsector)
-        .then((list) => { if (!cancelled) setEmissionFactorNamesCache((prev: Record<string, string[]>) => ({ ...prev, [key]: list })); })
+        .then((list) => {
+          if (cancelled) return;
+          setFuelLabels((prev: Record<string, string>) => ({ ...prev, ...list.labels }));
+          setEmissionFactorNamesCache((prev: Record<string, string[]>) => ({ ...prev, [key]: list.values }));
+        })
         .catch(() => { if (!cancelled) setEmissionFactorNamesCache((prev: Record<string, string[]>) => ({ ...prev, [key]: [] })); });
     });
     return () => { cancelled = true; };
@@ -700,7 +741,7 @@ const NewCalculation: React.FC = () => {
   };
 
   const handleNext = async () => {
-    if (calculationId != null && questionsFromApi?.length && !isSteelStepCode(currentStepCode) && !(step === 5 && (currentStepCode === 'FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT')) && step !== 13) {
+    if (calculationId != null && questionsFromApi?.length && !isSteelStepCode(currentStepCode) && !(step === 5 && (currentStepCode === 'FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT')) && step !== 13 && step !== 9) {
       const questionIds = questionsFromApi.map((q: QuestionWithOptions) => q.id);
       const valuesToSave: { questionId: number; value: string }[] = [];
       const anodeTypeQuestion = questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_ANODE_TYPE');
@@ -738,7 +779,7 @@ const NewCalculation: React.FC = () => {
       }
       setReportingPeriodError(null);
       if (calculationId == null) {
-        setCreateError('Please wait for the calculation to be ready, or start from the dashboard.');
+        setCreateError(t('wizard.waitForCalculation'));
         return;
       }
       setCreateError(null);
@@ -763,7 +804,7 @@ const NewCalculation: React.FC = () => {
         const reportingFromQuestionId = Object.entries(questionCodeMap).find(([, code]) => code === 'CBAM_REPORTING_PERIOD_FROM')?.[0];
         const reportingToQuestionId = Object.entries(questionCodeMap).find(([, code]) => code === 'CBAM_REPORTING_PERIOD_TO')?.[0];
         if (categoryQuestionId == null || reportingFromQuestionId == null || reportingToQuestionId == null) {
-          setCreateError('Product info pitanja nisu pronađena. Pokreni nove migracije pa pokušaj ponovo.');
+          setCreateError(t('wizard.productInfoMissing'));
           setCreateLoading(false);
           return;
         }
@@ -778,7 +819,7 @@ const NewCalculation: React.FC = () => {
         setCurrentStepCode(nextStep);
         setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: nextStep } : null));
       } catch (err) {
-        setCreateError(err instanceof Error ? err.message : 'Failed to save product');
+        setCreateError(err instanceof Error ? err.message : t('wizard.saveProductFailed'));
       } finally {
         setCreateLoading(false);
       }
@@ -800,7 +841,7 @@ const NewCalculation: React.FC = () => {
 
         const productEntryQuestionId = Object.entries(questionCodeMap).find(([, code]) => code === 'CBAM_PRODUCT_ENTRY')?.[0];
         if (productEntryQuestionId == null) {
-          setCreateError('Pitanje za product details nije pronađeno. Pokreni nove migracije pa pokušaj ponovo.');
+          setCreateError(t('wizard.productDetailsMissing'));
           return;
         }
         const productEntryQuestionIdNum = Number(productEntryQuestionId);
@@ -832,7 +873,7 @@ const NewCalculation: React.FC = () => {
             setCurrentStepCode(toStepCode);
             setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode } : null));
           } catch (err) {
-            setSteelSaveError(err instanceof Error ? err.message : 'Spremanje nije uspjelo');
+            setSteelSaveError(err instanceof Error ? err.message : t('steel.wizard.saveFailed'));
           } finally {
             setSteelSaving(false);
           }
@@ -926,7 +967,9 @@ const NewCalculation: React.FC = () => {
       if (calculationId == null) return;
       try {
         const { toStepCode } = await getNextStep(calculationId, currentStepCode);
-        const resolvedToStepCode = isProductsRemainingFuel ? 'SABIRNA_TACKA' : toStepCode;
+        // Aluminium products: flue gas treatment follows the remaining fuels
+        // (IR (EU) 2025/2547 Annex I point 3.18.2; DB default_next_step since post-025).
+        const resolvedToStepCode = isProductsRemainingFuel ? 'ALU_FLUE_GAS_TREATMENT' : toStepCode;
         stepStackRef.current.push(currentStepCode);
         if (resolvedToStepCode === 'COMPLETE') {
           await patchCalculationWizard(calculationId, { status: 'COMPLETED' });
@@ -1028,13 +1071,22 @@ const NewCalculation: React.FC = () => {
         // validation or API error
       }
     } else if (step === 9) {
-      const flueGasQuestion = questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_FLUE_GAS_TREATMENT');
-      const flueGasAnswer = flueGasQuestion != null ? getAnswer(flueGasQuestion.id) : '';
-      const needsQty = flueGasAnswer === 'SODA_ASH' || flueGasAnswer === 'soda-ash' || flueGasAnswer === 'LIMESTONE' || flueGasAnswer === 'limestone';
-      const qtyQuestion = questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_FLUE_GAS_QTY');
-      if (!flueGasAnswer) return;
-      if (needsQty && qtyQuestion && !getAnswer(qtyQuestion.id)) return;
-      if (calculationId == null) return;
+      // Flue gas: soda ash and/or limestone, each with its own quantity (see utils/flueGas.ts).
+      // Saved here instead of the generic save above: that one deletes unanswered questions of the
+      // step, which would also delete the quantities saved on the other production route's visit.
+      const byCode = (code: string) => questionsFromApi?.find((q: { code: string }) => q.code === code);
+      const treatQ = byCode(FLUE_GAS_TREATMENT_Q);
+      const sodaQ = byCode(FLUE_GAS_SODA_ASH_QTY_Q);
+      const limeQ = byCode(FLUE_GAS_LIMESTONE_QTY_Q);
+      if (!treatQ || !sodaQ || !limeQ || calculationId == null) return;
+      const sel = flueGasSelection(getAnswer(treatQ.id));
+      const sodaQty = getAnswer(sodaQ.id);
+      const limeQty = getAnswer(limeQ.id);
+      if (!flueGasComplete(sel, sodaQty, limeQty)) return;
+      const normalise = (v: string) => v.trim().replace(',', '.');
+      await saveAnswer(treatQ.id, flueGasCode(sel));
+      if (sel.sodaAsh) await saveAnswer(sodaQ.id, normalise(sodaQty));
+      if (sel.limestone) await saveAnswer(limeQ.id, normalise(limeQty));
       try {
         stepStackRef.current.push(currentStepCode);
         await patchCalculationWizard(calculationId, { currentStep: 'SABIRNA_TACKA' });
@@ -1211,13 +1263,13 @@ const NewCalculation: React.FC = () => {
             '&:hover': { bgcolor: T.color.mint, color: T.color.forest },
           }}
         >
-          Back to Dashboard
+          {t('wizard.backToDashboard')}
         </Button>
         <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: { xs: '1.6rem', md: '2rem' }, color: T.color.ink, letterSpacing: '-0.02em', mb: 0.5 }}>
-          New CBAM Calculation
+          {t('wizard.title')}
         </Typography>
         <Typography sx={{ fontFamily: T.font.body, fontSize: '1.05rem', color: T.color.muted, lineHeight: 1.6 }}>
-          Calculate embedded emissions for your products
+          {t('wizard.subtitle')}
         </Typography>
       </Box>
 
@@ -1250,6 +1302,7 @@ const NewCalculation: React.FC = () => {
             }}
             reportingPeriodError={reportingPeriodError}
             categoryNames={categoryNames}
+            categoryLabels={categoryLabels}
             categoriesLoading={categoriesLoading}
             categoriesError={categoriesError}
             createError={createError}
@@ -1292,7 +1345,7 @@ const NewCalculation: React.FC = () => {
 
         {step === 2 && currentStepCode === 'CBAM_PRODUCT_DETAILS' && !isSteel && (
           <ProductDetailsStep
-            title="Product details"
+            title={t('wizard.productDetails')}
             entries={productDetailEntries}
             updateEntry={(index: number, updates: Partial<ProductDetailEntry>) =>
               setProductDetailEntries((prev: ProductDetailEntry[]) =>
@@ -1366,7 +1419,7 @@ const NewCalculation: React.FC = () => {
         {step === 5 && ((currentStepCode === 'FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT') ? (
           <FuelInputStep
             title={currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT' ? questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_PRODUCTS_REMAINING_FUEL_ENTRY')?.label : currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' ? questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_SECONDARY_FUEL_RELATED_STEP_LABEL')?.label : currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' ? questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_SECONDARY_FUEL_STEP_LABEL')?.label : questionsFromApi?.find((q: { code: string }) => q.code === 'FUEL_STEP_LABEL')?.label}
-            addButtonLabel={currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT' ? '+ ADD ANOTHER FUEL' : undefined}
+            addButtonLabel={currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT' ? t('wizard.addAnotherFuel') : undefined}
             fuelEntries={fuelEntries}
             updateFuelEntry={updateFuelEntry}
             resolveEmissionFactorId={resolveEmissionFactorId}
@@ -1390,6 +1443,7 @@ const NewCalculation: React.FC = () => {
             subsectorsCache={subsectorsCache}
             subsubsectorsCache={subsubsectorsCache}
             emissionFactorNamesCache={emissionFactorNamesCache}
+            fuelLabels={fuelLabels}
             denominatorsCache={denominatorsCache}
             fuelLookupLoading={fuelLookupLoading}
             fuelLookupError={fuelLookupError}
@@ -1410,7 +1464,7 @@ const NewCalculation: React.FC = () => {
             title={
               dataQualityLevel === 'calculated-emissions' ? (
                 <Typography sx={{ mb: 3, fontFamily: T.font.display, fontWeight: 600, fontSize: '1.1rem', color: T.color.ink }}>
-                  Unesite:
+                  {t('wizard.enter')}
                 </Typography>
               ) : undefined
             }
@@ -1439,7 +1493,7 @@ const NewCalculation: React.FC = () => {
           ) : questionsError ? (
             <Typography sx={{ mb: 2, fontFamily: T.font.body, color: '#C0392B' }}>{questionsError}</Typography>
           ) : (
-            <Typography sx={{ fontFamily: T.font.body, color: T.color.muted }}>No questions available for this step.</Typography>
+            <Typography sx={{ fontFamily: T.font.body, color: T.color.muted }}>{t('anode.noQuestions')}</Typography>
           )
         )}
 
@@ -1475,13 +1529,8 @@ const NewCalculation: React.FC = () => {
           stepCodeForQuestions && questionsFromApi.length > 0 ? (
             <FlueGasStep
               questionsFromApi={questionsFromApi}
-              questionsLoading={questionsLoading}
-              questionsError={questionsError}
               getAnswer={getAnswer}
-              getAnswerForStep={getAnswerForStep}
               setAnswer={setAnswer}
-              onOptionSelect={handleOptionSelect}
-              onValueChange={handleValueChange}
               onBack={handleBack}
               onNext={handleNext}
             />
@@ -1490,7 +1539,7 @@ const NewCalculation: React.FC = () => {
           ) : questionsError ? (
             <Typography sx={{ mb: 2, fontFamily: T.font.body, color: '#C0392B' }}>{questionsError}</Typography>
           ) : (
-            <Typography sx={{ fontFamily: T.font.body, color: T.color.muted }}>No questions available for this step.</Typography>
+            <Typography sx={{ fontFamily: T.font.body, color: T.color.muted }}>{t('anode.noQuestions')}</Typography>
           )
         )}
 

@@ -11,6 +11,7 @@ import { useCountries } from '../../hooks/useCountries';
 import { useIsCnMapping, useIsCnValidation, useIsExemptOrigins } from '../../hooks/useIronSteelRefData';
 import type { ProductDetailEntry } from '../ProductDetailsStep';
 import { categoryLabel, cnDigits, toNum, type StepIssue } from '../../utils/steelSteps';
+import { useTranslation } from 'react-i18next';
 
 export interface SteelProductDetailsStepProps {
   entries: ProductDetailEntry[];
@@ -27,6 +28,7 @@ export interface SteelProductDetailsStepProps {
 export function SteelProductDetailsStep({
   entries, updateEntry, addEntry, removeEntry, onBack, onNext, saving, saveError,
 }: SteelProductDetailsStepProps) {
+  const { t } = useTranslation();
   const [infoOpen, setInfoOpen] = useState(false);
   const { countries } = useCountries();
   const { exempt } = useIsExemptOrigins();
@@ -39,46 +41,46 @@ export function SteelProductDetailsStep({
     const w: StepIssue[] = [];
     let pend = false;
     entries.forEach((en, idx) => {
-      const what = `Proizvod ${idx + 1}`;
-      if (!en.productName.trim()) e.push({ code: '', message: `${what}: unesite naziv proizvoda.` });
+      const what = t('steel.pd.product', { n: idx + 1 });
+      if (!en.productName.trim()) e.push({ code: '', message: t('steel.pd.eName', { what }) });
       const chk = checkCn(en.cnCode, cnResults, what);
       if (chk.state === 'error') e.push(chk.issue);
       else if (chk.state === 'pending') pend = true;
       else if (chk.result.precursorOnly) {
-        e.push({ code: 'IS_E_CN_NOT_CBAM_STEEL', message: `${what}: vodik (2804 10 00) se može unijeti samo kao prekursor, ne kao deklarisana roba.` });
+        e.push({ code: 'IS_E_CN_NOT_CBAM_STEEL', message: t('steel.pd.eHydrogen', { what }) });
       }
       const q = toNum(en.quantity);
-      if (q == null || q <= 0) e.push({ code: 'IS_E_QTY', message: `${what}: količina (t) mora biti veća od 0.` });
-      if (!en.countryOfOrigin) e.push({ code: '', message: `${what}: odaberite državu porijekla.` });
+      if (q == null || q <= 0) e.push({ code: 'IS_E_QTY', message: t('steel.pd.eQty', { what }) });
+      if (!en.countryOfOrigin) e.push({ code: '', message: t('steel.pd.eCountry', { what }) });
       else if (countries.find((c) => c.country === en.countryOfOrigin)?.isEu) {
-        w.push({ code: 'IS_W_ORIGIN_EU', message: `${what}: roba porijeklom iz države članice EU – ugrađene emisije se ne obračunavaju (rezultat 0).` });
+        w.push({ code: 'IS_W_ORIGIN_EU', message: t('steel.pd.wEu', { what }) });
       } else if (exempt.countries.includes(en.countryOfOrigin)) {
-        w.push({ code: 'IS_W_ORIGIN_EXEMPT', message: `${what}: roba porijeklom iz države izuzete iz CBAM-a – rezultat 0.` });
+        w.push({ code: 'IS_W_ORIGIN_EXEMPT', message: t('steel.pd.wExempt', { what }) });
       }
     });
     return { errors: e, warnings: w, pending: pend };
-  }, [entries, cnResults, countries, exempt]);
+  }, [entries, cnResults, countries, exempt, t]);
 
   return (
     <Box sx={{ fontFamily: T.font.body }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
         <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.2rem', color: T.color.ink, letterSpacing: '-0.02em' }}>
-          Detalji proizvoda – željezo i čelik
+          {t('steel.pd.title')}
         </Typography>
-        <IconButton size="small" aria-label="Informacije o CN kodovima" onClick={() => setInfoOpen(true)} sx={{ color: T.color.forest }}>
+        <IconButton size="small" aria-label={t('steel.pd.cnInfo')} onClick={() => setInfoOpen(true)} sx={{ color: T.color.forest }}>
           <InfoOutlined fontSize="small" />
         </IconButton>
       </Box>
       <Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem', color: T.color.muted, mb: 2 }}>
-        Unesite svaki proizvod s punim 8-cifrenim CN kodom, količinom u tonama i državom porijekla.
+        {t('steel.pd.intro')}
       </Typography>
 
       {entries.map((en, idx) => {
         const res = cnResults[cnDigits(en.cnCode)];
         const ambiguous = Boolean(res?.ok && res.ambiguous);
         return (
-          <RowCard key={en.id} title={`Proizvod ${idx + 1}`} onRemove={entries.length > 1 ? () => removeEntry(idx) : undefined}>
-            <TextInput label="Naziv proizvoda" required value={en.productName} onChange={(v) => updateEntry(idx, { productName: v })} />
+          <RowCard key={en.id} title={t('steel.pd.product', { n: idx + 1 })} onRemove={entries.length > 1 ? () => removeEntry(idx) : undefined}>
+            <TextInput label={t('steel.pd.name')} required value={en.productName} onChange={(v) => updateEntry(idx, { productName: v })} />
             <Autocomplete
               freeSolo
               options={suggestions.map((m) => m.cnCode)}
@@ -101,22 +103,22 @@ export function SteelProductDetailsStep({
                   {...params}
                   size="small"
                   required
-                  label="CN kod (8 cifara)"
-                  helperText={res?.ok ? categoryLabel(ambiguous ? (en.aggregatedCategory || 'IRON_STEEL_PRODUCTS') : res.category) : 'npr. 7208 51 20'}
+                  label={t('steel.proc.cn8')}
+                  helperText={res?.ok ? categoryLabel(ambiguous ? (en.aggregatedCategory || 'IRON_STEEL_PRODUCTS') : res.category) : t('steel.pd.cnExample')}
                   sx={textFieldSx}
                 />
               )}
             />
-            <NumField label="Količina (t)" required value={en.quantity} onChange={(v) => updateEntry(idx, { quantity: v })} />
+            <NumField label={t('steel.proc.qtyT')} required value={en.quantity} onChange={(v) => updateEntry(idx, { quantity: v })} />
             <CountrySelect
-              label="Država porijekla"
+              label={t('steel.pre.countryOrigin')}
               countries={countries}
               value={countries.find((c) => c.country === en.countryOfOrigin)?.id ?? null}
               onChange={(c) => updateEntry(idx, { countryOfOrigin: c?.country ?? '' })}
             />
             {ambiguous && (
               <SelectField
-                label="Agregirana kategorija (7205)"
+                label={t('steel.pd.aggCategory')}
                 value={en.aggregatedCategory || 'IRON_STEEL_PRODUCTS'}
                 options={[
                   { value: 'IRON_STEEL_PRODUCTS', label: categoryLabel('IRON_STEEL_PRODUCTS') },
@@ -128,25 +130,25 @@ export function SteelProductDetailsStep({
           </RowCard>
         );
       })}
-      <AddButton label="Dodaj proizvod" onClick={addEntry} />
+      <AddButton label={t('steel.proc.addProduct')} onClick={addEntry} />
       <IssueList
         errors={errors}
         warnings={warnings}
         infos={[
-          ...(pending ? ['Provjera CN kodova u toku…'] : []),
-          ...(mappingError ? [`Lista CN kodova nije učitana (${mappingError}).`] : []),
+          ...(pending ? [t('steel.proc.cnChecking')] : []),
+          ...(mappingError ? [t('steel.pd.cnListError', { error: mappingError })] : []),
         ]}
       />
       <NavButtons onBack={onBack} onNext={onNext} nextDisabled={errors.length > 0 || pending} saving={saving} saveError={saveError} />
 
       <Dialog open={infoOpen} onClose={() => setInfoOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle sx={{ fontFamily: T.font.display, fontWeight: 600, color: T.color.ink, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          CN kodovi – željezo i čelik
-          <IconButton onClick={() => setInfoOpen(false)} size="small" aria-label="Zatvori"><Close fontSize="small" /></IconButton>
+          {t('steel.pd.dialogTitle')}
+          <IconButton onClick={() => setInfoOpen(false)} size="small" aria-label={t('common.close')}><Close fontSize="small" /></IconButton>
         </DialogTitle>
         <DialogContent dividers>
           <Typography sx={{ fontFamily: T.font.body, color: T.color.inkSoft, mb: 2, fontSize: '0.9rem' }}>
-            Kodovi s 4 ili 6 cifara obuhvataju sve 8-cifrene kodove koji počinju istim ciframa. Isključeni su ferosilicij i ostale navedene ferolegure (7202 2, 7202 30 00 …) te otpad i lom (7204).
+            {t('steel.pd.dialogText')}
           </Typography>
           <Box display="grid" gap={1}>
             {suggestions.map((m) => (

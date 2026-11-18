@@ -1,6 +1,7 @@
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { DynamicQuestionStep } from './DynamicQuestionStep';
 import type { QuestionWithOptions } from '../hooks/useQuestionsByStep';
+import { useTranslation } from 'react-i18next';
 
 const T = {
   font: { body: "'DM Sans', system-ui, sans-serif" },
@@ -32,6 +33,7 @@ export function QuestionStepWrapper({
   onNext,
   title,
 }: QuestionStepWrapperProps) {
+  const { t } = useTranslation();
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight={120}>
@@ -49,7 +51,7 @@ export function QuestionStepWrapper({
   if (!questions || questions.length === 0) {
     return (
       <Typography sx={{ fontFamily: T.font.body, color: T.color.muted }}>
-        No questions available for this step.
+        {t('anode.noQuestions')}
       </Typography>
     );
   }

@@ -9,11 +9,11 @@ import {
   ELECTRICITY_SOURCES, IS_Q, checkNonNegative, checkPositive, newRowId, parseJsonRows, processCoversSinter, processLabel,
   type ElectricityRow, type StepIssue,
 } from '../../utils/steelSteps';
-
-const HELP = 'Indirektne emisije uračunavaju se samo za CN 2601 12 00. Za zajednički proces unesite samo potrošnju sinter/pelet postrojenja. Ako se struja dobija iz više izvora, unesite udjele izvora (ponderisani prosjek, čl. 9 Uredbe 2025/2547).';
+import { useTranslation } from 'react-i18next';
 
 export function SteelElectricityStep({ data, questions, saving, saveError, onBack, onSubmit }: SteelStepProps) {
-  const meta = questionMeta(questions, IS_Q.ELECTRICITY, 'Potrošnja električne energije – samo za aglomeriranu rudu (sinter/pelete)', HELP);
+  const { t } = useTranslation();
+  const meta = questionMeta(questions, IS_Q.ELECTRICITY, t('steel.el.label'), t('steel.el.help'));
   const { countries } = useCountries();
   const sinterProcesses = useMemo(() => data.processes.filter(processCoversSinter), [data.processes]);
   const sinterIds = useMemo(() => new Set(sinterProcesses.map((p) => p.process_id)), [sinterProcesses]);
@@ -52,21 +52,21 @@ export function SteelElectricityStep({ data, questions, saving, saveError, onBac
     const w: StepIssue[] = [];
     sinterProcesses.forEach((p) => {
       if (!rows.some((r) => r.process_id === p.process_id)) {
-        e.push({ code: 'IS_E_SINTER_EL_MISSING', message: `Proces ${p.process_id}: proces aglomerirane rude mora imati potrošnju električne energije.` });
+        e.push({ code: 'IS_E_SINTER_EL_MISSING', message: t('steel.el.eMissing', { id: p.process_id }) });
       }
     });
     rows.forEach((r, idx) => {
-      const what = `Električna energija ${idx + 1} (${r.process_id})`;
+      const what = t('steel.el.what', { n: idx + 1, process: r.process_id });
       checkPositive(r.mwh, what, e);
       if (r.izvor === 'GRID') {
-        if (!r.drzava && !data.installationCountry) e.push({ code: '', message: `${what}: odaberite državu mreže.` });
+        if (!r.drzava && !data.installationCountry) e.push({ code: '', message: t('steel.el.eCountry', { what }) });
       } else {
-        checkNonNegative(r.ef, `${what}, EF`, e, true);
-        if (!r.dokazi) w.push({ code: 'IS_W_EL_NO_EVIDENCE', message: `${what}: bez dokaza se koristi zadani emisioni faktor mreže.` });
+        checkNonNegative(r.ef, t('steel.ef.ef', { what }), e, true);
+        if (!r.dokazi) w.push({ code: 'IS_W_EL_NO_EVIDENCE', message: t('steel.el.wNoEvidence', { what }) });
       }
     });
     return { errors: e, warnings: w };
-  }, [rows, sinterProcesses, data.installationCountry]);
+  }, [rows, sinterProcesses, data.installationCountry, t]);
 
   const countryOptions = countries.map((c) => ({ value: c.country, label: c.country }));
 
@@ -75,8 +75,8 @@ export function SteelElectricityStep({ data, questions, saving, saveError, onBac
       <StepHeader title={meta.label} help={meta.help} />
       {sinterProcesses.length === 0 ? (
         <Alert severity="info" sx={{ borderRadius: T.radius.sm, fontFamily: T.font.body }}>
-          Ovaj korak nije potreban za vaše procese.
-          {ignoredCount > 0 && ` Ranije uneseni redovi (${ignoredCount}) se ne koriste i bit će uklonjeni.`}
+          {t('steel.el.notNeeded')}
+          {ignoredCount > 0 && t('steel.el.ignored', { count: ignoredCount })}
         </Alert>
       ) : (
         sinterProcesses.map((p) => (
@@ -88,29 +88,29 @@ export function SteelElectricityStep({ data, questions, saving, saveError, onBac
               const country = r.drzava || data.installationCountry;
               const ef = gridEf[country];
               return (
-                <RowCard key={r.row_id} title={`Izvor ${idx + 1}`} onRemove={() => setRows((prev) => prev.filter((x) => x.row_id !== r.row_id))}>
-                  <NumField label="Potrošnja (MWh)" required value={r.mwh} onChange={(v) => upd(r.row_id, { mwh: v })} />
-                  <SelectField label="Izvor električne energije" value={r.izvor} options={ELECTRICITY_SOURCES}
+                <RowCard key={r.row_id} title={t('steel.el.sourceN', { n: idx + 1 })} onRemove={() => setRows((prev) => prev.filter((x) => x.row_id !== r.row_id))}>
+                  <NumField label={t('steel.el.consumption')} required value={r.mwh} onChange={(v) => upd(r.row_id, { mwh: v })} />
+                  <SelectField label={t('steel.el.source')} value={r.izvor} options={ELECTRICITY_SOURCES}
                     onChange={(v) => upd(r.row_id, { izvor: v, ...(v === 'GRID' ? { ef: '', dokazi: false } : {}) })} />
-                  <SelectField label="Država mreže" value={r.drzava} options={countryOptions} emptyLabel="Država postrojenja"
+                  <SelectField label={t('steel.el.gridCountry')} value={r.drzava} options={countryOptions} emptyLabel={t('steel.el.installationCountry')}
                     onChange={(v) => upd(r.row_id, { drzava: v })} />
                   {r.izvor !== 'GRID' && (
                     <>
-                      <NumField label="Stvarni EF (t CO2/MWh)" required value={r.ef} onChange={(v) => upd(r.row_id, { ef: v })} />
-                      <CheckField label="Dokazi za verifikatora su dostupni" checked={r.dokazi} onChange={(v) => upd(r.row_id, { dokazi: v })} />
+                      <NumField label={t('steel.el.actualEf')} required value={r.ef} onChange={(v) => upd(r.row_id, { ef: v })} />
+                      <CheckField label={t('steel.ef.evidence')} checked={r.dokazi} onChange={(v) => upd(r.row_id, { dokazi: v })} />
                     </>
                   )}
                   <Box sx={{ gridColumn: '1 / -1' }}>
                     {ef && (
                       <Typography sx={{ fontSize: '0.78rem', color: T.color.muted }}>
-                        Zadani EF mreže ({ef.country}): {ef.efTPerMwh} t CO2/MWh{ef.fallbackUsed ? ' – država nije u tabeli, koristi se „Other countries and territories“' : ''} · {ef.source}
+                        {t('steel.el.defaultEf', { country: ef.country, ef: ef.efTPerMwh, fallback: ef.fallbackUsed ? t('steel.el.fallback') : '', source: ef.source })}
                       </Typography>
                     )}
                   </Box>
                 </RowCard>
               );
             })}
-            <AddButton label="Dodaj izvor električne energije" onClick={() => setRows((prev) => [...prev, newRow(p.process_id)])} />
+            <AddButton label={t('steel.el.addSource')} onClick={() => setRows((prev) => [...prev, newRow(p.process_id)])} />
             <Divider sx={{ mt: 1, borderColor: T.color.lineFaint }} />
           </Box>
         ))

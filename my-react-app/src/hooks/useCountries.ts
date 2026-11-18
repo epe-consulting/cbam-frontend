@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiRequest } from '../utils/api';
+import { tr } from '../i18n';
 
 export interface CountryDto {
   id: number;
@@ -34,10 +35,10 @@ export function useCountries(): {
       const result = await apiRequest<CountriesResponse>('/countries/active');
       if (cancelled) return;
       if (result === null) {
-        setError('Session expired or not authenticated');
+        setError(tr('err.notAuthenticated'));
         setCountries([]);
       } else if (!result.data.success || !result.data.countries) {
-        setError(result.data.message ?? 'Failed to load countries');
+        setError(result.data.message ?? tr('err.countries'));
         setCountries([]);
       } else {
         setCountries(result.data.countries);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Button,
@@ -11,6 +11,8 @@ import {
   Typography,
 } from '@mui/material';
 import { Add, ArrowBack, ArrowForward, Close, Delete, InfoOutlined } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
+import { useCnCodes } from '../hooks/useCnCodes';
 
 const T = {
   font: {
@@ -60,17 +62,8 @@ export interface ProductDetailsStepProps {
   onNext: () => void;
 }
 
-const cnCodeInfo: Array<{ code: string; description: string }> = [
-  { code: '7601', description: 'Neobrađeni aluminij (ingoti, blokovi i slični oblici).' },
-  { code: '7604', description: 'Šipke, profilne šipke i profili od aluminija.' },
-  { code: '7605', description: 'Žica od aluminija.' },
-  { code: '7606', description: 'Ploče, limovi i trake od aluminija debljine veće od 0,2 mm.' },
-  { code: '7607', description: 'Folije od aluminija (debljine do 0,2 mm).' },
-  { code: '7608', description: 'Cijevi od aluminija.' },
-  { code: '7609', description: 'Spojnice (fitingi) za cijevi od aluminija.' },
-  { code: '7610', description: 'Konstrukcije i dijelovi konstrukcija od aluminija.' },
-  { code: '7616', description: 'Ostali proizvodi od aluminija.' },
-];
+// CN code descriptions for the info dialog come from GET /cn-codes/active (localized by the backend).
+
 
 export function ProductDetailsStep({
   title,
@@ -81,7 +74,18 @@ export function ProductDetailsStep({
   onBack,
   onNext,
 }: ProductDetailsStepProps) {
+  const { t } = useTranslation();
   const [cnInfoOpen, setCnInfoOpen] = useState(false);
+  const { cnCodes: cnCodeInfo } = useCnCodes();
+
+  // Close the CN info dialog with Escape even when focus is not inside the dialog
+  // (MUI only handles Escape for key events that reach the modal itself).
+  useEffect(() => {
+    if (!cnInfoOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setCnInfoOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [cnInfoOpen]);
 
   const allValid = entries.length > 0
     && entries.every(
@@ -102,7 +106,7 @@ export function ProductDetailsStep({
             </Typography>
             <IconButton
               size="small"
-              aria-label="CN code information"
+              aria-label={t('product.details.cnInfoAria')}
               onClick={() => setCnInfoOpen(true)}
               sx={{ color: T.color.forest }}
             >
@@ -132,7 +136,7 @@ export function ProductDetailsStep({
               size="small"
               onClick={() => removeEntry(index)}
               sx={{ position: 'absolute', top: 8, right: 8, color: T.color.muted, '&:hover': { bgcolor: T.color.errorLight, color: T.color.error } }}
-              aria-label="Remove entry"
+              aria-label={t('common.removeEntry')}
             >
               <Delete fontSize="small" />
             </IconButton>
@@ -141,7 +145,7 @@ export function ProductDetailsStep({
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
-              label="Product Name"
+              label={t('product.details.name')}
               value={entry.productName}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateEntry(index, { productName: e.target.value })}
               sx={textFieldSx}
@@ -150,7 +154,7 @@ export function ProductDetailsStep({
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
-              label="CN Code"
+              label={t('product.details.cn')}
               value={entry.cnCode}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateEntry(index, { cnCode: e.target.value })}
               sx={textFieldSx}
@@ -159,7 +163,7 @@ export function ProductDetailsStep({
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
-              label="Quantity (tonnes)"
+              label={t('product.details.qty')}
               value={entry.quantity}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateEntry(index, { quantity: e.target.value })}
               slotProps={{ htmlInput: { min: 0, step: 'any' } }}
@@ -169,7 +173,7 @@ export function ProductDetailsStep({
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
-              label="Country of Origin"
+              label={t('product.details.country')}
               value={entry.countryOfOrigin}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateEntry(index, { countryOfOrigin: e.target.value })}
               sx={textFieldSx}
@@ -196,7 +200,7 @@ export function ProductDetailsStep({
             '&:hover': { bgcolor: T.color.mint, borderColor: T.color.mintDark },
           }}
         >
-          + Add another
+          {t('common.addAnother')}
         </Button>
       </Grid>
 
@@ -218,7 +222,7 @@ export function ProductDetailsStep({
               '&:hover': { bgcolor: T.color.mint, borderColor: T.color.mintDark, color: T.color.forest },
             }}
           >
-            Back
+            {t('common.back')}
           </Button>
           <Button
             type="button"
@@ -237,38 +241,38 @@ export function ProductDetailsStep({
               '&:hover': { bgcolor: T.color.ctaHover },
             }}
           >
-            Next
+            {t('common.next')}
           </Button>
         </Box>
       </Grid>
 
       <Dialog open={cnInfoOpen} onClose={() => setCnInfoOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle sx={{ fontFamily: T.font.display, fontWeight: 600, color: T.color.ink, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          Informacije o CN kodovima
-          <IconButton onClick={() => setCnInfoOpen(false)} size="small" aria-label="Close">
+          {t('product.details.cnInfoTitle')}
+          <IconButton onClick={() => setCnInfoOpen(false)} size="small" aria-label={t('common.close')}>
             <Close fontSize="small" />
           </IconButton>
         </DialogTitle>
         <DialogContent dividers>
           <Typography sx={{ fontFamily: T.font.body, color: T.color.inkSoft, mb: 2 }}>
-            Odaberite odgovarajući CN kod prema tipu proizvoda koji unosite:
+            {t('product.details.cnInfoIntro')}
           </Typography>
           <Box display="grid" gap={1.25}>
             {cnCodeInfo.map((item) => (
               <Box
-                key={item.code}
+                key={item.id}
                 sx={{
                   p: 1.25,
                   border: `1px solid ${T.color.lineFaint}`,
                   borderRadius: T.radius.sm,
                   bgcolor: T.color.warmWhite,
                   display: 'grid',
-                  gridTemplateColumns: '80px 1fr',
+                  gridTemplateColumns: '96px 1fr',
                   gap: 1.5,
                 }}
               >
                 <Typography sx={{ fontFamily: T.font.body, fontWeight: 700, color: T.color.forest }}>
-                  {item.code}
+                  {item.cnCode}
                 </Typography>
                 <Typography sx={{ fontFamily: T.font.body, color: T.color.inkSoft }}>
                   {item.description}

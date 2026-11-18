@@ -15,8 +15,7 @@ import {
   parseJsonRows, processCoversSinter, processRequiresMb, toNum,
   type ProcessRow, type SteelCategory, type SteelMethod, type StepIssue,
 } from '../../utils/steelSteps';
-
-const HELP = "Definišite svaki proizvodni proces (npr. sinter postrojenje, visoka peć, čeličana, valjaonica) i robu koja iz njega izlazi. Isti CN kod može izlaziti samo iz jednog procesa. Ako se prekursori proizvedeni u postrojenju ne prodaju, možete definisati jedan zajednički proces ('bubble').";
+import { useTranslation } from 'react-i18next';
 
 function emptyProcess(processId: string): ProcessRow {
   return {
@@ -47,7 +46,8 @@ function outputCategoryOk(res: IsCnValidation, covered: string[]): boolean {
 }
 
 export function SteelProcessesStep({ data, questions, saving, saveError, onBack, onSubmit }: SteelStepProps) {
-  const meta = questionMeta(questions, IS_Q.PROCESS, 'Proizvodni procesi u postrojenju', HELP);
+  const { t } = useTranslation();
+  const meta = questionMeta(questions, IS_Q.PROCESS, t('steel.proc.label'), t('steel.proc.help'));
   const initialIds = useMemo(() => data.processes.map((p) => p.process_id), [data.processes]);
   // Next free number; ids are never reused within the session (spec §5.4). An empty step starts with P1.
   const counterRef = useRef<number>(initialIds.length > 0 ? Number(nextProcessId(initialIds).slice(1)) : 2);
@@ -80,49 +80,49 @@ export function SteelProcessesStep({ data, questions, saving, saveError, onBack,
     const e: StepIssue[] = [];
     const w: StepIssue[] = [];
     let pend = false;
-    if (rows.length === 0) e.push({ code: 'IS_E_QTY', message: 'Unesite barem jedan proizvodni proces.' });
+    if (rows.length === 0) e.push({ code: 'IS_E_QTY', message: t('steel.proc.eNone') });
     const cnToProcesses: Record<string, Set<string>> = {};
     rows.forEach((p) => {
-      const label = `Proces ${p.process_id}`;
+      const label = t('steel.proc.process', { id: p.process_id });
       const cats = coveredCategories(p);
-      if (p.tip === 'SINGLE' && !p.kategorija) e.push({ code: '', message: `${label}: odaberite agregiranu kategoriju robe.` });
+      if (p.tip === 'SINGLE' && !p.kategorija) e.push({ code: '', message: t('steel.proc.eCategory', { label }) });
       if (p.tip === 'JOINT') {
-        if (p.obuhvacene_kategorije.length < 2) e.push({ code: 'IS_E_JOINT_NOT_ELIGIBLE', message: `${label}: zajednički proces mora obuhvatiti najmanje 2 kategorije.` });
-        if (!p.potvrda_bez_prodaje) e.push({ code: 'IS_E_JOINT_NOT_ELIGIBLE', message: `${label}: zajednički proces je dozvoljen samo ako se nijedan prekursor proizveden unutar procesa ne prodaje niti prenosi.` });
+        if (p.obuhvacene_kategorije.length < 2) e.push({ code: 'IS_E_JOINT_NOT_ELIGIBLE', message: t('steel.proc.eJointMin', { label }) });
+        if (!p.potvrda_bez_prodaje) e.push({ code: 'IS_E_JOINT_NOT_ELIGIBLE', message: t('steel.proc.eJointNoSale', { label }) });
       }
       (cats as SteelCategory[]).forEach((c) => {
         const allowed = CATEGORY_ROUTES[c] ?? [];
         if (!p.ruta.some((r) => allowed.includes(r as never))) {
-          e.push({ code: '', message: `${label}: odaberite proizvodnu rutu za kategoriju „${categoryLabel(c)}“.` });
+          e.push({ code: '', message: t('steel.proc.eRoute', { label, category: categoryLabel(c) }) });
         }
       });
       if (processRequiresMb(p) && p.metoda !== 'MASS_BALANCE') {
-        e.push({ code: 'IS_E_METHOD', message: `${label}: za ovu kategoriju obavezna je metoda masenog bilansa.` });
+        e.push({ code: 'IS_E_METHOD', message: t('steel.proc.eMethodMb', { label }) });
       }
-      if (p.proizvodi.length === 0) e.push({ code: 'IS_E_QTY', message: `${label}: unesite barem jedan proizvod (izlaz) procesa.` });
+      if (p.proizvodi.length === 0) e.push({ code: 'IS_E_QTY', message: t('steel.proc.eNoOutput', { label }) });
       const al = p.proizvodi.reduce((s, o) => s + (toNum(o.kolicina) ?? 0), 0);
-      if (p.proizvodi.length > 0 && al <= 0) e.push({ code: 'IS_E_QTY', message: `${label}: nivo aktivnosti (zbir proizvedenih količina) mora biti veći od 0.` });
+      if (p.proizvodi.length > 0 && al <= 0) e.push({ code: 'IS_E_QTY', message: t('steel.proc.eActivity', { label }) });
       p.proizvodi.forEach((o, j) => {
-        const what = `${label}, proizvod ${j + 1}`;
+        const what = t('steel.proc.productN', { label, n: j + 1 });
         const chk = checkCn(o.cn_code, cnResults, what);
         if (chk.state === 'error') e.push(chk.issue);
         else if (chk.state === 'pending') pend = true;
         else {
           if (chk.result.precursorOnly) {
-            e.push({ code: 'IS_E_CN_NOT_CBAM_STEEL', message: `${what}: vodik (2804 10 00) nije roba sektora željeza i čelika.` });
+            e.push({ code: 'IS_E_CN_NOT_CBAM_STEEL', message: t('steel.proc.eHydrogen', { what }) });
           } else if (!outputCategoryOk(chk.result, cats)) {
-            e.push({ code: 'IS_E_OUTPUT_CATEGORY', message: `${what}: CN ${o.cn_code} pripada kategoriji „${categoryLabel(chk.result.category)}“ koju ovaj proces ne obuhvata.` });
+            e.push({ code: 'IS_E_OUTPUT_CATEGORY', message: t('steel.proc.eOutputCategory', { what, cn: o.cn_code, category: categoryLabel(chk.result.category) }) });
           }
         }
         const qty = toNum(o.kolicina);
-        if (qty == null || qty <= 0) e.push({ code: 'IS_E_QTY', message: `${what}: količina mora biti veća od 0.` });
+        if (qty == null || qty <= 0) e.push({ code: 'IS_E_QTY', message: t('steel.msg.qty', { what }) });
         const d = cnDigits(o.cn_code);
         if (/^\d{8}$/.test(d)) (cnToProcesses[d] ??= new Set()).add(p.process_id);
       });
     });
     Object.entries(cnToProcesses).forEach(([d, set]) => {
       if (set.size > 1) {
-        e.push({ code: 'IS_E_CN_MULTI_PROCESS', message: `CN ${d} je izlaz više procesa (${[...set].join(', ')}). Isti CN kod može izlaziti samo iz jednog procesa.` });
+        e.push({ code: 'IS_E_CN_MULTI_PROCESS', message: t('steel.proc.eCnMulti', { cn: d, processes: [...set].join(', ') }) });
       }
     });
     data.products.forEach((prod) => {
@@ -130,12 +130,12 @@ export function SteelProcessesStep({ data, questions, saving, saveError, onBack,
       if (d && !cnToProcesses[d]) {
         w.push({
           code: 'IS_W_PRODUCT_NO_PROCESS_DEFAULT_USED',
-          message: `Deklarisani proizvod ${prod.cn_code} nije izlaz nijednog procesa – za njega će se koristiti zadana vrijednost.`,
+          message: t('steel.proc.wNoProcess', { cn: prod.cn_code }),
         });
       }
     });
     return { errors: e, warnings: w, pending: pend };
-  }, [rows, cnResults, data.products]);
+  }, [rows, cnResults, data.products, t]);
 
   const handleNext = () => {
     const finalRows: ProcessRow[] = rows.map((p) => {
@@ -187,16 +187,16 @@ export function SteelProcessesStep({ data, questions, saving, saveError, onBack,
         return (
           <RowCard
             key={p.row_id}
-            title={`Proces ${p.process_id}`}
+            title={t('steel.proc.process', { id: p.process_id })}
             onRemove={rows.length > 1 ? () => setRows((prev) => prev.filter((_, idx) => idx !== i)) : undefined}
           >
-            <TextInput label="Naziv procesa" value={p.naziv} onChange={(v) => update(i, { naziv: v })} />
+            <TextInput label={t('steel.proc.name')} value={p.naziv} onChange={(v) => update(i, { naziv: v })} />
             <SelectField
-              label="Tip procesa"
+              label={t('steel.proc.type')}
               value={p.tip}
               options={[
-                { value: 'SINGLE', label: 'Pojedinačni proces' },
-                { value: 'JOINT', label: "Zajednički proces ('bubble')" },
+                { value: 'SINGLE', label: t('steel.proc.typeSingle') },
+                { value: 'JOINT', label: t('steel.proc.typeJoint') },
               ]}
               onChange={(v) => {
                 if (v === 'JOINT') update(i, { tip: 'JOINT', obuhvacene_kategorije: p.kategorija ? [p.kategorija] : [] });
@@ -205,7 +205,7 @@ export function SteelProcessesStep({ data, questions, saving, saveError, onBack,
             />
             {p.tip === 'SINGLE' ? (
               <SelectField
-                label="Agregirana kategorija robe"
+                label={t('steel.proc.category')}
                 value={p.kategorija}
                 required
                 options={STEEL_CATEGORIES.map((c) => ({ value: c, label: CATEGORY_LABELS[c] }))}
@@ -218,7 +218,7 @@ export function SteelProcessesStep({ data, questions, saving, saveError, onBack,
             {p.tip === 'JOINT' && (
               <FullRow>
                 <Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem', fontWeight: 500, color: T.color.ink }}>
-                  Obuhvaćene kategorije (najmanje 2)
+                  {t('steel.proc.coveredCategories')}
                 </Typography>
                 <Box display="flex" flexWrap="wrap" columnGap={2}>
                   {STEEL_CATEGORIES.map((c) => (
@@ -235,7 +235,7 @@ export function SteelProcessesStep({ data, questions, saving, saveError, onBack,
                   ))}
                 </Box>
                 <CheckField
-                  label="Nijedan prekursor proizveden unutar ovog procesa se ne prodaje niti prenosi"
+                  label={t('steel.proc.noSaleConfirm')}
                   checked={p.potvrda_bez_prodaje}
                   onChange={(v) => update(i, { potvrda_bez_prodaje: v })}
                 />
@@ -243,9 +243,9 @@ export function SteelProcessesStep({ data, questions, saving, saveError, onBack,
             )}
 
             <FullRow>
-              <Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem', fontWeight: 500, color: T.color.ink }}>Proizvodna ruta</Typography>
+              <Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem', fontWeight: 500, color: T.color.ink }}>{t('steel.proc.route')}</Typography>
               {routeOptions.length === 0 ? (
-                <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>Prvo odaberite kategoriju.</Typography>
+                <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>{t('steel.proc.selectCategoryFirst')}</Typography>
               ) : (
                 <Box display="flex" flexWrap="wrap" columnGap={2}>
                   {routeOptions.map((r) => (
@@ -261,7 +261,7 @@ export function SteelProcessesStep({ data, questions, saving, saveError, onBack,
             </FullRow>
 
             <SelectField
-              label="Metoda"
+              label={t('steel.proc.method')}
               value={p.metoda}
               disabled={mbForced}
               options={(Object.keys(METHOD_LABELS) as SteelMethod[]).map((m) => ({ value: m, label: METHOD_LABELS[m] }))}
@@ -270,15 +270,15 @@ export function SteelProcessesStep({ data, questions, saving, saveError, onBack,
             <FullRow>
               {mbForced && (
                 <Typography sx={{ fontFamily: T.font.body, fontSize: '0.8rem', color: T.color.muted }}>
-                  Za ovu kategoriju ugljik u proizvodu, šljaci i otpadu uzima se u obzir metodom masenog bilansa – metoda je obavezna.
+                  {t('steel.proc.mbForced')}
                 </Typography>
               )}
             </FullRow>
 
             <FullRow>
-              <SectionTitle>Proizvodi procesa (nivo aktivnosti u izvještajnom periodu, t)</SectionTitle>
+              <SectionTitle>{t('steel.proc.outputsTitle')}</SectionTitle>
               <Typography sx={{ fontFamily: T.font.body, fontSize: '0.8rem', color: T.color.muted, mb: 1 }}>
-                Količina proizvedena u izvještajnom periodu (prodana ili korištena kao prekursor u drugom procesu), bez otpada, škarta, nusproizvoda i otpadnih materijala.
+                {t('steel.proc.outputsHelp')}
               </Typography>
               {p.proizvodi.map((o, j) => (
                 <Box key={j} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr auto' }, gap: 2, mb: 1.5, alignItems: 'center' }}>
@@ -287,17 +287,17 @@ export function SteelProcessesStep({ data, questions, saving, saveError, onBack,
                     options={productCns}
                     inputValue={o.cn_code}
                     onInputChange={(_, v) => update(i, { proizvodi: p.proizvodi.map((x, k) => (k === j ? { ...x, cn_code: v } : x)) })}
-                    renderInput={(params) => <TextField {...params} size="small" label="CN kod (8 cifara)" required sx={textFieldSx} />}
+                    renderInput={(params) => <TextField {...params} size="small" label={t('steel.proc.cn8')} required sx={textFieldSx} />}
                   />
                   <NumField
-                    label="Količina (t)"
+                    label={t('steel.proc.qtyT')}
                     value={o.kolicina}
                     required
                     onChange={(v) => update(i, { proizvodi: p.proizvodi.map((x, k) => (k === j ? { ...x, kolicina: v } : x)) })}
                   />
                   <IconButton
                     size="small"
-                    aria-label="Ukloni proizvod"
+                    aria-label={t('steel.proc.removeProduct')}
                     disabled={p.proizvodi.length <= 1}
                     onClick={() => update(i, { proizvodi: p.proizvodi.filter((_, k) => k !== j) })}
                     sx={{ color: T.color.muted, '&:hover': { bgcolor: T.color.errorLight, color: T.color.error } }}
@@ -306,16 +306,16 @@ export function SteelProcessesStep({ data, questions, saving, saveError, onBack,
                   </IconButton>
                 </Box>
               ))}
-              <AddButton label="Dodaj proizvod" onClick={() => update(i, { proizvodi: [...p.proizvodi, { cn_code: '', kolicina: '' }] })} />
+              <AddButton label={t('steel.proc.addProduct')} onClick={() => update(i, { proizvodi: [...p.proizvodi, { cn_code: '', kolicina: '' }] })} />
             </FullRow>
           </RowCard>
         );
       })}
-      <AddButton label="Dodaj proces" onClick={addProcess} />
+      <AddButton label={t('steel.proc.addProcess')} onClick={addProcess} />
       {rows.length < data.processes.length && (
-        <IssueList infos={['Brisanjem procesa brišu se i svi njegovi redovi u narednim koracima (goriva, maseni bilans, energetski tokovi, električna energija, prekursori, parametri).']} />
+        <IssueList infos={[t('steel.proc.deleteInfo')]} />
       )}
-      <IssueList errors={errors} warnings={warnings} infos={pending ? ['Provjera CN kodova u toku…'] : undefined} />
+      <IssueList errors={errors} warnings={warnings} infos={pending ? [t('steel.proc.cnChecking')] : undefined} />
       <NavButtons onBack={onBack} onNext={handleNext} nextDisabled={errors.length > 0 || pending} saving={saving} saveError={saveError} />
     </Box>
   );

@@ -65,6 +65,8 @@ import {
   EditNote,
   TrendingUp,
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from './components/LanguageSwitcher';
 
 /* ─── Design tokens (shared across Panonia) ─── */
 const T = {
@@ -157,6 +159,7 @@ interface User {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
+  const { t } = useTranslation();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [userName, setUserName] = useState<string>('User');
   const [, setUser] = useState<User | null>(null);
@@ -358,7 +361,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         }),
       });
       if (calcResult === null || !calcResult.data.success || !calcResult.data.calculation?.id) {
-        setNewCalcError((calcResult?.data as { message?: string })?.message ?? 'Failed to create calculation');
+        setNewCalcError((calcResult?.data as { message?: string })?.message ?? t('dashboard.createFailed'));
         setNewCalcLoading(false);
         return;
       }
@@ -481,7 +484,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 Panonia
               </Typography>
               <Chip
-                label="Dashboard"
+                label={t('dashboard.chip')}
                 size="small"
                 sx={{
                   fontFamily: T.font.body, fontWeight: 600, fontSize: '0.7rem', letterSpacing: '0.04em',
@@ -490,9 +493,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               />
             </Box>
 
+            <LanguageSwitcher />
+
             <IconButton
               onClick={() => navigate('/cbam-guide')}
-              title="CBAM Guide"
+              title={t('dashboard.cbamGuide')}
               sx={{ mr: 1, color: T.color.muted, '&:hover': { bgcolor: T.color.mint, color: T.color.forest } }}
             >
               <Help sx={{ fontSize: 22 }} />
@@ -509,7 +514,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 px: 2, '&:hover': { bgcolor: T.color.mint, color: T.color.forest },
               }}
             >
-              {loading ? 'Loading…' : userName}
+              {loading ? t('common.loading') : userName}
             </Button>
 
             <Menu
@@ -523,7 +528,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 sx={{ fontFamily: T.font.body, borderRadius: '8px', mx: 0.5 }}
               >
                 <ListItemIcon><Settings sx={{ fontSize: 20, color: T.color.muted }} /></ListItemIcon>
-                <ListItemText primaryTypographyProps={{ fontFamily: T.font.body }}>Settings</ListItemText>
+                <ListItemText primaryTypographyProps={{ fontFamily: T.font.body }}>{t('dashboard.settings')}</ListItemText>
               </MenuItem>
               <Divider sx={{ borderColor: T.color.lineFaint, mx: 1 }} />
               <MenuItem
@@ -531,7 +536,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 sx={{ fontFamily: T.font.body, borderRadius: '8px', mx: 0.5 }}
               >
                 <ListItemIcon><Logout sx={{ fontSize: 20, color: T.color.muted }} /></ListItemIcon>
-                <ListItemText primaryTypographyProps={{ fontFamily: T.font.body }}>Logout</ListItemText>
+                <ListItemText primaryTypographyProps={{ fontFamily: T.font.body }}>{t('dashboard.logout')}</ListItemText>
               </MenuItem>
             </Menu>
           </Toolbar>

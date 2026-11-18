@@ -86,6 +86,7 @@ export function optionCodeToFrontendState(questionCode: string, optionCode: stri
     case 'ALU_FLUE_GAS_TREATMENT':
       if (optionCode === 'SODA_ASH') return 'soda-ash';
       if (optionCode === 'LIMESTONE') return 'limestone';
+      if (optionCode === 'SODA_ASH_AND_LIMESTONE') return 'soda-ash-and-limestone';
       if (optionCode === 'NOTHING') return 'nothing';
       return lower;
     default:
@@ -138,6 +139,7 @@ export function frontendStateToOptionCode(questionCode: string, frontendValue: s
     case 'ALU_FLUE_GAS_TREATMENT':
       if (frontendValue === 'soda-ash') return 'SODA_ASH';
       if (frontendValue === 'limestone') return 'LIMESTONE';
+      if (frontendValue === 'soda-ash-and-limestone') return 'SODA_ASH_AND_LIMESTONE';
       if (frontendValue === 'nothing') return 'NOTHING';
       return frontendValue.toUpperCase();
     default:

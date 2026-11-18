@@ -1,4 +1,5 @@
 import { apiRequest } from '../utils/api';
+import { tr } from '../i18n';
 
 export type CalculationStatus = 'DRAFT' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 
@@ -22,7 +23,7 @@ interface CalculationResponse {
 export async function getCalculation(id: number): Promise<CalculationDto> {
   const result = await apiRequest<CalculationResponse>(`/calculations/${id}`);
   if (result === null || !result.data.success || !result.data.calculation) {
-    throw new Error(result?.data?.message ?? 'Failed to fetch calculation');
+    throw new Error(result?.data?.message ?? tr('err.calculation'));
   }
   const c = result.data.calculation;
   return { id: c.id, status: c.status, currentStep: c.currentStep, createdAt: c.createdAt, modifiedAt: c.modifiedAt };
@@ -41,7 +42,7 @@ export async function patchCalculationWizard(
     body: JSON.stringify(body),
   });
   if (result === null || !result.data.success || !result.data.calculation) {
-    throw new Error(result?.data?.message ?? 'Failed to update calculation');
+    throw new Error(result?.data?.message ?? tr('err.updateCalculation'));
   }
   const c = result.data.calculation;
   return { id: c.id, status: c.status, currentStep: c.currentStep, createdAt: c.createdAt, modifiedAt: c.modifiedAt };

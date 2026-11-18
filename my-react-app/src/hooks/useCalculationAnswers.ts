@@ -4,6 +4,7 @@ import {
   upsertCalculationAnswer,
   deleteCalculationAnswersByCalculationAndQuestions,
 } from '../api/calculationAnswers';
+import { tr } from '../i18n';
 
 /** Map questionId -> valueText (or option code for single/multi choice) */
 export type AnswersMap = Record<number, string>;
@@ -27,7 +28,7 @@ export function useCalculationAnswers(calculationId: number | null) {
       });
       setAnswers(map);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load answers');
+      setError(e instanceof Error ? e.message : tr('err.answers'));
       setAnswers({});
     } finally {
       setLoading(false);
@@ -61,7 +62,7 @@ export function useCalculationAnswers(calculationId: number | null) {
           ...(emissionFactorId != null && { emissionFactorId }),
         });
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to save answer');
+        setError(e instanceof Error ? e.message : tr('err.saveAnswer'));
       }
     },
     [calculationId]
@@ -86,7 +87,7 @@ export function useCalculationAnswers(calculationId: number | null) {
           return next;
         });
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to delete answers');
+        setError(e instanceof Error ? e.message : tr('err.deleteAnswers'));
       }
     },
     [calculationId]

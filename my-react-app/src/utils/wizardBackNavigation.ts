@@ -92,6 +92,13 @@ export function inferPreviousStepFallback(
       return 'ALU_SECONDARY_UNWROUGHT_SOURCES';
     }
 
+    case 'ALU_FLUE_GAS_TREATMENT':
+      // Aluminium products reach flue gas after the remaining fuels (post-025).
+      if (isProductsFlow(lookup) && lookup.hasAnswerByCode('ALU_PRODUCTS_REMAINING_FUEL_ENTRY')) {
+        return 'ALU_PRODUCTS_REMAINING_FUEL_INPUT';
+      }
+      return null;
+
     case 'ALU_PRODUCTS_REMAINING_FUEL_INPUT':
       return lookup.hasAnswerByCode('ALU_PRODUCTS_ALLOYING_PERCENT')
         ? 'ALU_PRODUCTS_ALLOYING_PERCENT'

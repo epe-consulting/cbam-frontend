@@ -12,6 +12,8 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { ArrowForward } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
+import { productCategoryLabel } from '../i18n';
 
 const T = {
   font: {
@@ -49,6 +51,8 @@ export interface ProductInfoStepProps {
   onReportingPeriodToChange: (value: string) => void;
   reportingPeriodError: string | null;
   categoryNames: string[];
+  /** Stored name -> localized label (backend displayName). Values stay the stored names. */
+  categoryLabels?: Record<string, string>;
   categoriesLoading: boolean;
   categoriesError: string | null;
   createError: string | null;
@@ -67,6 +71,7 @@ export function ProductInfoStep({
   onReportingPeriodToChange,
   reportingPeriodError,
   categoryNames,
+  categoryLabels,
   categoriesLoading,
   categoriesError,
   createError,
@@ -75,32 +80,34 @@ export function ProductInfoStep({
   calculationId,
   onNext,
 }: ProductInfoStepProps) {
+  const { t } = useTranslation();
+  const labelOf = (name: string) => categoryLabels?.[name] || productCategoryLabel(name);
   return (
     <>
       <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.2rem', color: T.color.ink, letterSpacing: '-0.02em', mb: 3 }}>
-        Izaberi kategoriju i reporting period
+        {t('product.info.title')}
       </Typography>
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 6 }}>
           <FormControl fullWidth disabled={categoriesLoading} error={!!categoriesError} sx={selectSx}>
-            <InputLabel>Product Category</InputLabel>
+            <InputLabel>{t('product.info.category')}</InputLabel>
             <Select
               value={category}
-              label="Product Category"
+              label={t('product.info.category')}
               onChange={(e: { target: { value: string } }) => onCategoryChange(e.target.value)}
-              renderValue={(v: string) => (categoriesLoading ? 'Loading...' : v)}
+              renderValue={(v: string) => (categoriesLoading ? t('common.loading') : labelOf(v))}
             >
               {categoriesLoading ? (
                 <MenuItem disabled>
                   <Box display="flex" alignItems="center" gap={1}>
                     <CircularProgress size={20} sx={{ color: T.color.forest }} />
-                    <Typography sx={{ fontFamily: T.font.body, fontSize: '0.9rem', color: T.color.muted }}>Loading categories...</Typography>
+                    <Typography sx={{ fontFamily: T.font.body, fontSize: '0.9rem', color: T.color.muted }}>{t('product.info.loadingCategories')}</Typography>
                   </Box>
                 </MenuItem>
               ) : (
                 categoryNames.map((cat) => (
                   <MenuItem key={cat} value={cat} sx={{ fontFamily: T.font.body }}>
-                    {cat}
+                    {labelOf(cat)}
                   </MenuItem>
                 ))
               )}
@@ -115,7 +122,7 @@ export function ProductInfoStep({
         <Grid size={{ xs: 12, md: 3 }}>
           <TextField
             fullWidth
-            label="Od"
+            label={t('product.info.from')}
             type="date"
             value={reportingPeriodFrom}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => onReportingPeriodFromChange(e.target.value)}
@@ -126,7 +133,7 @@ export function ProductInfoStep({
         <Grid size={{ xs: 12, md: 3 }}>
           <TextField
             fullWidth
-            label="Do"
+            label={t('product.info.to')}
             type="date"
             value={reportingPeriodTo}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => onReportingPeriodToChange(e.target.value)}
@@ -164,7 +171,7 @@ export function ProductInfoStep({
                 bgcolor: T.color.forest, '&:hover': { bgcolor: T.color.ctaHover },
               }}
             >
-              {createLoading ? 'Saving...' : calculationLoading ? 'Loading...' : 'Next'}
+              {createLoading ? t('common.saving') : calculationLoading ? t('common.loading') : t('common.next')}
             </Button>
           </Box>
         </Grid>

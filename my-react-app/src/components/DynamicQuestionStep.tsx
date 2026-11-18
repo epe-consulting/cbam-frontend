@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { ArrowBack, ArrowForward } from '@mui/icons-material';
 import type { QuestionWithOptions } from '../hooks/useQuestionsByStep';
+import { useTranslation } from 'react-i18next';
 
 const T = {
   font: {
@@ -64,6 +65,7 @@ export function DynamicQuestionStep({
   onNext,
   nextDisabled = false,
 }: DynamicQuestionStepProps) {
+  const { t } = useTranslation();
   const isHasCarbonYes = (val: string) => val === 'YES' || val === 'yes' || val === 'DA' || val === 'da';
   const visibleQuestions = questions.filter((q) => {
     if (q.code === 'ALU_ANODE_CARBON_PERCENT') {
@@ -183,7 +185,7 @@ export function DynamicQuestionStep({
                 borderColor: T.color.line, color: T.color.inkSoft,
                 '&:hover': { bgcolor: T.color.mint, borderColor: T.color.mintDark, color: T.color.forest },
               }}>
-              Back
+              {t('common.back')}
             </Button>
             <Button
               type="button" variant="contained" size="large" disableElevation
@@ -193,7 +195,7 @@ export function DynamicQuestionStep({
                 fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', borderRadius: T.radius.pill,
                 bgcolor: T.color.forest, '&:hover': { bgcolor: T.color.ctaHover },
               }}>
-              Next
+              {t('common.next')}
             </Button>
           </Box>
         </Grid>

@@ -5,6 +5,7 @@ import {
   upsertCalculationAnswer,
 } from './calculationAnswers';
 import { getAllQuestions } from './questions';
+import { tr } from '../i18n';
 
 /* Company installations maintained in Settings (used instead of re-entering them in the wizard). */
 
@@ -26,7 +27,7 @@ export async function getMyCompanyInstallations(): Promise<CompanyInstallation[]
   const res = await apiRequest<{ success: boolean; installations?: CompanyInstallation[] }>(
     `/installations/company/${companyId}`
   );
-  if (res === null || !res.data.success) throw new Error('Učitavanje postrojenja iz postavki nije uspjelo');
+  if (res === null || !res.data.success) throw new Error(tr('err.installations'));
   return res.data.installations ?? [];
 }
 
@@ -46,7 +47,7 @@ export interface IsCnMappingRow {
 
 export async function getIsCnMapping(): Promise<IsCnMappingRow[]> {
   const res = await apiRequest<{ success: boolean; rows?: IsCnMappingRow[]; message?: string }>('/is/cn-mapping');
-  if (res === null || !res.data.success) throw new Error(res?.data?.message ?? 'Učitavanje CN kodova nije uspjelo');
+  if (res === null || !res.data.success) throw new Error(res?.data?.message ?? tr('err.cnCodes'));
   return res.data.rows ?? [];
 }
 
@@ -68,7 +69,7 @@ export async function validateIsCn(cn: string, allowShort = false): Promise<IsCn
     success: boolean; cnDigits?: string; matchedCnCode?: string; category?: string;
     directOnly?: boolean; ambiguous?: boolean; precursorOnly?: boolean; errorCode?: string; message?: string;
   }>(`/is/cn-validate?${q}`);
-  if (res === null) return { ok: false, errorCode: 'SESSION', message: 'Sesija je istekla' };
+  if (res === null) return { ok: false, errorCode: 'SESSION', message: tr('err.session') };
   const d = res.data;
   if (!d.success) return { ok: false, errorCode: d.errorCode, message: d.message };
   return {
@@ -97,7 +98,7 @@ export interface IsStandardFactor {
 
 export async function getIsStandardFactors(): Promise<IsStandardFactor[]> {
   const res = await apiRequest<{ success: boolean; factors?: IsStandardFactor[]; message?: string }>('/is/standard-factors');
-  if (res === null || !res.data.success) throw new Error(res?.data?.message ?? 'Učitavanje standardnih faktora nije uspjelo');
+  if (res === null || !res.data.success) throw new Error(res?.data?.message ?? tr('err.factors'));
   return res.data.factors ?? [];
 }
 
@@ -128,7 +129,7 @@ export interface IsExemptOrigins {
 
 export async function getIsExemptOrigins(): Promise<IsExemptOrigins> {
   const res = await apiRequest<{ success: boolean; countries?: string[]; territories?: string[]; message?: string }>('/is/exempt-origins');
-  if (res === null || !res.data.success) throw new Error(res?.data?.message ?? 'Učitavanje izuzetih država nije uspjelo');
+  if (res === null || !res.data.success) throw new Error(res?.data?.message ?? tr('err.exempt'));
   return { countries: res.data.countries ?? [], territories: res.data.territories ?? [] };
 }
 

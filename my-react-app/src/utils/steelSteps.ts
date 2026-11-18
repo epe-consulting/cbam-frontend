@@ -3,6 +3,9 @@
  * docs/steel-api-contract.md). Everything regulatory here is copied from the spec.
  */
 
+import i18n, { lazyLabels, lazyOptions, tr } from '../i18n';
+
+/** Stored answer value of the product category – compared by routing, never translate it. */
 export const STEEL_CATEGORY_NAME = 'Iron and Steel';
 
 export function isSteelCategory(category: string | null | undefined): boolean {
@@ -90,17 +93,8 @@ export const STEEL_CATEGORIES: SteelCategory[] = [
   'SINTERED_ORE', 'FEMN', 'FECR', 'FENI', 'PIG_IRON', 'DRI', 'CRUDE_STEEL', 'IRON_STEEL_PRODUCTS',
 ];
 
-export const CATEGORY_LABELS: Record<string, string> = {
-  SINTERED_ORE: 'Aglomerirana željezna ruda (sinter / pelete)',
-  FEMN: 'Ferolegura FeMn',
-  FECR: 'Ferolegura FeCr',
-  FENI: 'Ferolegura FeNi',
-  PIG_IRON: 'Sirovo željezo',
-  DRI: 'Direktno reducirano željezo (DRI)',
-  CRUDE_STEEL: 'Sirovi čelik',
-  IRON_STEEL_PRODUCTS: 'Proizvodi od željeza ili čelika',
-  HYDROGEN: 'Vodik',
-};
+/** Display labels (locale keys steel.category.*); the codes themselves are stored and never translated. */
+export const CATEGORY_LABELS: Record<string, string> = lazyLabels('steel.category', [...STEEL_CATEGORIES, 'HYDROGEN']);
 
 export function categoryLabel(code: string | null | undefined): string {
   if (!code) return '—';
@@ -126,17 +120,10 @@ export type SteelRoute =
   | 'SINTERING' | 'PELLETISATION' | 'EAF_SMELTING' | 'BLAST_FURNACE' | 'SMELTING_REDUCTION'
   | 'DIRECT_REDUCTION' | 'BOF' | 'EAF' | 'FORMING';
 
-export const ROUTE_LABELS: Record<SteelRoute, string> = {
-  SINTERING: 'Sinterovanje',
-  PELLETISATION: 'Peletizacija',
-  EAF_SMELTING: 'Redukcijsko taljenje u elektro peći',
-  BLAST_FURNACE: 'Visoka peć',
-  SMELTING_REDUCTION: 'Redukcijsko taljenje (smelting reduction)',
-  DIRECT_REDUCTION: 'Direktna redukcija',
-  BOF: 'Bazični kisikov konvertor (BOF)',
-  EAF: 'Elektrolučna peć (EAF)',
-  FORMING: 'Prerada (valjanje, kovanje, žarenje, premazivanje …)',
-};
+export const ROUTE_LABELS: Record<SteelRoute, string> = lazyLabels<SteelRoute>('steel.route', [
+  'SINTERING', 'PELLETISATION', 'EAF_SMELTING', 'BLAST_FURNACE', 'SMELTING_REDUCTION',
+  'DIRECT_REDUCTION', 'BOF', 'EAF', 'FORMING',
+]);
 
 export const CATEGORY_ROUTES: Record<SteelCategory, SteelRoute[]> = {
   SINTERED_ORE: ['SINTERING', 'PELLETISATION'],
@@ -153,10 +140,7 @@ export const CATEGORY_ROUTES: Record<SteelCategory, SteelRoute[]> = {
 export const MB_MANDATORY = new Set<string>(['FEMN', 'FECR', 'FENI', 'PIG_IRON', 'DRI', 'CRUDE_STEEL']);
 
 export type SteelMethod = 'STANDARD' | 'MASS_BALANCE';
-export const METHOD_LABELS: Record<SteelMethod, string> = {
-  STANDARD: 'Standardna metoda (gorivo + procesni materijali)',
-  MASS_BALANCE: 'Metoda masenog bilansa ugljika',
-};
+export const METHOD_LABELS: Record<SteelMethod, string> = lazyLabels<SteelMethod>('steel.method', ['STANDARD', 'MASS_BALANCE']);
 
 /** Expected precursor categories per consuming category (G05d Table 2-2 via spec §3.3). */
 export const EXPECTED_PRECURSORS: Record<SteelCategory, string[]> = {
@@ -178,28 +162,11 @@ export const FUEL_UNITS = [
   { value: 'TJ', label: 'TJ' },
 ];
 
-export const FACTOR_SOURCES = [
-  { value: 'STANDARD_TABLE', label: 'Standardna tabela (Prilog II G, Uredba 2025/2547)' },
-  { value: 'NATIONAL_INVENTORY', label: 'Nacionalni inventar' },
-  { value: 'SUPPLIER', label: 'Dobavljač' },
-  { value: 'LAB_ANALYSIS', label: 'Laboratorijska analiza' },
-  { value: 'OTHER', label: 'Ostalo' },
-];
+export const FACTOR_SOURCES = lazyOptions('steel.factorSource', ['STANDARD_TABLE', 'NATIONAL_INVENTORY', 'SUPPLIER', 'LAB_ANALYSIS', 'OTHER']);
 
-export const HEAT_METHODS = [
-  { value: 'SUPPLIER_VERIFIED', label: 'Verificirani emisioni faktor dobavljača' },
-  { value: 'FUEL_MIX', label: 'Mješavina goriva (EF goriva / η)' },
-  { value: 'CHP', label: 'Kogeneracija (CHP)' },
-  { value: 'STANDARD_90', label: 'Standardni EF goriva / 0,9' },
-  { value: 'ZERO', label: 'Nula emisija (toplota iz egzotermnih hemijskih procesa / rekuperirana iz električnih procesa)' },
-];
+export const HEAT_METHODS = lazyOptions('steel.heatMethod', ['SUPPLIER_VERIFIED', 'FUEL_MIX', 'CHP', 'STANDARD_90', 'ZERO']);
 
-export const WASTE_GASES = [
-  { value: 'BLAST_FURNACE_GAS', label: 'Visokopećni plin (BFG)' },
-  { value: 'OXYGEN_STEEL_FURNACE_GAS', label: 'Konvertorski plin (BOFG)' },
-  { value: 'COKE_OVEN_GAS', label: 'Koksni plin (COG)' },
-  { value: 'OTHER', label: 'Ostalo' },
-];
+export const WASTE_GASES = lazyOptions('steel.wasteGas', ['BLAST_FURNACE_GAS', 'OXYGEN_STEEL_FURNACE_GAS', 'COKE_OVEN_GAS', 'OTHER']);
 
 /** Waste gas fuel codes – warning IS_W_WG_IN_FUEL when used as a fuel row. */
 export const WASTE_GAS_FUEL_CODES = new Set(['BLAST_FURNACE_GAS', 'OXYGEN_STEEL_FURNACE_GAS', 'COKE_OVEN_GAS']);
@@ -207,38 +174,19 @@ export const WASTE_GAS_FUEL_CODES = new Set(['BLAST_FURNACE_GAS', 'OXYGEN_STEEL_
 /** EF of natural gas used as cap for waste gas in heat/electricity fuel mix (spec §4.2(g), §6.3(2)). */
 export const EF_NG_WASTE_GAS = 56.1;
 
-export const ELECTRICITY_SOURCES = [
-  { value: 'GRID', label: 'Električna mreža' },
-  { value: 'OWN_PRODUCTION', label: 'Vlastita proizvodnja' },
-  { value: 'PPA', label: 'Ugovor o kupovini električne energije (PPA)' },
-  { value: 'DIRECT_LINK', label: 'Direktni priključak na proizvođača' },
-];
+export const ELECTRICITY_SOURCES = lazyOptions('steel.electricitySource', ['GRID', 'OWN_PRODUCTION', 'PPA', 'DIRECT_LINK']);
 
-export const REDUCING_AGENTS = [
-  { value: 'COKE', label: 'Koks' },
-  { value: 'COAL', label: 'Ugalj' },
-  { value: 'NATURAL_GAS', label: 'Prirodni plin' },
-  { value: 'HYDROGEN', label: 'Vodik' },
-  { value: 'CHARCOAL_BIOMASS', label: 'Drveni ugalj / biomasa' },
-  { value: 'OTHER', label: 'Ostalo' },
-  { value: 'UNKNOWN', label: 'Nepoznato' },
-];
+export const REDUCING_AGENTS = lazyOptions('steel.reducingAgent', ['COKE', 'COAL', 'NATURAL_GAS', 'HYDROGEN', 'CHARCOAL_BIOMASS', 'OTHER', 'UNKNOWN']);
 
 /** Reporting parameters per category: 'req' = ✱ mandatory, 'opt' = ◇ "if known" (spec §5.4). */
 export type ParamField =
   | 'redukciono_sredstvo' | 'mn_posto' | 'cr_posto' | 'ni_posto' | 'ostali_legirni_posto'
   | 'c_posto' | 'otpad_t_po_t' | 'pre_consumer_otpad_posto';
 
-export const PARAM_LABELS: Record<ParamField, string> = {
-  redukciono_sredstvo: 'Glavno redukciono sredstvo',
-  mn_posto: 'Maseni udio Mn (%)',
-  cr_posto: 'Maseni udio Cr (%)',
-  ni_posto: 'Maseni udio Ni (%)',
-  ostali_legirni_posto: 'Maseni udio ostalih legirnih elemenata (%)',
-  c_posto: 'Maseni udio ugljika (%)',
-  otpad_t_po_t: 'Otpad korišten za proizvodnju (t otpada / t proizvoda)',
-  pre_consumer_otpad_posto: 'Udio pre-consumer otpada u ukupnom otpadu (%)',
-};
+export const PARAM_LABELS: Record<ParamField, string> = lazyLabels<ParamField>('steel.param', [
+  'redukciono_sredstvo', 'mn_posto', 'cr_posto', 'ni_posto', 'ostali_legirni_posto',
+  'c_posto', 'otpad_t_po_t', 'pre_consumer_otpad_posto',
+]);
 
 export const CATEGORY_PARAMS: Record<SteelCategory, Partial<Record<ParamField, 'req' | 'opt'>>> = {
   SINTERED_ORE: {},
@@ -257,18 +205,10 @@ export const CATEGORY_PARAMS: Record<SteelCategory, Partial<Record<ParamField, '
   },
 };
 
-/** Out of scope list for UI help "Nije podržano" (spec §1.8). */
-export const NOT_SUPPORTED_BS: string[] = [
-  'Prilagođavanje za besplatnu dodjelu emisionih jedinica / CBAM referentne vrijednosti (oznake rute iz zadanih vrijednosti prikazuju se samo informativno).',
-  'Odbitak cijene ugljika plaćene u zemlji porijekla.',
-  'Provjera kriterija za nultu stopu biomase – polje za udio biomase postoji (zadano 0), ali se dokazi o održivosti ne provjeravaju.',
-  'Prijenos CO2 / hvatanje i skladištenje (CCS) / korištenje (CCU) ugljika.',
-  'Metodologija zasnovana na mjerenju (CEMS).',
-  'Alternativne / regionalne zadane vrijednosti i alternativni emisioni faktori mreže koje utvrđuje Komisija.',
-  'Prekursori koji su CBAM roba drugih sektora (npr. aluminij).',
-  'Logika praga od 50 t (samo informativno).',
-  'Električna energija kao uvezena roba; roba sektora cementa i gnojiva.',
-];
+/** Out of scope list for UI help "Nije podržano" (spec §1.8). Translated: locale key steel.notSupported. */
+export function notSupportedList(): string[] {
+  return i18n.t('steel.notSupported', { returnObjects: true }) as string[];
+}
 
 /* ─── Row types (exact JSON shapes, spec §5.4 / contract §2) ─── */
 
@@ -426,8 +366,8 @@ export function processLabel(p: ProcessRow | undefined, fallbackId?: string): st
 export interface StepIssue { code: string; message: string }
 
 export const MSG = {
-  qty: (what: string) => ({ code: 'IS_E_QTY', message: `${what}: količina mora biti veća od 0.` }),
-  pct: (what: string) => ({ code: 'IS_E_CC_RANGE', message: `${what}: vrijednost u % mora biti između 0 i 100.` }),
+  qty: (what: string) => ({ code: 'IS_E_QTY', message: tr('steel.msg.qty', { what }) }),
+  pct: (what: string) => ({ code: 'IS_E_CC_RANGE', message: tr('steel.msg.pct', { what }) }),
   factor: (what: string) => ({ code: 'IS_E_FACTOR_RANGE', message: `${what}` }),
 };
 
@@ -449,19 +389,19 @@ export function checkPercent(value: string, what: string, issues: StepIssue[], r
 export function checkFraction(value: string, what: string, issues: StepIssue[], required = false): void {
   const n = toNum(value);
   if (n == null) {
-    if (required || String(value ?? '').trim() !== '') issues.push(MSG.factor(`${what}: vrijednost mora biti veća od 0 i najviše 1.`));
+    if (required || String(value ?? '').trim() !== '') issues.push(MSG.factor(tr('steel.msg.fraction', { what })));
     return;
   }
-  if (n <= 0 || n > 1) issues.push(MSG.factor(`${what}: vrijednost mora biti veća od 0 i najviše 1.`));
+  if (n <= 0 || n > 1) issues.push(MSG.factor(tr('steel.msg.fraction', { what })));
 }
 
 export function checkNonNegative(value: string, what: string, issues: StepIssue[], required = false): void {
   const n = toNum(value);
   if (n == null) {
-    if (required || String(value ?? '').trim() !== '') issues.push(MSG.factor(`${what}: unesite broj ≥ 0.`));
+    if (required || String(value ?? '').trim() !== '') issues.push(MSG.factor(tr('steel.msg.enterNonNegative', { what })));
     return;
   }
-  if (n < 0) issues.push(MSG.factor(`${what}: vrijednost ne smije biti negativna.`));
+  if (n < 0) issues.push(MSG.factor(tr('steel.msg.notNegative', { what })));
 }
 
 /** User value deviates > 50 % from the Table G value (IS_W_CC_DEVIATION, app heuristic). */
@@ -476,24 +416,12 @@ export function steelPeriodError(from: string, to: string): string | null {
   const yf = Number((from ?? '').slice(0, 4));
   const yt = Number((to ?? '').slice(0, 4));
   if (!Number.isFinite(yf) || !Number.isFinite(yt) || yf === 0 || yt === 0) return null;
-  if (yf !== yt) return 'Izvještajni period za željezo i čelik mora biti unutar iste kalendarske godine (IS_E_PERIOD).';
-  if (yf < 2026) return 'Izvještajni period mora biti 2026. ili kasnije – prijelazni period se ne podržava (IS_E_PERIOD).';
+  if (yf !== yt) return tr('steel.msg.periodSameYear');
+  if (yf < 2026) return tr('steel.msg.periodFrom2026');
   return null;
 }
 
-/** Bosnian names for the most common Table G factors (by wizardCode); others use the backend description. */
-export const FACTOR_LABELS_BS: Record<string, string> = {
-  NATURAL_GAS: 'Prirodni plin',
-  COKE_OVEN_COKE: 'Koks (koksni i lignitni koks)',
-  COKING_COAL: 'Koksni ugalj',
-  BLAST_FURNACE_GAS: 'Visokopećni plin (BFG)',
-  OXYGEN_STEEL_FURNACE_GAS: 'Konvertorski plin (BOFG)',
-  COKE_OVEN_GAS: 'Koksni plin (COG)',
-  CaCO3: 'CaCO3 – kalcijev karbonat (krečnjak)',
-  STEEL_SCRAP: 'Čelični otpad',
-  IRON_SCRAP: 'Željezni otpad',
-};
-
+/** Display name of a Table G standard factor: the description comes localized from GET /is/standard-factors. */
 export function factorLabel(f: { wizardCode: string; description: string }): string {
-  return FACTOR_LABELS_BS[f.wizardCode] ?? f.description;
+  return f.description || f.wizardCode;
 }

@@ -8,8 +8,8 @@ import {
   parseJsonRows, processLabel,
   type ParamField, type ProcessRow, type ReportingParamRow, type SteelCategory, type StepIssue,
 } from '../../utils/steelSteps';
+import { useTranslation } from 'react-i18next';
 
-const HELP = 'Parametri se prenose uvozniku za CBAM deklaraciju (Prilog IV t. 2 Uredbe 2025/2547).';
 const FIELD_ORDER: ParamField[] = [
   'redukciono_sredstvo', 'mn_posto', 'cr_posto', 'ni_posto', 'ostali_legirni_posto', 'c_posto', 'otpad_t_po_t', 'pre_consumer_otpad_posto',
 ];
@@ -24,7 +24,8 @@ function emptyRow(processId: string, kategorija: string): ReportingParamRow {
 }
 
 export function SteelReportingParamsStep({ data, questions, saving, saveError, onBack, onSubmit }: SteelStepProps) {
-  const meta = questionMeta(questions, IS_Q.REPORTING_PARAM, 'Dodatni parametri za izvještaj (sektor željezo i čelik)', HELP);
+  const { t } = useTranslation();
+  const meta = questionMeta(questions, IS_Q.REPORTING_PARAM, t('steel.rp.label'), t('steel.rp.help'));
 
   /** One slot per SINGLE process, one per covered category of a JOINT process (spec §5.4). */
   const slots = useMemo<Slot[]>(() => data.processes.flatMap((p) => {
@@ -62,16 +63,16 @@ export function SteelReportingParamsStep({ data, questions, saving, saveError, o
         .filter(([f, level]) => level === 'req' && String(r[f] ?? '').trim() === '')
         .map(([f]) => PARAM_LABELS[f]);
       if (missing.length > 0) {
-        w.push({ code: 'IS_W_REPORTING_PARAM_MISSING', message: `${what}: nedostaju obavezni parametri – ${missing.join(', ')}.` });
+        w.push({ code: 'IS_W_REPORTING_PARAM_MISSING', message: t('steel.rp.wMissing', { what, fields: missing.join(', ') }) });
       }
     });
     return { errors: e, warnings: w };
-  }, [rows, slots]);
+  }, [rows, slots, t]);
 
   return (
     <Box sx={{ fontFamily: T.font.body }}>
       <StepHeader title={meta.label} help={meta.help} />
-      <Typography sx={{ fontSize: '0.82rem', color: T.color.muted, mb: 2 }}>✱ = obavezno · ◇ = ako je poznato</Typography>
+      <Typography sx={{ fontSize: '0.82rem', color: T.color.muted, mb: 2 }}>{t('steel.rp.legend')}</Typography>
       {slots.map((s) => {
         const req = CATEGORY_PARAMS[s.category] ?? {};
         const fields = FIELD_ORDER.filter((f) => req[f]);
@@ -80,7 +81,7 @@ export function SteelReportingParamsStep({ data, questions, saving, saveError, o
           <RowCard key={s.key} title={`${processLabel(s.process)} · ${categoryLabel(s.category)}`}>
             {fields.length === 0 && (
               <Box sx={{ gridColumn: '1 / -1' }}>
-                <Typography sx={{ fontSize: '0.85rem', color: T.color.muted }}>Za ovu kategoriju nema dodatnih parametara.</Typography>
+                <Typography sx={{ fontSize: '0.85rem', color: T.color.muted }}>{t('steel.rp.none')}</Typography>
               </Box>
             )}
             {fields.map((f) => {
