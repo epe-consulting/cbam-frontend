@@ -19,6 +19,7 @@ import { ArrowBack } from '@mui/icons-material';
 import { apiRequest } from '../utils/api';
 import { DEFAULT_TOTAL_UNIT, formatEmissionsNumber, formatResultItem, unitLabel } from '../utils/formatEmissions';
 import { SteelResultView, type SteelResultWarning } from './steel/SteelResultView';
+import { CementResultView } from './cement/CementResultView';
 import { useTranslation } from 'react-i18next';
 
 const T = {
@@ -91,6 +92,8 @@ export interface CalculationCompleteStepProps {
   onNewCalculation: () => void;
   /** Iron & steel calculation: render the per-CN steel result view. */
   isSteel?: boolean;
+  /** Cement calculation: render the per-product cement result view (cement spec §3.6). */
+  isCement?: boolean;
 }
 
 function humanizeFormulaCode(code: string): string {
@@ -118,6 +121,7 @@ export function CalculationCompleteStep({
   onBackToDashboard,
   onNewCalculation,
   isSteel = false,
+  isCement = false,
 }: CalculationCompleteStepProps) {
   const { t } = useTranslation();
   const [result, setResult] = useState<CalcResult | null>(null);
@@ -197,7 +201,11 @@ export function CalculationCompleteStep({
         <SteelResultView calculationId={calculationId} result={result} />
       )}
 
-      {!resultLoading && !resultError && result && !isSteel && (
+      {!resultLoading && !resultError && result && isCement && (
+        <CementResultView calculationId={calculationId} result={result} />
+      )}
+
+      {!resultLoading && !resultError && result && !isSteel && !isCement && (
         <>
           {/* Total Emissions Hero Card */}
           <Paper

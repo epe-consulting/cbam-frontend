@@ -50,6 +50,10 @@ export interface ProductDetailEntry {
   countryOfOrigin: string;
   /** Iron & steel only: PIG_IRON | IRON_STEEL_PRODUCTS for CN 7205 (spec §5.3). */
   aggregatedCategory?: string;
+  /** Cement only: 10-digit TARIC where the CN requires one (docs/cement-implementation-spec.md §4.3). */
+  taricCode?: string;
+  /** Cement only: clinker content of the good in % (klinker_udio_posto, cement spec §4.3). */
+  clinkerSharePct?: string;
 }
 
 export interface ProductDetailsStepProps {

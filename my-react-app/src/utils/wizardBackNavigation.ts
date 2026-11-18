@@ -1,4 +1,5 @@
 import { DATA_SOURCE, STEEL_STEP_PREVIOUS } from './steelSteps';
+import { CE_DATA_SOURCE, CE_STEP_PREVIOUS } from './cementSteps';
 
 /** Steps that auto-forward in the UI; never show as a Back destination. */
 export const HIDDEN_WIZARD_STEPS = new Set(['SABIRNA_TACKA']);
@@ -24,6 +25,8 @@ export const STEP_PREVIOUS_FALLBACK: Record<string, string> = {
   ALU_SECONDARY_ALLOYING_PERCENT: 'ALU_SECONDARY_ALLOYING_ELEMENTS',
   // Iron & steel (IS_*) – static chain, spec §5.1
   ...STEEL_STEP_PREVIOUS,
+  // Cement (CE_*) – static chain, cement spec §4.2
+  ...CE_STEP_PREVIOUS,
 };
 
 function resolveElectricityTerminalStep(lookup: WizardAnswerLookup): string {
@@ -109,6 +112,10 @@ export function inferPreviousStepFallback(
       const source = lookup.getAnswerByCode('IS_DATA_SOURCE');
       if (source === DATA_SOURCE.DEFAULT) return 'IS_GENERAL';
       if (source === DATA_SOURCE.ACTUAL) return 'IS_REPORTING_PARAMS';
+      // Cement only (steel/aluminium calculations have no CE_DATA_SOURCE answer → unchanged).
+      const ceSource = lookup.getAnswerByCode('CE_DATA_SOURCE');
+      if (ceSource === CE_DATA_SOURCE.DEFAULT) return 'CE_GENERAL';
+      if (ceSource === CE_DATA_SOURCE.ACTUAL) return 'CE_PRECURSORS';
       return null;
     }
 
