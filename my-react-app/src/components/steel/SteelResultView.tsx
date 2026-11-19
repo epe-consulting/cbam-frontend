@@ -7,6 +7,8 @@ import { T } from './steelTheme';
 import { getAnswerValuesByCode, getQuestionIdsByCode } from '../../api/ironSteel';
 import { notSupportedList, categoryLabel, formatCn, parseJsonRows, type SteelProductRow } from '../../utils/steelSteps';
 import { lazyLabels } from '../../i18n';
+import { useIsCnMapping } from '../../hooks/useIronSteelRefData';
+import { cnHeadingText } from '../../utils/steelCnLabel';
 import { useTranslation } from 'react-i18next';
 
 export interface SteelResultItem {
@@ -117,6 +119,7 @@ function DefaultValueBlock({ dv }: { dv: Snapshot }) {
 export function SteelResultView({ calculationId, result }: { calculationId: number | null; result: SteelResult }) {
   const { t, i18n } = useTranslation();
   const isBs = (i18n.resolvedLanguage ?? i18n.language) === 'bs';
+  const { rows: cnMapping } = useIsCnMapping();
   const [products, setProducts] = useState<SteelProductRow[]>([]);
   useEffect(() => {
     if (calculationId == null) return;
@@ -162,7 +165,7 @@ export function SteelResultView({ calculationId, result }: { calculationId: numb
           {warnings.map((w, i) => (
             <Alert key={`${w.code}-${i}`} severity={w.severity === 'ERROR' ? 'error' : 'warning'} sx={{ borderRadius: T.radius.sm, fontFamily: T.font.body }}>
               <Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem' }}>
-                {(isBs ? (w.message_bs || WARNING_FALLBACK[w.code] || w.message) : (w.message || WARNING_FALLBACK[w.code] || w.message_bs)) || w.code}
+                {t(`steel.res.code.${w.code}`, { defaultValue: (isBs ? w.message_bs : undefined) || WARNING_FALLBACK[w.code] || w.message || w.message_bs || w.code })}
               </Typography>
               {w.context && Object.keys(w.context).length > 0 && (
                 <Typography sx={{ fontFamily: T.font.body, fontSize: '0.78rem', opacity: 0.8 }}>
@@ -227,6 +230,11 @@ export function SteelResultView({ calculationId, result }: { calculationId: numb
                 <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>
                   CN {formatCn(String(cn))} · {categoryLabel(category)} · {snap.country_of_origin ?? prod?.country_of_origin ?? '—'} · {snap.quantity_t ?? prod?.quantity ?? '—'} t
                 </Typography>
+                {cnHeadingText(cnMapping, String(cn)) && (
+                  <Typography sx={{ fontFamily: T.font.body, fontSize: '0.8rem', color: T.color.muted }}>
+                    {cnHeadingText(cnMapping, String(cn))}
+                  </Typography>
+                )}
               </Box>
               {entry && <Chip label={dsLabel} size="small" sx={{ fontFamily: T.font.body, fontWeight: 600, bgcolor: ds === 'ACTUAL' ? T.color.forest : T.color.mintDark, color: ds === 'ACTUAL' ? '#fff' : T.color.ink }} />}
             </Box>

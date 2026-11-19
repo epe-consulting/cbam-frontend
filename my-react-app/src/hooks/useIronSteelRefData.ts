@@ -70,9 +70,11 @@ export function useIsCnValidation(codes: string[], allowShort = false) {
   const language = useAppLanguage();
   const [results, setResults] = useState<Record<string, IsCnValidation>>({});
   const key = useMemo(() => {
-    const digits = codes.map(cnDigits).filter((d) => (allowShort ? /^(\d{4}|\d{6}|\d{8})$/ : /^\d{8}$/).test(d));
+    // 4–8 digits in both modes (5 = ferro-alloy headings 7202 1/4/6); checkCn applies the stricter
+    // 4/6/8 format for allowShort rows that need no default value.
+    const digits = codes.map(cnDigits).filter((d) => /^\d{4,8}$/.test(d));
     return [...new Set(digits)].sort().join(',');
-  }, [codes, allowShort]);
+  }, [codes]);
 
   useEffect(() => {
     if (!key) return;

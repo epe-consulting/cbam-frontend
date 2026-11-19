@@ -7,8 +7,9 @@ import {
 } from './SteelUi';
 import { questionMeta, type SteelStepProps } from './types';
 import { checkCn } from './cnCheck';
-import { useIsCnValidation } from '../../hooks/useIronSteelRefData';
+import { useIsCnMapping, useIsCnValidation } from '../../hooks/useIronSteelRefData';
 import type { IsCnValidation } from '../../api/ironSteel';
+import { cnHeadingText, cnHelperText } from '../../utils/steelCnLabel';
 import {
   CATEGORY_LABELS, CATEGORY_ROUTES, IS_Q, MB_MANDATORY, METHOD_LABELS, PROCESS_CHILD_QUESTIONS, ROUTE_LABELS,
   STEEL_CATEGORIES, categoryLabel, cnDigits, coveredCategories, mostDownstream, newRowId, nextProcessId,
@@ -66,8 +67,16 @@ export function SteelProcessesStep({ data, questions, saving, saveError, onBack,
   );
   const allOutputCns = useMemo(() => rows.flatMap((r) => r.proizvodi.map((o) => o.cn_code)), [rows]);
   const cnResults = useIsCnValidation(allOutputCns, false);
+  const { rows: cnMapping } = useIsCnMapping();
 
-  const update = (i: number, patch: Partial<ProcessRow>) =>
+  /** Helper under an output CN: heading description · category (or nothing while unknown / invalid). */
+  const outputCnHelper = (cn: string): string | undefined => {
+    const res = cnResults[cnDigits(cn)];
+    if (!res?.ok) return undefined;
+    return cnHelperText(cnMapping, cn, categoryLabel(res.category));
+  };
+
+  const update =(i: number, patch: Partial<ProcessRow>) =>
     setRows((prev) => prev.map((r, idx) => (idx === i ? normalise({ ...r, ...patch }) : r)));
 
   const addProcess = () => {
@@ -117,7 +126,7 @@ export function SteelProcessesStep({ data, questions, saving, saveError, onBack,
         const qty = toNum(o.kolicina);
         if (qty == null || qty <= 0) e.push({ code: 'IS_E_QTY', message: t('steel.msg.qty', { what }) });
         const d = cnDigits(o.cn_code);
-        if (/^\d{8}$/.test(d)) (cnToProcesses[d] ??= new Set()).add(p.process_id);
+        if (/^\d{4,8}$/.test(d)) (cnToProcesses[d] ??= new Set()).add(p.process_id);
       });
     });
     Object.entries(cnToProcesses).forEach(([d, set]) => {
@@ -287,7 +296,23 @@ export function SteelProcessesStep({ data, questions, saving, saveError, onBack,
                     options={productCns}
                     inputValue={o.cn_code}
                     onInputChange={(_, v) => update(i, { proizvodi: p.proizvodi.map((x, k) => (k === j ? { ...x, cn_code: v } : x)) })}
-                    renderInput={(params) => <TextField {...params} size="small" label={t('steel.proc.cn8')} required sx={textFieldSx} />}
+                    renderOption={(props, option) => {
+                      const names = data.products.filter((d) => d.cn_code === option).map((d) => d.product_name).filter(Boolean);
+                      return (
+                        <li {...props} key={option}>
+                          <Box>
+                            <Typography sx={{ fontWeight: 600, fontSize: '0.88rem' }}>
+                              {option}{names.length > 0 ? ` · ${names.join(', ')}` : ''}
+                            </Typography>
+                            <Typography sx={{ fontSize: '0.75rem', color: T.color.muted }}>{cnHeadingText(cnMapping, option)}</Typography>
+                          </Box>
+                        </li>
+                      );
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} size="small" label={t('steel.proc.cn8')} required sx={textFieldSx}
+                        helperText={outputCnHelper(o.cn_code)} />
+                    )}
                   />
                   <NumField
                     label={t('steel.proc.qtyT')}

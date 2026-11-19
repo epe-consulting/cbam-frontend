@@ -11,6 +11,7 @@ import { useCountries } from '../../hooks/useCountries';
 import { useIsCnMapping, useIsCnValidation, useIsExemptOrigins } from '../../hooks/useIronSteelRefData';
 import type { ProductDetailEntry } from '../ProductDetailsStep';
 import { categoryLabel, cnDigits, toNum, type StepIssue } from '../../utils/steelSteps';
+import { cnHelperText, cnOptions, filterCnOptions } from '../../utils/steelCnLabel';
 import { useTranslation } from 'react-i18next';
 
 export interface SteelProductDetailsStepProps {
@@ -35,6 +36,9 @@ export function SteelProductDetailsStep({
   const { rows: mapping, error: mappingError } = useIsCnMapping();
   const cnResults = useIsCnValidation(entries.map((e) => e.cnCode), false);
   const suggestions = useMemo(() => mapping.filter((m) => !m.precursorOnly), [mapping]);
+  // Headings plus the codes printed below them in 2025/2621 Annex I (sub-codes).
+  const options = useMemo(() => cnOptions(mapping), [mapping]);
+  const optionByCode = useMemo(() => new Map(options.map((o) => [o.cnCode, o])), [options]);
 
   const { errors, warnings, pending } = useMemo(() => {
     const e: StepIssue[] = [];
@@ -83,15 +87,28 @@ export function SteelProductDetailsStep({
             <TextInput label={t('steel.pd.name')} required value={en.productName} onChange={(v) => updateEntry(idx, { productName: v })} />
             <Autocomplete
               freeSolo
-              options={suggestions.map((m) => m.cnCode)}
+              options={options.map((o) => o.cnCode)}
               getOptionLabel={(o) => o}
+              filterOptions={(opts, state) => {
+                // Search by code (with or without spaces) or by description; headings and sub-codes.
+                const shown = new Set(filterCnOptions(options, state.inputValue).map((o) => o.cnCode));
+                return opts.filter((o) => shown.has(o));
+              }}
               renderOption={(props, option) => {
-                const m = suggestions.find((x) => x.cnCode === option);
+                const o = optionByCode.get(option);
                 return (
                   <li {...props} key={option}>
-                    <Box>
-                      <Typography sx={{ fontWeight: 600, fontSize: '0.88rem' }}>{option}</Typography>
-                      <Typography sx={{ fontSize: '0.75rem', color: T.color.muted }}>{categoryLabel(m?.category)}</Typography>
+                    <Box sx={{ pl: o?.sub ? 2 : 0 }}>
+                      <Typography sx={{ fontWeight: o?.sub ? 500 : 600, fontSize: '0.88rem' }}>{option}</Typography>
+                      {o?.description && (
+                        <Typography sx={{ fontSize: '0.8rem', color: T.color.inkSoft }}>{o.description}</Typography>
+                      )}
+                      {!o?.sub && (
+                        <Typography sx={{ fontSize: '0.72rem', color: T.color.muted }}>{categoryLabel(o?.category)}</Typography>
+                      )}
+                      {o && !o.dvSpecific && (
+                        <Typography sx={{ fontSize: '0.72rem', color: T.color.sage, fontStyle: 'italic' }}>{t('steel.pd.pickSub')}</Typography>
+                      )}
                     </Box>
                   </li>
                 );
@@ -104,7 +121,9 @@ export function SteelProductDetailsStep({
                   size="small"
                   required
                   label={t('steel.proc.cn8')}
-                  helperText={res?.ok ? categoryLabel(ambiguous ? (en.aggregatedCategory || 'IRON_STEEL_PRODUCTS') : res.category) : t('steel.pd.cnExample')}
+                  helperText={res?.ok
+                    ? cnHelperText(mapping, en.cnCode, categoryLabel(ambiguous ? (en.aggregatedCategory || 'IRON_STEEL_PRODUCTS') : res.category))
+                    : t('steel.pd.cnExample')}
                   sx={textFieldSx}
                 />
               )}

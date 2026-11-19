@@ -2,6 +2,7 @@
 // Only documents in docs/cbam-sources are used. Gaps are listed in OPEN_QUESTIONS.md.
 
 import type { Sector } from './types.ts';
+import { tr } from '../i18n';
 
 /** Reg. (EU) 2023/956 Art. 2a(1) + Annex VII point 1 (consolidated 20.10.2025, pp. 6, 56): 50 t net mass. */
 export const MASS_THRESHOLD_TONNES = 50;
@@ -132,9 +133,9 @@ export const SCOPE_SOURCE = 'Reg. (EU) 2023/956 Annex I (consolidated 20.10.2025
 
 export function scopeOf(cnDigits: string): { inScope: boolean; sector?: Sector; note: string } {
   const excl = SCOPE_EXCLUSIONS.find((e) => cnDigits.startsWith(e.prefix));
-  if (excl) return { inScope: false, note: `Excluded by Annex I: ${excl.label}. ${SCOPE_SOURCE}` };
+  if (excl) return { inScope: false, note: tr('cc.r.excluded', { label: excl.label, src: SCOPE_SOURCE }) };
   const hit = SCOPE.find((s) => cnDigits.startsWith(s.prefix));
-  if (!hit) return { inScope: false, note: `CN code not listed in Annex I. ${SCOPE_SOURCE}` };
+  if (!hit) return { inScope: false, note: tr('cc.r.notListed', { src: SCOPE_SOURCE }) };
   return { inScope: true, sector: hit.sector, note: `${hit.note ? hit.note + '. ' : ''}${SCOPE_SOURCE}` };
 }
 

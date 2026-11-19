@@ -57,16 +57,21 @@ export function splitEmissions(items: ReportResultItem[]): { direct: number; ind
 
 /**
  * Tool totals for the aluminium report when no explicit direct/indirect answer exists:
- * ignore ALU_DIRECT_INDIRECT_SUM (avoids double counting) unless it is the only emission item.
+ * sum every aluminium t CO2e item, including ALU_DIRECT_INDIRECT_SUM (the user-entered emissions of the
+ * unwrought stage). Since post-043 that path continues through the collection point, so the products
+ * stage (precursors, remaining fuels, flue gas) or the secondary module add their own, separate items.
+ * Same rule as the backend total (CalculationResultService: sum of all t CO2e items).
  * Returns null when there is no aluminium emission item at all (e.g. a steel calculation).
  */
 export function aluminiumToolTotals(items: ReportResultItem[]): { direct: number; indirect: number } | null {
   const emissionItems = items.filter(isAluminiumEmissionItem);
   if (emissionItems.length === 0) return null;
-  const withoutSum = emissionItems.filter((i) => i.formulaCode !== DIRECT_INDIRECT_SUM_CODE);
-  const s = splitEmissions(withoutSum.length ? withoutSum : emissionItems);
-  const all = splitEmissions(emissionItems);
-  return { direct: s.direct || all.direct, indirect: s.indirect || all.indirect };
+  return splitEmissions(emissionItems);
+}
+
+/** True when the result holds aluminium emission items other than the user-entered total. */
+export function hasItemsBesidesEnteredTotal(items: ReportResultItem[]): boolean {
+  return items.some((i) => isAluminiumEmissionItem(i) && i.formulaCode !== DIRECT_INDIRECT_SUM_CODE);
 }
 
 /** Specific direct embedded emissions [t CO2e/t] = direct total [t CO2e] ÷ product quantity [t]. */

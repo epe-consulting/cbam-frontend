@@ -7,7 +7,8 @@ import {
 import { questionMeta, type SteelStepProps } from './types';
 import { checkCn } from './cnCheck';
 import { useCountries } from '../../hooks/useCountries';
-import { useIsCnValidation, useIsExemptOrigins } from '../../hooks/useIronSteelRefData';
+import { useIsCnMapping, useIsCnValidation, useIsExemptOrigins } from '../../hooks/useIronSteelRefData';
+import { cnHelperText } from '../../utils/steelCnLabel';
 import {
   EXPECTED_PRECURSORS, IS_Q, categoryLabel, checkNonNegative, checkPositive, cnDigits, coveredCategories, newRowId,
   parseJsonRows, processLabel, toNum,
@@ -62,6 +63,7 @@ export function SteelPrecursorsStep({ data, questions, saving, saveError, onBack
     .map((r) => ({ ...newPrecursor(r.process_id), ...r })));
 
   const cnResults = useIsCnValidation(rows.map((r) => r.cn_code), true);
+  const { rows: cnMapping } = useIsCnMapping();
 
   const originOptions: Option[] = [
     ...countries.map((c) => ({ value: c.country, label: c.country })),
@@ -204,7 +206,7 @@ export function SteelPrecursorsStep({ data, questions, saving, saveError, onBack
           options={[{ value: 'PURCHASED', label: t('steel.pre.purchased') }, { value: 'INTERNAL_PROCESS', label: t('steel.pre.internal') }]}
           onChange={(v) => upd(r.row_id, { izvor: v as PrecursorRow['izvor'] })} />
         <TextInput label={t('steel.pre.cn')} required value={r.cn_code} onChange={(v) => upd(r.row_id, { cn_code: v })}
-          helperText={category ? categoryLabel(category) : (sourceOutputs.length ? t('steel.pre.sourceOutputs', { list: sourceOutputs.join(', ') }) : (needsFullCn(r) ? t('steel.pre.cn8Default') : t('steel.pre.cn468')))} />
+          helperText={category ? cnHelperText(cnMapping, r.cn_code, categoryLabel(category)) : (sourceOutputs.length ? t('steel.pre.sourceOutputs', { list: sourceOutputs.join(', ') }) : (needsFullCn(r) ? t('steel.pre.cn8Default') : t('steel.pre.cn468')))} />
         <NumField label={t('steel.pre.mass')} required value={r.kolicina} onChange={(v) => upd(r.row_id, { kolicina: v })} />
         {ambiguous && (
           <SelectField label={t('steel.pre.category7205')} value={category}

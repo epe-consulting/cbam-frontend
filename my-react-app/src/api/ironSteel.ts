@@ -43,6 +43,17 @@ export interface IsCnMappingRow {
   ambiguous: boolean;
   precursorOnly: boolean;
   sortOrder: number;
+  /** False when 2025/2621 Annex I has different values below this heading (a sub-code is needed). */
+  dvSpecific?: boolean;
+  /** Rows below the heading as printed in 2025/2621 Annex I (English). */
+  subCodes?: IsCnSubCode[];
+}
+
+export interface IsCnSubCode {
+  cnCode: string;
+  cnDigits: string;
+  description: string;
+  dvSpecific: boolean;
 }
 
 export async function getIsCnMapping(): Promise<IsCnMappingRow[]> {
@@ -59,6 +70,8 @@ export interface IsCnValidation {
   directOnly?: boolean;
   ambiguous?: boolean;
   precursorOnly?: boolean;
+  /** False when the code is too short to pick one default value (backend IS_E_CN_TOO_SHORT). */
+  dvSpecific?: boolean;
   errorCode?: string;
   message?: string;
 }
@@ -67,7 +80,8 @@ export async function validateIsCn(cn: string, allowShort = false): Promise<IsCn
   const q = `cn=${encodeURIComponent(cn)}${allowShort ? '&allowShort=true' : ''}`;
   const res = await apiRequest<{
     success: boolean; cnDigits?: string; matchedCnCode?: string; category?: string;
-    directOnly?: boolean; ambiguous?: boolean; precursorOnly?: boolean; errorCode?: string; message?: string;
+    directOnly?: boolean; ambiguous?: boolean; precursorOnly?: boolean; dvSpecific?: boolean;
+    errorCode?: string; message?: string;
   }>(`/is/cn-validate?${q}`);
   if (res === null) return { ok: false, errorCode: 'SESSION', message: tr('err.session') };
   const d = res.data;
@@ -80,6 +94,7 @@ export async function validateIsCn(cn: string, allowShort = false): Promise<IsCn
     directOnly: d.directOnly,
     ambiguous: d.ambiguous,
     precursorOnly: d.precursorOnly,
+    dvSpecific: d.dvSpecific,
   };
 }
 

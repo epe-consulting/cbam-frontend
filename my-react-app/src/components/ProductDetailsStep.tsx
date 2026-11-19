@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Autocomplete,
   Box,
   Button,
   Dialog,
@@ -13,6 +14,11 @@ import {
 import { Add, ArrowBack, ArrowForward, Close, Delete, InfoOutlined } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { useCnCodes } from '../hooks/useCnCodes';
+import { useCountries } from '../hooks/useCountries';
+import { CountrySelect } from './CountrySelect';
+import { IssueList } from './steel/SteelUi';
+import type { StepIssue } from '../utils/steelSteps';
+import { checkAluminiumCn, filterAluminiumCn, findAluminiumCn, parseQuantity } from '../utils/aluminiumProduct';
 
 const T = {
   font: {
@@ -91,14 +97,29 @@ export function ProductDetailsStep({
     return () => document.removeEventListener('keydown', onKey);
   }, [cnInfoOpen]);
 
-  const allValid = entries.length > 0
-    && entries.every(
-      (e: ProductDetailEntry) =>
-        e.productName.trim() !== ''
-        && e.cnCode.trim() !== ''
-        && e.quantity.trim() !== ''
-        && e.countryOfOrigin.trim() !== ''
-    );
+  const { countries } = useCountries();
+
+  // Same checks as the steel product step (name, CN in scope, quantity > 0, country from the list).
+  const errors = useMemo(() => {
+    const e: StepIssue[] = [];
+    entries.forEach((en: ProductDetailEntry, idx: number) => {
+      const what = t('product.details.what', { n: idx + 1 });
+      if (!en.productName.trim()) e.push({ code: '', message: t('product.details.eName', { what }) });
+      const cnState = checkAluminiumCn(cnCodeInfo, en.cnCode);
+      if (cnState === 'empty') e.push({ code: '', message: t('product.details.eCnEmpty', { what }) });
+      else if (cnState === 'format') e.push({ code: '', message: t('product.details.eCnFormat', { what }) });
+      // While the list is still loading, don't block on scope.
+      else if (cnState === 'notAluminium' && cnCodeInfo.length > 0) {
+        e.push({ code: '', message: t('product.details.eCnNotAlu', { what, cn: en.cnCode }) });
+      }
+      const q = parseQuantity(en.quantity);
+      if (q == null || q <= 0) e.push({ code: '', message: t('product.details.eQty', { what }) });
+      if (!en.countryOfOrigin.trim()) e.push({ code: '', message: t('product.details.eCountry', { what }) });
+    });
+    return e;
+  }, [entries, cnCodeInfo, t]);
+
+  const allValid = entries.length > 0 && errors.length === 0;
 
   return (
     <Grid container spacing={3} sx={{ width: '100%', maxWidth: '100%', fontFamily: T.font.body }}>
@@ -156,12 +177,42 @@ export function ProductDetailsStep({
             />
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
-            <TextField
-              fullWidth
-              label={t('product.details.cn')}
-              value={entry.cnCode}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateEntry(index, { cnCode: e.target.value })}
-              sx={textFieldSx}
+            <Autocomplete
+              freeSolo
+              options={cnCodeInfo.map((c) => c.cnCode)}
+              getOptionLabel={(o) => o}
+              filterOptions={(opts, state) => {
+                // Search by code (with or without spaces) or by description.
+                const shown = new Set(filterAluminiumCn(cnCodeInfo, state.inputValue).map((c) => c.cnCode));
+                return opts.filter((o) => shown.has(o));
+              }}
+              renderOption={(props, option) => {
+                const c = cnCodeInfo.find((x) => x.cnCode === option);
+                return (
+                  <li {...props} key={option}>
+                    <Box>
+                      <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.88rem' }}>{option}</Typography>
+                      {c?.description && (
+                        <Typography sx={{ fontFamily: T.font.body, fontSize: '0.8rem', color: T.color.inkSoft }}>{c.description}</Typography>
+                      )}
+                    </Box>
+                  </li>
+                );
+              }}
+              inputValue={entry.cnCode}
+              onInputChange={(_, v) => updateEntry(index, { cnCode: v })}
+              renderInput={(params) => {
+                const match = findAluminiumCn(cnCodeInfo, entry.cnCode);
+                return (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    label={t('product.details.cn')}
+                    helperText={match ? `${match.cnCode} – ${match.description}` : t('product.details.cnHelp')}
+                    sx={textFieldSx}
+                  />
+                );
+              }}
             />
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
@@ -175,16 +226,20 @@ export function ProductDetailsStep({
             />
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
-            <TextField
-              fullWidth
+            <CountrySelect
               label={t('product.details.country')}
-              value={entry.countryOfOrigin}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateEntry(index, { countryOfOrigin: e.target.value })}
-              sx={textFieldSx}
+              countries={countries}
+              value={countries.find((c) => c.country === entry.countryOfOrigin)?.id ?? null}
+              onChange={(c) => updateEntry(index, { countryOfOrigin: c?.country ?? '' })}
+              required
             />
           </Grid>
         </Grid>
       ))}
+
+      <Grid size={12}>
+        <IssueList errors={errors} />
+      </Grid>
 
       <Grid size={12}>
         <Button

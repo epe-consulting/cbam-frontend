@@ -29,23 +29,26 @@ export const STEP_PREVIOUS_FALLBACK: Record<string, string> = {
   ...CE_STEP_PREVIOUS,
 };
 
-function resolveElectricityTerminalStep(lookup: WizardAnswerLookup): string {
-  const source = lookup.getAnswerByCode('ALU_ELECTRICITY_SOURCE');
-  if (source === 'GRID') return 'ALU_GRID_CONSUMPTION';
-  if (source === 'OWN_PLANT') {
-    return lookup.hasAnswerByCode('ALU_OWN_PLANT_CONSUMPTION')
-      ? 'ALU_OWN_PLANT_CONSUMPTION'
-      : 'ALU_OWN_PLANT_FUEL_TYPE';
-  }
-  if (source === 'PPA') {
-    const ppaHas = lookup.getAnswerByCode('ALU_PPA_HAS_EMISSION_FACTOR');
-    return ppaHas === 'YES' ? 'ALU_PPA_EMISSION_FACTOR_AND_CONSUMPTION' : 'ALU_PPA_CONSUMPTION_ONLY';
-  }
-  return 'ALU_ELECTRICITY_SOURCE';
-}
-
 function isProductsFlow(lookup: WizardAnswerLookup): boolean {
   return lookup.getAnswerByCode('ALU_DECLARATION_PRODUCT') === 'ALU_PRODUCTS';
+}
+
+/**
+ * Last visible step of the primary module. The electricity steps are skipped for aluminium
+ * (direct emissions only), so the module ends with flue gas, or with the "already calculated
+ * emissions" input (which goes to SABIRNA_TACKA since post-043).
+ */
+function endOfPrimaryModule(lookup: WizardAnswerLookup): string {
+  return lookup.getAnswerByCode('ALU_DATA_AVAILABILITY') === 'HAS_EMISSIONS_ONLY'
+    ? 'ALU_EMISSIONS_INPUT'
+    : 'ALU_FLUE_GAS_TREATMENT';
+}
+
+/** Last visible step before SABIRNA_TACKA once the unwrought stage (primary and/or secondary) is done. */
+function endOfUnwroughtStage(lookup: WizardAnswerLookup): string {
+  return lookup.getAnswerByCode('ALU_UNWROUGHT_PRODUCTION_METHOD') === 'PRIMARY'
+    ? endOfPrimaryModule(lookup)
+    : 'ALU_FLUE_GAS_TREATMENT';
 }
 
 /** Infer the previous visible step from saved answers when the stack is missing. */
@@ -69,7 +72,7 @@ export function inferPreviousStepFallback(
         return 'ALU_EXTERNAL_PURCHASED_QTY';
       }
       if (lookup.getAnswerByCode('ALU_OWN_EMBEDDED_EMISSIONS') === 'NO') {
-        return resolveElectricityTerminalStep(lookup);
+        return endOfUnwroughtStage(lookup);
       }
       return 'ALU_PRODUCTS_UNWROUGHT_INPUT';
 
@@ -80,10 +83,17 @@ export function inferPreviousStepFallback(
       return 'ALU_DECLARATION';
 
     case 'ALU_SECONDARY_UNWROUGHT_SOURCES':
-      if (isProductsFlow(lookup) && lookup.getAnswerByCode('ALU_OWN_EMBEDDED_EMISSIONS') === 'NO') {
-        return resolveElectricityTerminalStep(lookup);
+      // "Oba" (BOTH): the secondary module follows the primary one via SABIRNA_TACKA, both for
+      // CN 7601 (post-043) and for own production of aluminium products.
+      if (lookup.getAnswerByCode('ALU_UNWROUGHT_PRODUCTION_METHOD') === 'BOTH') {
+        return endOfPrimaryModule(lookup);
       }
       return 'ALU_UNWROUGHT';
+
+    case 'ALU_UNWROUGHT_ADDITIONAL':
+      // Products always end with flue gas of the products stage; CN 7601 ends with the last module.
+      if (isProductsFlow(lookup)) return 'ALU_FLUE_GAS_TREATMENT';
+      return endOfUnwroughtStage(lookup);
 
     case 'ALU_SECONDARY_ALLOYING_ELEMENTS': {
       const sourcesAnswer = lookup.getAnswerByCode('ALU_SECONDARY_UNWROUGHT_SOURCES');

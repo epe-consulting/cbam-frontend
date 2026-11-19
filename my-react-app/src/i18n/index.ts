@@ -12,6 +12,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import bs from './locales/bs.json';
 import en from './locales/en.json';
+import trLocale from './locales/tr.json';
 
 export const DEFAULT_LANGUAGE = 'bs';
 export const LANGUAGE_STORAGE_KEY = 'cbam.lang';
@@ -20,12 +21,10 @@ export const LANGUAGE_STORAGE_KEY = 'cbam.lang';
 export const APP_LANGUAGES = [
   { code: 'bs', short: 'BS', label: 'Bosanski' },
   { code: 'en', short: 'EN', label: 'English' },
+  { code: 'tr', short: 'TR', label: 'Türkçe' },
 ] as const;
 
-/**
- * Languages the public landing page offers. A landing-only language (e.g. `tr`)
- * is still stored as the i18n language; app texts then fall back to Bosnian.
- */
+/** Languages the public landing page offers (all of them are also app languages since 2026-11-19). */
 export const LANDING_LANGUAGES = ['en', 'bs', 'tr'] as const;
 export type LandingLanguage = (typeof LANDING_LANGUAGES)[number];
 
@@ -56,6 +55,7 @@ void i18n.use(initReactI18next).init({
   resources: {
     bs: { translation: bs },
     en: { translation: en },
+    tr: { translation: trLocale },
   },
   lng: readStoredLanguage(),
   fallbackLng: DEFAULT_LANGUAGE,
@@ -73,9 +73,27 @@ export function getCurrentLanguage(): string {
 
 export default i18n;
 
+/** Language forced by {@link withLanguage} for the duration of a synchronous call, else null. */
+let forcedLanguage: string | null = null;
+
 /** Translate outside React components (module-level helpers, validation messages). */
 export function tr(key: string, options?: Record<string, unknown>): string {
-  return (i18n.t as unknown as (k: string, o?: Record<string, unknown>) => string)(key, options);
+  const t = forcedLanguage ? i18n.getFixedT(forcedLanguage) : i18n.t;
+  return (t as unknown as (k: string, o?: Record<string, unknown>) => string)(key, options);
+}
+
+/**
+ * Runs `fn` with {@link tr} answering in `lng` (e.g. 'en' for PDF / CSV exports, whose PDF font has
+ * no glyphs for ş, ğ, ı, č, ć, đ), without changing the UI language.
+ */
+export function withLanguage<T>(lng: string, fn: () => T): T {
+  const prev = forcedLanguage;
+  forcedLanguage = lng;
+  try {
+    return fn();
+  } finally {
+    forcedLanguage = prev;
+  }
 }
 
 /**

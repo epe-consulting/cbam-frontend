@@ -4,6 +4,7 @@
 // default-value scenario and the actual-emissions scenario.
 
 import { BENCHMARKS } from './data/benchmarks.ts';
+import { tr } from '../i18n';
 import { DEFAULT_VALUES } from './data/defaultValues.ts';
 import {
   CBAM_FACTOR,
@@ -34,8 +35,18 @@ import type {
   Step,
 } from './types.ts';
 
+/** Internal marker labels (stable, English); show them with labelText(). */
 export const PLANNING_LABEL = 'Planning scenario—verification pending';
 export const FORECAST_LABEL = 'Forecast';
+
+/** Display text of a scenario label in the current language (markers are translated, other labels already are). */
+export function labelText(label: string): string {
+  if (label === PLANNING_LABEL) return tr('cc.e.planning');
+  if (label === FORECAST_LABEL) return tr('cc.e.forecast');
+  return label;
+}
+
+const caseText = (c: string) => tr(`cc.e.case.${c}`);
 
 // ------------------------------------------------------------------ helpers
 export const digits = (cn: string) => cn.replace(/\D/g, '');
@@ -90,7 +101,7 @@ function pickVariant(rows: DefaultValueRow[], variant?: string) {
  */
 export function lookupDefaultValue(country: string, cn: string, year: number, variant?: string): DefaultLookup {
   const col = defaultValueColumn(year);
-  if (!col) return { ok: false, reason: `No definitive-period default values for ${year} (Annex I covers 2026 onwards).` };
+  if (!col) return { ok: false, reason: tr('cc.e.noDvYear', { year }) };
   const cnD = digits(cn);
   const notes: string[] = [];
 
@@ -98,7 +109,7 @@ export function lookupDefaultValue(country: string, cn: string, year: number, va
   if (!ownTable && country !== FALLBACK_COUNTRY) {
     return {
       ok: false,
-      reason: `${country} is not in this calculator's extract of Annex I. Choose 'Other countries and territories' only if ${country} has no table in Annex I.`,
+      reason: tr('cc.e.countryNotInExtract', { country }),
     };
   }
   let variantDesc = variant;
@@ -106,34 +117,34 @@ export function lookupDefaultValue(country: string, cn: string, year: number, va
     const own = matchRows(ownTable, cnD);
     if (own.length) {
       const pick = pickVariant(own, variant);
-      if (!pick.row) return { ok: false, reason: 'Select the product variant used in Annex I.', variants: pick.variants };
+      if (!pick.row) return { ok: false, reason: tr('cc.e.selectVariant'), variants: pick.variants };
       const row = pick.row;
       variantDesc = row.description;
       if (row.blocked) {
         return {
           ok: false,
-          reason: `Annex I row ${row.cn} '${row.description}' for ${country} (p. ${row.page}) has an unresolved critical discrepancy (see DATA_VALIDATION.md). Not used.`,
+          reason: tr('cc.e.rowBlocked', { cn: row.cn, desc: row.description, country, page: row.page }),
         };
       }
       const v = row[col];
       if (v != null && row.markers[col] === 'NUM') {
         return { ok: true, row, value: v, usedFallback: false, notes };
       }
-      notes.push(`${country} lists ${row.cn} without a value ('–') on p. ${row.page}; fallback applies.`);
+      notes.push(tr('cc.e.rowDash', { country, cn: row.cn, page: row.page }));
     } else {
-      notes.push(`${country} has no row for this CN code; fallback applies.`);
+      notes.push(tr('cc.e.noRow', { country }));
     }
   }
   const other = dvByCountry.get(FALLBACK_COUNTRY) ?? [];
   const oth = matchRows(other, cnD);
-  if (!oth.length) return { ok: false, reason: `No default value for ${cn} in 'Other countries and territories'.` };
+  if (!oth.length) return { ok: false, reason: tr('cc.e.noDvOther', { cn }) };
   const pick = pickVariant(oth, variantDesc);
-  if (!pick.row) return { ok: false, reason: 'Select the product variant used in Annex I.', variants: pick.variants };
+  if (!pick.row) return { ok: false, reason: tr('cc.e.selectVariant'), variants: pick.variants };
   const row = pick.row;
-  if (row.blocked) return { ok: false, reason: `Fallback row ${row.cn} (p. ${row.page}) has a critical discrepancy.` };
+  if (row.blocked) return { ok: false, reason: tr('cc.e.fallbackBlocked', { cn: row.cn, page: row.page }) };
   const v = row[col];
   if (v == null || row.markers[col] !== 'NUM') {
-    return { ok: false, reason: `No default value for ${cn} in 'Other countries and territories' (p. ${row.page}).` };
+    return { ok: false, reason: tr('cc.e.noDvOtherPage', { cn, page: row.page }) };
   }
   return { ok: true, row, value: v, usedFallback: country !== FALLBACK_COUNTRY, notes };
 }
@@ -161,15 +172,15 @@ export type BenchmarkLookup =
  */
 export function selectDefaultBenchmark(cn: string, year: number, defaultRoute: string): BenchmarkLookup {
   const bm = bmByCn.get(digits(cn));
-  if (!bm) return { ok: false, reason: `No CBAM benchmark for ${cn} in IR 2025/2620 point 5.3.` };
+  if (!bm) return { ok: false, reason: tr('cc.e.noBenchmark', { cn }) };
   const band = benchmarkYearBand(year);
-  if (band == null) return { ok: false, reason: `IR 2025/2620 gives benchmarks for production years 2026-2030 only (year ${year}).` };
+  if (band == null) return { ok: false, reason: tr('cc.e.bmYears', { year }) };
   let opts = bm.colB.filter((o) => o.yearBand == null || o.yearBand === band);
-  if (!opts.length) return { ok: false, reason: `No benchmark for year band ${band} for ${cn}.` };
+  if (!opts.length) return { ok: false, reason: tr('cc.e.bmBand', { band, cn }) };
   const withRoute = opts.filter((o) => o.route);
   if (!withRoute.length) {
-    if (opts.length === 1) return { ok: true, value: opts[0].value, option: opts[0], note: 'Benchmark independent of production route', page: bm.page };
-    return { ok: false, reason: `Ambiguous benchmark for ${cn}.` };
+    if (opts.length === 1) return { ok: true, value: opts[0].value, option: opts[0], note: tr('cc.e.bmNoRoute'), page: bm.page };
+    return { ok: false, reason: tr('cc.e.bmAmbiguous', { cn }) };
   }
   opts = withRoute;
   const routes = (defaultRoute.match(/[A-L]/g) ?? []) as string[];
@@ -182,8 +193,8 @@ export function selectDefaultBenchmark(cn: string, year: number, defaultRoute: s
       option: best,
       note:
         matched.length > 1
-          ? `Route ${defaultRoute}: highest of matching routes (${matched.map((m) => m.route).join(', ')})`
-          : `Route (${best.route}) from the default-value table`,
+          ? tr('cc.e.bmHighest', { route: defaultRoute, routes: matched.map((m) => m.route).join(', ') })
+          : tr('cc.e.bmFromTable', { route: best.route }),
       page: bm.page,
     };
   }
@@ -194,17 +205,15 @@ export function selectDefaultBenchmark(cn: string, year: number, defaultRoute: s
       ok: true,
       value: best.value,
       option: best,
-      note: `Steel alloy grades: highest benchmark for the production year (point 5.1), route (${best.route})`,
+      note: tr('cc.e.bmAlloy', { route: best.route }),
       page: bm.page,
     };
   }
   return {
     ok: false,
     reason: routes.length
-      ? `Default route ${defaultRoute} does not match benchmark routes ${opts.map((o) => o.route).join('/')} for ${cn}.`
-      : `The default-value table gives no production route for ${cn}, but the benchmark depends on the route (${opts
-          .map((o) => o.route)
-          .join('/')}). IR 2026/1740 corrected missing route indicators; it is not in the sources.`,
+      ? tr('cc.e.bmRouteMismatch', { route: defaultRoute, routes: opts.map((o) => o.route).join('/'), cn })
+      : tr('cc.e.bmRouteMissing', { cn, routes: opts.map((o) => o.route).join('/') }),
   };
 }
 
@@ -213,30 +222,30 @@ function deductionFor(claim: DeductionClaim | undefined, pathway: 'DEFAULT' | 'A
   const c = claim ?? { kind: 'NONE_ASSUMED' as const };
   switch (c.kind) {
     case 'NONE_ASSUMED':
-      return { amount: 0, note: 'No foreign carbon-price deduction assumed.', label: null };
+      return { amount: 0, note: tr('cc.e.dedNone'), label: null };
     case 'UNKNOWN':
       return {
         amount: 0,
-        note: 'Carbon price paid abroad unknown — no deduction applied; cost may be overstated.',
-        label: 'Deduction unknown',
+        note: tr('cc.e.dedUnknownNote'),
+        label: tr('cc.e.dedUnknown'),
       };
     case 'EFFECTIVELY_PAID':
       if (pathway === 'DEFAULT')
         return {
           amount: 0,
-          note: `Not eligible: ${SOURCES.deductionDefault}.`,
-          label: 'Deduction not eligible with default values',
+          note: tr('cc.e.dedNotEligibleNote', { src: SOURCES.deductionDefault }),
+          label: tr('cc.e.dedNotEligible'),
         };
       return {
         amount: 0,
-        note: `Claimed but not quantified: ${SOURCES.deductionConversion}. Requires evidence of effective payment and net of rebates (Art. 9(1)-(2)).`,
-        label: 'Deduction not quantified',
+        note: tr('cc.e.dedClaimedNote', { src: SOURCES.deductionConversion }),
+        label: tr('cc.e.dedNotQuantified'),
       };
     case 'COMMISSION_DEFAULT_CARBON_PRICE':
       return {
         amount: 0,
-        note: `Claimed but not quantified: ${SOURCES.deductionConversion}; Commission default carbon prices are not in the sources.`,
-        label: 'Deduction not quantified',
+        note: tr('cc.e.dedCommissionNote', { src: SOURCES.deductionConversion }),
+        label: tr('cc.e.dedNotQuantified'),
       };
   }
 }
@@ -247,19 +256,19 @@ function priceFor(line: ImportLine, prices: PriceAssumptions, pc: PriceCase) {
     if (off != null && off > 0) {
       return {
         price: off,
-        label: `Official 2026 Q${line.importQuarter} price as entered (check against the Commission publication). ${SOURCES.price2026}`,
+        label: tr('cc.e.priceOfficial', { q: line.importQuarter, src: SOURCES.price2026 }),
         forecast: false,
       };
     }
     return {
       price: prices[pc],
-      label: `Assumed ${pc} price for 2026 Q${line.importQuarter} (official quarterly price not entered). ${SOURCES.price2026}`,
+      label: tr('cc.e.priceAssumed2026', { case: caseText(pc), q: line.importQuarter, src: SOURCES.price2026 }),
       forecast: true,
     };
   }
   return {
     price: prices[pc],
-    label: `Assumed ${pc} price. ${SOURCES.priceFrom2027}; the import week does not fix the purchase price.`,
+    label: tr('cc.e.priceAssumed', { case: caseText(pc), src: SOURCES.priceFrom2027 }),
     forecast: true,
   };
 }
@@ -282,20 +291,20 @@ function finish(
   const p = priceFor(line, prices, pc);
   const steps: Step[] = [
     ...base.steps,
-    { label: 'Embedded emissions = SEE × mass', value: `${fmt(see)} × ${fmt(M)} = ${fmt(E)} t CO2e` },
-    { label: 'Free-allocation adjustment = SEFA × mass', value: `${fmt(sefa, 6)} × ${fmt(M)} = ${fmt(FAA)} t CO2e`, source: SOURCES.freeAllocationTotal },
-    { label: 'Foreign carbon-price reduction', value: `${fmt(ded.amount)} t CO2e — ${ded.note}` },
+    { label: tr('cc.e.stepEE'), value: `${fmt(see)} × ${fmt(M)} = ${fmt(E)} t CO2e` },
+    { label: tr('cc.e.stepFAA'), value: `${fmt(sefa, 6)} × ${fmt(M)} = ${fmt(FAA)} t CO2e`, source: SOURCES.freeAllocationTotal },
+    { label: tr('cc.e.stepDed'), value: `${fmt(ded.amount)} t CO2e — ${ded.note}` },
     {
-      label: 'Certificates = max(0, emissions − adjustment − reduction)',
+      label: tr('cc.e.stepCerts'),
       value: `${fmt(certs)}`,
       source: SOURCES.certificates,
     },
-    { label: 'Certificate cost = certificates × price', value: `${fmt(certs)} × €${fmt(p.price, 2)} = €${fmt(certs * p.price, 2)}`, source: p.label },
+    { label: tr('cc.e.stepCost'), value: `${fmt(certs)} × €${fmt(p.price, 2)} = €${fmt(certs * p.price, 2)}`, source: p.label },
   ];
   const labels = [...base.labels];
   if (p.forecast) labels.push(FORECAST_LABEL);
   if (ded.label) labels.push(ded.label);
-  if (E - FAA - ded.amount < 0) labels.push('Adjustment exceeds emissions — floored at 0 (see open questions)');
+  if (E - FAA - ded.amount < 0) labels.push(tr('cc.e.floored'));
   return {
     ...base,
     status: 'ESTIMATED',
@@ -333,7 +342,7 @@ export function suggestDefaultPathwaySefa(
   if (!bm.ok) return { ok: false, reason: bm.reason };
   const cf = CBAM_FACTOR[year];
   const cscf = CSCF[year];
-  if (cf == null || cscf == null) return { ok: false, reason: `No CBAM factor / CSCF for ${year} in the sources.` };
+  if (cf == null || cscf == null) return { ok: false, reason: tr('cc.e.noFactor', { year }) };
   const sefa = cf * cscf * bm.value;
   return {
     ok: true,
@@ -342,33 +351,33 @@ export function suggestDefaultPathwaySefa(
     benchmark: bm.value,
     cbamFactor: cf,
     cscf,
-    note: `Default-path SEFA = ${cf} × ${cscf} × ${bm.value} = ${sefa} t CO₂e/t (IR 2025/2620 Eq. 6). Planning estimate only — replace with supplier-report SEFA when available.`,
+    note: tr('cc.e.sefaNote', { cf, cscf, bm: bm.value, sefa }),
   };
 }
 
 function defaultScenario(line: ImportLine, M: number, prices: PriceAssumptions, pc: PriceCase): ScenarioLineResult {
   const y = line.importYear; // default values for the final good: year of import (IR 2025/2547 Art. 7; Guidance 3 p. 116)
   const base: ScenarioLineResult = { status: 'INSUFFICIENT_INFO', reasons: [], massTonnes: M, reportingYear: y, labels: [], steps: [] };
-  base.steps.push({ label: 'Reporting period', value: String(y), source: SOURCES.reportingYearDefault });
+  base.steps.push({ label: tr('cc.e.stepPeriod'), value: String(y), source: SOURCES.reportingYearDefault });
   const dv = lookupDefaultValue(line.countryOfOrigin, line.cn, y, line.variant);
   if (!dv.ok) return { ...base, reasons: [dv.reason] };
   base.steps.push({
-    label: `Default SEE (${dv.row.country}, ${dv.row.cn} ${dv.row.description}, incl. ${y >= 2028 ? '2028+' : y} mark-up)`,
+    label: tr('cc.e.stepDefaultSee', { country: dv.row.country, cn: dv.row.cn, desc: dv.row.description, year: y >= 2028 ? '2028+' : y }),
     value: `${fmt(dv.value)} t CO2e/t`,
     source: `${SOURCES.defaultValues}, p. ${dv.row.page}${dv.usedFallback ? '; ' + SOURCES.fallback : ''}`,
   });
   dv.notes.forEach((n) => base.labels.push(n));
-  if (dv.usedFallback) base.labels.push('Fallback default (Other countries and territories)');
+  if (dv.usedFallback) base.labels.push(tr('cc.e.fallbackLabel'));
   const bm = selectDefaultBenchmark(line.cn, y, dv.row.route);
   if (!bm.ok) return { ...base, see: dv.value, reasons: [bm.reason] };
   const cf = CBAM_FACTOR[y];
   const cscf = CSCF[y];
-  if (cf == null || cscf == null) return { ...base, see: dv.value, reasons: [`No CBAM factor / CSCF for ${y} in the sources.`] };
+  if (cf == null || cscf == null) return { ...base, see: dv.value, reasons: [tr('cc.e.noFactor', { year: y })] };
   const sefa = cf * cscf * bm.value; // IR 2025/2620 Eq. 6
-  base.steps.push({ label: `Default benchmark BMg (Column B) — ${bm.note}`, value: `${fmt(bm.value, 3)} t CO2e/t`, source: `IR (EU) 2025/2620 point 5.3, p. ${bm.page}` });
-  base.steps.push({ label: 'CBAM factor', value: String(cf), source: CBAM_FACTOR_SOURCE });
+  base.steps.push({ label: tr('cc.e.stepBm', { note: bm.note }), value: `${fmt(bm.value, 3)} t CO2e/t`, source: `IR (EU) 2025/2620 point 5.3, p. ${bm.page}` });
+  base.steps.push({ label: tr('cc.e.stepCbamFactor'), value: String(cf), source: CBAM_FACTOR_SOURCE });
   base.steps.push({ label: 'CSCF', value: String(cscf), source: CSCF_SOURCE });
-  base.steps.push({ label: 'SEFA = CBAM factor × CSCF × BMg', value: `${fmt(sefa, 6)} t CO2e/t`, source: SOURCES.freeAllocationDefault });
+  base.steps.push({ label: tr('cc.e.stepSefa'), value: `${fmt(sefa, 6)} t CO2e/t`, source: SOURCES.freeAllocationDefault });
   base.seeSource = `${SOURCES.defaultValues} p. ${dv.row.page}`;
   base.sefaSource = SOURCES.freeAllocationDefault;
   return finish(base, line, dv.value, sefa, line.defaultDeduction, 'DEFAULT', prices, pc);
@@ -384,31 +393,31 @@ function actualScenario(line: ImportLine, M: number, prices: PriceAssumptions, p
         ? line.productionYear
         : line.importYear;
   const base: ScenarioLineResult = { status: 'INSUFFICIENT_INFO', reasons: [], massTonnes: M, reportingYear: y, labels: [], steps: [] };
-  base.steps.push({ label: 'Reporting period (actual data)', value: String(y), source: 'IR (EU) 2025/2547 Art. 7(1)' });
+  base.steps.push({ label: tr('cc.e.stepPeriodActual'), value: String(y), source: 'IR (EU) 2025/2547 Art. 7(1)' });
   if (line.actualSource !== 'VERIFIED_SUPPLIER') base.labels.push(PLANNING_LABEL);
-  if (line.actualSee == null) return { ...base, reasons: ['Actual specific embedded emissions (SEE) not entered.'] };
+  if (line.actualSee == null) return { ...base, reasons: [tr('cc.e.noActualSee')] };
   if (line.actualSefa == null)
     return {
       ...base,
       see: line.actualSee,
       reasons: [
-        "Supplier's specific embedded free allocation (SEFA) not entered. It is part of the operator's emissions report (Guidance Doc. No. 4 §2.2); the calculator does not estimate it.",
+        tr('cc.e.noActualSefa'),
       ],
     };
   base.steps.push({
-    label: `Actual SEE (${line.actualSource === 'VERIFIED_SUPPLIER' ? 'verified supplier data' : 'preliminary estimate'})`,
+    label: tr('cc.e.stepActualSee', { kind: line.actualSource === 'VERIFIED_SUPPLIER' ? tr('cc.e.verifiedData') : tr('cc.e.preliminary') }),
     value: `${fmt(line.actualSee)} t CO2e/t`,
   });
   base.steps.push(
     line.actualSource === 'VERIFIED_SUPPLIER'
-      ? { label: "SEFA from supplier's emissions report", value: `${fmt(line.actualSefa, 6)} t CO2e/t`, source: SOURCES.sefaActual }
+      ? { label: tr('cc.e.stepSefaSupplier'), value: `${fmt(line.actualSefa, 6)} t CO2e/t`, source: SOURCES.sefaActual }
       : {
-          label: 'SEFA (planning value — replace with the figure from the supplier report)',
+          label: tr('cc.e.stepSefaPlanning'),
           value: `${fmt(line.actualSefa, 6)} t CO2e/t`,
-          source: `Not verified. Required source: ${SOURCES.sefaActual}`,
+          source: tr('cc.e.notVerifiedSrc', { src: SOURCES.sefaActual }),
         },
   );
-  base.seeSource = line.actualSource === 'VERIFIED_SUPPLIER' ? 'Verified supplier data' : 'Preliminary estimate';
+  base.seeSource = line.actualSource === 'VERIFIED_SUPPLIER' ? tr('cc.e.verifiedSupplier') : tr('cc.e.preliminaryCap');
   base.sefaSource = SOURCES.sefaActual;
   return finish(base, line, line.actualSee, line.actualSefa, line.actualDeduction, 'ACTUAL', prices, pc);
 }
@@ -442,7 +451,7 @@ export function calculate(
       steps: [],
     });
     if (!(M > 0)) {
-      const r = empty('INSUFFICIENT_INFO', 'Quantity must be greater than zero.');
+      const r = empty('INSUFFICIENT_INFO', tr('cc.e.qtyPositive'));
       return { line, sector: sc.sector, scopeNote: sc.note, defaultScenario: r, actualScenario: null };
     }
     if (!sc.inScope) {
@@ -450,7 +459,7 @@ export function calculate(
       return { line, scopeNote: sc.note, defaultScenario: r, actualScenario: null };
     }
     if (sc.sector === 'ELECTRICITY') {
-      const r = empty('NOT_IMPLEMENTED', 'Electricity (MWh, IR 2025/2621 Annex III) is not implemented in this calculator.');
+      const r = empty('NOT_IMPLEMENTED', tr('cc.e.electricityNotImpl'));
       return { line, sector: sc.sector, scopeNote: sc.note, defaultScenario: r, actualScenario: null };
     }
     let thresholdNote: string | undefined;
@@ -458,24 +467,24 @@ export function calculate(
       const linesMass = massByYear.get(line.importYear) ?? 0;
       const other = importer.otherImportsTonnesByYear[line.importYear];
       if (linesMass > MASS_THRESHOLD_TONNES) {
-        thresholdNote = `Annual total ${fmt(linesMass + (other ?? 0), 3)} t > ${MASS_THRESHOLD_TONNES} t: all ${line.importYear} imports are subject to CBAM (${SOURCES.threshold}).`;
+        thresholdNote = tr('cc.e.thresholdOver', { total: fmt(linesMass + (other ?? 0), 3), limit: MASS_THRESHOLD_TONNES, year: line.importYear, src: SOURCES.threshold });
       } else if (other == null) {
         const r = empty(
           'INSUFFICIENT_INFO',
-          `Lines total ${fmt(linesMass, 3)} t in ${line.importYear}. Enter your other CBAM imports for that year to assess the ${MASS_THRESHOLD_TONNES} t exemption (${SOURCES.threshold}).`,
+          tr('cc.e.thresholdNeedOther', { total: fmt(linesMass, 3), year: line.importYear, limit: MASS_THRESHOLD_TONNES, src: SOURCES.threshold }),
         );
         return { line, sector: sc.sector, scopeNote: sc.note, defaultScenario: r, actualScenario: line.actualSee != null ? r : null };
       } else {
         const total = linesMass + other;
         if (total <= MASS_THRESHOLD_TONNES) {
-          const msg = `Annual total ${fmt(total, 3)} t does not exceed ${MASS_THRESHOLD_TONNES} t: importer exempt for ${line.importYear} (${SOURCES.threshold}).`;
+          const msg = tr('cc.e.thresholdExempt', { total: fmt(total, 3), limit: MASS_THRESHOLD_TONNES, year: line.importYear, src: SOURCES.threshold });
           const r = empty('EXEMPT', msg);
           return { line, sector: sc.sector, scopeNote: sc.note, thresholdNote: msg, defaultScenario: r, actualScenario: line.actualSee != null ? r : null };
         }
-        thresholdNote = `Annual total ${fmt(total, 3)} t > ${MASS_THRESHOLD_TONNES} t: all ${line.importYear} imports are subject to CBAM (${SOURCES.threshold}).`;
+        thresholdNote = tr('cc.e.thresholdOver', { total: fmt(total, 3), limit: MASS_THRESHOLD_TONNES, year: line.importYear, src: SOURCES.threshold });
       }
     } else {
-      thresholdNote = `The ${MASS_THRESHOLD_TONNES} t exemption does not apply to hydrogen (Art. 2a(4)).`;
+      thresholdNote = tr('cc.e.thresholdHydrogen', { limit: MASS_THRESHOLD_TONNES });
     }
     return {
       line,
@@ -635,7 +644,7 @@ function netSavingAt(input: CompareInput, k: number, basis: 'FIRST' | 'RECURRING
 
 function breakEven(input: CompareInput, c: Omit<Comparison, 'breakEvenFirstYear' | 'breakEvenRecurring' | 'conclusion'>, basis: 'FIRST' | 'RECURRING'): BreakEven {
   const mass = c.default.totals.massTonnes;
-  if (!c.comparable || mass <= 0) return { kind: 'NOT_APPLICABLE', explanation: 'Break-even needs a complete comparison of the same goods.' };
+  if (!c.comparable || mass <= 0) return { kind: 'NOT_APPLICABLE', explanation: tr('cc.e.beNeedComplete') };
   const extra = basis === 'FIRST' ? c.additionalCostsFirstYear : c.additionalCostsRecurring;
   const savingPerTonne = c.certificateSaving / mass;
   if (savingPerTonne <= 0) {
@@ -643,18 +652,18 @@ function breakEven(input: CompareInput, c: Omit<Comparison, 'breakEvenFirstYear'
       kind: 'NONE',
       explanation:
         extra > 0
-          ? 'Actual emissions do not lower certificate costs under these assumptions, so the additional costs are never recovered — no break-even volume.'
-          : 'Actual emissions do not lower certificate costs; any difference comes only from the other cost items.',
+          ? tr('cc.e.beNever')
+          : tr('cc.e.beOnlyOther'),
     };
   }
-  if (extra <= 0) return { kind: 'ALWAYS', explanation: 'No additional costs for the actual-emissions route, so it is cheaper at any liable volume.' };
+  if (extra <= 0) return { kind: 'ALWAYS', explanation: tr('cc.e.beAlways') };
   const simple = extra / savingPerTonne;
   // Full engine (threshold and per-line rules): bisection on a uniform scale of all line quantities.
   let lo = 0;
   let hi = 1;
   let guard = 0;
   while (netSavingAt(input, hi, basis) < 0 && guard++ < 60) hi *= 2;
-  if (guard >= 60) return { kind: 'NONE', simpleFormulaTonnes: simple, explanation: 'No break-even found within a realistic volume range.' };
+  if (guard >= 60) return { kind: 'NONE', simpleFormulaTonnes: simple, explanation: tr('cc.e.beNotFound') };
   for (let i = 0; i < 60; i++) {
     const mid = (lo + hi) / 2;
     if (netSavingAt(input, mid, basis) >= 0) hi = mid;
@@ -666,9 +675,10 @@ function breakEven(input: CompareInput, c: Omit<Comparison, 'breakEvenFirstYear'
     kind: 'AT_QUANTITY',
     quantityTonnes: q,
     simpleFormulaTonnes: simple,
-    explanation: `Break-even at about ${q.toFixed(1)} t (same product mix, scaled). Simple estimate: additional costs ${eur(extra)} ÷ certificate saving ${eur(savingPerTonne)}/t = ${simple.toFixed(1)} t${
-      differs ? '; the full calculation differs because of the 50 t threshold or other per-line rules' : ''
-    }. Assumes the additional costs are fixed and do not change with volume.`,
+    explanation: tr('cc.e.beAt', {
+      q: q.toFixed(1), extra: eur(extra), saving: eur(savingPerTonne), simple: simple.toFixed(1),
+      diff: differs ? tr('cc.e.beDiffers') : '',
+    }),
   };
 }
 
@@ -679,10 +689,10 @@ export function compare(input: CompareInput): Comparison {
   const anyActual = res.some((r) => r.actualScenario);
   const comparable = anyActual && !d.totals.incomplete && !a.totals.incomplete;
   const comparableNote = !anyActual
-    ? 'Enter actual emissions for at least one line to compare.'
+    ? tr('cc.e.cmpNeedActual')
     : comparable
-      ? 'Both scenarios use the same goods, quantities, origins, years and price assumptions. Lines without actual data use default values in both scenarios.'
-      : 'Some lines could not be estimated in one scenario — totals are incomplete and must not be compared as final.';
+      ? tr('cc.e.cmpOk')
+      : tr('cc.e.cmpIncomplete');
   const base = {
     default: d,
     actual: a,
@@ -702,17 +712,18 @@ export function compare(input: CompareInput): Comparison {
     const cs = base.certificateSaving;
     const certPart =
       cs >= 0
-        ? `Using actual emissions is estimated to reduce certificate costs by ${eur(cs)}`
-        : `Using actual emissions is estimated to INCREASE certificate costs by ${eur(cs)}`;
+        ? tr('cc.e.conclCertDown', { v: eur(cs) })
+        : tr('cc.e.conclCertUp', { v: eur(cs) });
     const ns = base.netSavingFirstYear;
     const netPart =
-      ns >= 0 ? `the estimated net saving is ${eur(ns)}` : `the estimated net result is an ADDITIONAL COST of ${eur(ns)}`;
+      ns >= 0 ? tr('cc.e.conclNetSave', { v: eur(ns) }) : tr('cc.e.conclNetCost', { v: eur(ns) });
     const rec = base.netSavingRecurring;
-    conclusion = `${certPart}. After ${eur(base.additionalCostsFirstYear)} in additional calculation, verification and reporting costs in the first year, ${netPart} for the selected period. In later years (recurring costs only) the net ${
-      rec >= 0 ? 'saving' : 'additional cost'
-    } is ${eur(rec)} per year.`;
-    if (a.totals.planning) conclusion += ` Actual values include preliminary estimates (${PLANNING_LABEL}).`;
-    if (d.totals.forecast || a.totals.forecast) conclusion += ' Based on an assumed certificate price — this is a forecast.';
+    conclusion = tr('cc.e.conclMain', {
+      cert: certPart, extra: eur(base.additionalCostsFirstYear), net: netPart,
+      kind: rec >= 0 ? tr('cc.e.saving') : tr('cc.e.additionalCost'), rec: eur(rec),
+    });
+    if (a.totals.planning) conclusion += tr('cc.e.conclPlanning', { label: labelText(PLANNING_LABEL) });
+    if (d.totals.forecast || a.totals.forecast) conclusion += tr('cc.e.conclForecast');
   }
   return { ...base, breakEvenFirstYear: be1, breakEvenRecurring: be2, conclusion };
 }
@@ -753,12 +764,12 @@ export function sensitivity(input: CompareInput) {
     const c = compare({ ...input, ...patch });
     rows.push({ label, netSavingFirstYear: c.netSavingFirstYear, netSavingRecurring: c.netSavingRecurring });
   };
-  (['low', 'central', 'high'] as PriceCase[]).forEach((pc) => run(`Certificate price ${pc} (€${input.prices[pc]})`, { priceCase: pc }));
+  (['low', 'central', 'high'] as PriceCase[]).forEach((pc) => run(tr('cc.e.sensPrice', { case: caseText(pc), price: input.prices[pc] }), { priceCase: pc }));
   [0.8, 1.2].forEach((f) =>
-    run(`Actual SEE ×${f}`, {
+    run(tr('cc.e.sensSee', { f }), {
       lines: input.lines.map((l) => (l.actualSee != null ? { ...l, actualSee: l.actualSee * f } : l)),
     }),
   );
-  (['low', 'high'] as CostCase[]).forEach((cc) => run(`Calculation/verification costs ${cc}`, { costCase: cc }));
+  (['low', 'high'] as CostCase[]).forEach((cc) => run(tr('cc.e.sensCost', { case: caseText(cc) }), { costCase: cc }));
   return rows;
 }

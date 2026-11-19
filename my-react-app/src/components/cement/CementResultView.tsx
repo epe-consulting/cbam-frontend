@@ -70,6 +70,12 @@ function DefaultValueBlock({ dv }: { dv: Snapshot }) {
 export function CementResultView({ calculationId, result }: { calculationId: number | null; result: SteelResult }) {
   const { t, i18n } = useTranslation();
   const isBs = (i18n.resolvedLanguage ?? i18n.language) === 'bs';
+  // Short subject for the translated message (process / CN / product); the full context is shown below.
+  const warningSubject = (ctx: Record<string, unknown> | null | undefined): string => {
+    if (!ctx) return '';
+    const v = ctx.process_id ?? ctx.cn ?? ctx.taric ?? (typeof ctx.product_index === 'number' ? `#${ctx.product_index + 1}` : undefined);
+    return v == null ? '' : String(v);
+  };
   const [products, setProducts] = useState<CeProductRow[]>([]);
   useEffect(() => {
     if (calculationId == null) return;
@@ -99,7 +105,7 @@ export function CementResultView({ calculationId, result }: { calculationId: num
           {warnings.map((w, i) => (
             <Alert key={`${w.code}-${i}`} severity={w.severity === 'ERROR' ? 'error' : 'warning'} sx={{ borderRadius: T.radius.sm, fontFamily: T.font.body }}>
               <Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem' }}>
-                {(isBs ? (w.message_bs || w.message) : (w.message || w.message_bs)) || t(`cement.err.${w.code}`, { defaultValue: w.code, what: '' })}
+                {t(`cement.err.${w.code}`, { defaultValue: (isBs ? w.message_bs : undefined) || w.message || w.message_bs || w.code, what: warningSubject(w.context), m: w.context?.m ?? '', detail: '' })}
               </Typography>
               {w.context && Object.keys(w.context).length > 0 && (
                 <Typography sx={{ fontFamily: T.font.body, fontSize: '0.78rem', opacity: 0.8 }}>
