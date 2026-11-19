@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { usePageLanguage } from './i18n/useAppLanguage';
 import { useNavigate } from 'react-router-dom';
 import {
   AppBar,
@@ -366,7 +367,7 @@ const contactCards = (t: typeof translations['en']) => [
 
 const Contact: React.FC = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState<Lang>('en');
+  const [language, setLanguage] = usePageLanguage();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [demoOpen, setDemoOpen] = useState(false);
   const [demoName, setDemoName] = useState('');

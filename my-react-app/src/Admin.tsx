@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Container,
@@ -146,6 +147,7 @@ function getSortableValue(value: unknown): string | number | Date {
 }
 
 const Admin: React.FC = () => {
+  const { t } = useTranslation();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -266,7 +268,7 @@ const Admin: React.FC = () => {
     setDataSortDir('asc');
     const token = localStorage.getItem('token');
     if (!token) {
-      setDataError('Not authenticated.');
+      setDataError(t('admin.notAuth'));
       setDataRows([]);
       return;
     }
@@ -281,12 +283,12 @@ const Admin: React.FC = () => {
           setDataRows(rows.map((r: unknown) => (r && typeof r === 'object' ? (r as Record<string, unknown>) : {})));
         } else {
           setDataRows([]);
-          setDataError(data.message || 'Failed to load data.');
+          setDataError(data.message || t('admin.loadFailed'));
         }
       })
       .catch(() => {
         setDataRows([]);
-        setDataError('Request failed.');
+        setDataError(t('admin.requestFailed'));
       })
       .finally(() => setDataLoading(false));
   };
@@ -348,7 +350,7 @@ const Admin: React.FC = () => {
     if (!config) return;
     const token = localStorage.getItem('token');
     if (!token) {
-      setAddError('Not authenticated.');
+      setAddError(t('admin.notAuth'));
       return;
     }
     setAddLoading(true);
@@ -358,7 +360,7 @@ const Admin: React.FC = () => {
       if (dataTableId === 'companies') {
         const name = addForm.name?.trim();
         if (!name) {
-          setAddError('Company name is required.');
+          setAddError(t('admin.companyNameRequired'));
           setAddLoading(false);
           return;
         }
@@ -376,7 +378,7 @@ const Admin: React.FC = () => {
           loadDataTable(dataTableId);
           setCreateCompanySuccess((s) => (s ? '' : ' '));
         } else {
-          setAddError(data.message || 'Failed to create company.');
+          setAddError(data.message || t('admin.createCompanyFailed'));
         }
         setAddLoading(false);
         return;
@@ -435,10 +437,10 @@ const Admin: React.FC = () => {
         setAddDialogOpen(false);
         loadDataTable(dataTableId);
       } else {
-        setAddError(data.message || 'Failed to create.');
+        setAddError(data.message || t('admin.createFailed'));
       }
     } catch {
-      setAddError('Request failed.');
+      setAddError(t('admin.requestFailed'));
     } finally {
       setAddLoading(false);
     }
@@ -460,10 +462,10 @@ const Admin: React.FC = () => {
         localStorage.setItem('user', JSON.stringify({ ...data.admin, role: 'ADMIN' }));
         setIsAdmin(true);
       } else {
-        setLoginError(data.message || 'Invalid email or password.');
+        setLoginError(data.message || t('admin.invalidLogin'));
       }
     } catch {
-      setLoginError('Login failed. Please try again.');
+      setLoginError(t('admin.loginFailed'));
     } finally {
       setLoginLoading(false);
     }
@@ -485,7 +487,7 @@ const Admin: React.FC = () => {
     setCreateLoading(true);
     const token = localStorage.getItem('token');
     if (!token) {
-      setCreateError('Not authenticated.');
+      setCreateError(t('admin.notAuth'));
       setCreateLoading(false);
       return;
     }
@@ -504,15 +506,15 @@ const Admin: React.FC = () => {
       });
       const data = await response.json();
       if (response.ok && data.success) {
-        setCreateSuccess('Admin user created successfully.');
+        setCreateSuccess(t('admin.adminCreated'));
         setCreateUsername('');
         setCreateEmail('');
         setCreatePassword('');
       } else {
-        setCreateError(data.message || 'Failed to create admin.');
+        setCreateError(data.message || t('admin.createAdminFailed'));
       }
     } catch {
-      setCreateError('Request failed. Please try again.');
+      setCreateError(t('admin.requestFailedRetry'));
     } finally {
       setCreateLoading(false);
     }
@@ -528,12 +530,12 @@ const Admin: React.FC = () => {
     setCreateCompanySuccess('');
     const name = createCompanyName.trim();
     if (!name) {
-      setCreateCompanyError('Company name is required.');
+      setCreateCompanyError(t('admin.companyNameRequired'));
       return;
     }
     const token = localStorage.getItem('token');
     if (!token) {
-      setCreateCompanyError('Not authenticated.');
+      setCreateCompanyError(t('admin.notAuth'));
       return;
     }
     setCreateCompanyLoading(true);
@@ -548,14 +550,14 @@ const Admin: React.FC = () => {
       });
       const data = await response.json();
       if (response.ok && data.success) {
-        setCreateCompanySuccess('Company created successfully.');
+        setCreateCompanySuccess(t('admin.companyCreated'));
         setCreateCompanyName('');
         setCreateCompanyCountry('');
       } else {
-        setCreateCompanyError(data.message || 'Failed to create company.');
+        setCreateCompanyError(data.message || t('admin.createCompanyFailed'));
       }
     } catch {
-      setCreateCompanyError('Request failed. Please try again.');
+      setCreateCompanyError(t('admin.requestFailedRetry'));
     } finally {
       setCreateCompanyLoading(false);
     }
@@ -622,11 +624,11 @@ const Admin: React.FC = () => {
                 <Shield sx={{ color: '#fff', fontSize: 22 }} />
               </Box>
               <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: '1.5rem', color: T.color.ink }}>
-                Admin Sign In
+                {t('admin.signInTitle')}
               </Typography>
             </Stack>
             <Typography sx={{ fontFamily: T.font.body, fontSize: '0.92rem', color: T.color.muted, mb: 3.5, lineHeight: 1.6 }}>
-              Sign in with your admin account. This page is not linked from the main site.
+              {t('admin.signInText')}
             </Typography>
             {loginError && (
               <Alert severity="error" sx={{ mb: 2.5, borderRadius: T.radius.sm, fontFamily: T.font.body }}>
@@ -636,13 +638,13 @@ const Admin: React.FC = () => {
             <form onSubmit={handleAdminLogin}>
               <Stack spacing={2.5}>
                 <TextField
-                  fullWidth label="Email" type="email" value={email}
+                  fullWidth label={t('admin.email')} type="email" value={email}
                   onChange={(e) => setEmail(e.target.value)} required autoComplete="email"
                   InputProps={{ startAdornment: <Email sx={{ mr: 1, color: T.color.muted, fontSize: 20 }} /> }}
                   sx={textFieldSx}
                 />
                 <TextField
-                  fullWidth label="Password" type="password" value={password}
+                  fullWidth label={t('admin.password')} type="password" value={password}
                   onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password"
                   InputProps={{ startAdornment: <Lock sx={{ mr: 1, color: T.color.muted, fontSize: 20 }} /> }}
                   sx={textFieldSx}
@@ -657,7 +659,7 @@ const Admin: React.FC = () => {
                     '&:hover': { bgcolor: T.color.ctaHover },
                   }}
                 >
-                  {loginLoading ? 'Signing in…' : 'Sign in'}
+                  {loginLoading ? t('admin.signingIn') : t('admin.signIn')}
                 </Button>
               </Stack>
             </form>
@@ -666,7 +668,7 @@ const Admin: React.FC = () => {
               onClick={handleBackToHome}
               sx={{ mt: 3, fontFamily: T.font.body, fontWeight: 500, textTransform: 'none', color: T.color.muted, borderRadius: T.radius.pill, '&:hover': { bgcolor: T.color.mint, color: T.color.forest } }}
             >
-              Back to site
+              {t('admin.backToSite')}
             </Button>
           </Paper>
         </Container>
@@ -691,7 +693,7 @@ const Admin: React.FC = () => {
               <AdminPanelSettings sx={{ color: '#fff', fontSize: 20 }} />
             </Box>
             <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: '1.2rem', color: T.color.ink }}>
-              Admin
+              {t('admin.admin')}
             </Typography>
           </Stack>
           <Stack direction="row" spacing={1.5}>
@@ -700,7 +702,7 @@ const Admin: React.FC = () => {
               href="/"
               sx={{ fontFamily: T.font.body, fontWeight: 500, textTransform: 'none', color: T.color.muted, borderRadius: T.radius.pill, fontSize: '0.88rem', '&:hover': { bgcolor: T.color.mint, color: T.color.forest } }}
             >
-              Site
+              {t('admin.site')}
             </Button>
             <Button
               startIcon={<Logout sx={{ fontSize: '18px !important' }} />}
@@ -712,7 +714,7 @@ const Admin: React.FC = () => {
                 '&:hover': { borderColor: T.color.forest, bgcolor: T.color.mint },
               }}
             >
-              Sign out
+              {t('admin.signOut')}
             </Button>
           </Stack>
         </Stack>
@@ -720,7 +722,7 @@ const Admin: React.FC = () => {
 
       <Container maxWidth="lg" sx={{ pt: 4, pb: 6 }}>
         <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: { xs: '1.6rem', md: '2rem' }, color: T.color.ink, letterSpacing: '-0.02em', mb: 3 }}>
-          Admin Dashboard
+          {t('admin.dashboardTitle')}
         </Typography>
 
         <Tabs
@@ -735,8 +737,8 @@ const Admin: React.FC = () => {
             },
           }}
         >
-          <Tab label="Admins" icon={<AdminPanelSettings sx={{ fontSize: 20 }} />} iconPosition="start" />
-          <Tab label="Data Tables" icon={<TableChart sx={{ fontSize: 20 }} />} iconPosition="start" />
+          <Tab label={t('admin.tabAdmins')} icon={<AdminPanelSettings sx={{ fontSize: 20 }} />} iconPosition="start" />
+          <Tab label={t('admin.tabData')} icon={<TableChart sx={{ fontSize: 20 }} />} iconPosition="start" />
         </Tabs>
 
         {/* ── Tab 0: Admins ── */}
@@ -745,22 +747,22 @@ const Admin: React.FC = () => {
             {/* Create admin */}
             <Paper elevation={0} sx={{ ...sectionPaperSx, p: { xs: 3, md: 4 }, mb: 4 }}>
               <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.15rem', color: T.color.ink, mb: 2.5 }}>
-                Create Admin User
+                {t('admin.createAdminTitle')}
               </Typography>
               {createError && <Alert severity="error" sx={{ mb: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>{createError}</Alert>}
               {createSuccess && <Alert severity="success" sx={{ mb: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>{createSuccess}</Alert>}
               <form onSubmit={handleCreateAdmin}>
                 <Stack spacing={2} direction={{ xs: 'column', sm: 'row' }} flexWrap="wrap" useFlexGap>
-                  <TextField label="Username" value={createUsername} onChange={(e) => setCreateUsername(e.target.value)} required size="small" sx={{ minWidth: 160, ...textFieldSx }} />
-                  <TextField label="Email" type="email" value={createEmail} onChange={(e) => setCreateEmail(e.target.value)} required size="small" sx={{ minWidth: 200, ...textFieldSx }} />
-                  <TextField label="Password" type="password" value={createPassword} onChange={(e) => setCreatePassword(e.target.value)} required size="small" sx={{ minWidth: 160, ...textFieldSx }} inputProps={{ minLength: 6 }} />
+                  <TextField label={t('admin.username')} value={createUsername} onChange={(e) => setCreateUsername(e.target.value)} required size="small" sx={{ minWidth: 160, ...textFieldSx }} />
+                  <TextField label={t('admin.email')} type="email" value={createEmail} onChange={(e) => setCreateEmail(e.target.value)} required size="small" sx={{ minWidth: 200, ...textFieldSx }} />
+                  <TextField label={t('admin.password')} type="password" value={createPassword} onChange={(e) => setCreatePassword(e.target.value)} required size="small" sx={{ minWidth: 160, ...textFieldSx }} inputProps={{ minLength: 6 }} />
                   <Button
                     type="submit" variant="contained" disableElevation
                     startIcon={createLoading ? <CircularProgress size={18} sx={{ color: '#fff' }} /> : <PersonAdd />}
                     disabled={createLoading}
                     sx={{ fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', bgcolor: T.color.forest, borderRadius: T.radius.pill, px: 3, '&:hover': { bgcolor: T.color.ctaHover } }}
                   >
-                    {createLoading ? 'Creating…' : 'Create admin'}
+                    {createLoading ? t('admin.creating') : t('admin.createAdmin')}
                   </Button>
                 </Stack>
               </form>
@@ -770,7 +772,7 @@ const Admin: React.FC = () => {
             <Paper elevation={0} sx={sectionPaperSx}>
               <Box sx={sectionHeaderSx}>
                 <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.1rem', color: T.color.ink }}>
-                  Admin Users
+                  {t('admin.adminUsers')}
                 </Typography>
               </Box>
               {adminsLoading ? (
@@ -781,15 +783,15 @@ const Admin: React.FC = () => {
                     <TableHead>
                       <TableRow>
                         <TableCell sx={tableHeadCellSx}>ID</TableCell>
-                        <TableCell sx={tableHeadCellSx}>Username</TableCell>
-                        <TableCell sx={tableHeadCellSx}>Email</TableCell>
-                        <TableCell sx={tableHeadCellSx}>Created</TableCell>
+                        <TableCell sx={tableHeadCellSx}>{t('admin.username')}</TableCell>
+                        <TableCell sx={tableHeadCellSx}>{t('admin.email')}</TableCell>
+                        <TableCell sx={tableHeadCellSx}>{t('admin.colCreated')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {admins.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} align="center" sx={{ ...tableCellSx, py: 4, color: T.color.muted }}>No admin users</TableCell>
+                          <TableCell colSpan={4} align="center" sx={{ ...tableCellSx, py: 4, color: T.color.muted }}>{t('admin.noAdmins')}</TableCell>
                         </TableRow>
                       ) : (
                         admins.map((admin) => (
@@ -810,17 +812,17 @@ const Admin: React.FC = () => {
             {/* Create company */}
             <Paper elevation={0} sx={{ ...sectionPaperSx, p: { xs: 3, md: 4 }, mt: 4, mb: 4 }}>
               <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.15rem', color: T.color.ink, mb: 2.5 }}>
-                Create Company
+                {t('admin.createCompanyTitle')}
               </Typography>
               {createCompanyError && <Alert severity="error" sx={{ mb: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>{createCompanyError}</Alert>}
               {createCompanySuccess && <Alert severity="success" sx={{ mb: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>{createCompanySuccess}</Alert>}
               <form onSubmit={handleCreateCompany}>
                 <Stack spacing={2} direction={{ xs: 'column', sm: 'row' }} flexWrap="wrap" useFlexGap alignItems="center">
-                  <TextField label="Company name" value={createCompanyName} onChange={(e) => setCreateCompanyName(e.target.value)} required size="small" sx={{ minWidth: 240, ...textFieldSx }} />
+                  <TextField label={t('admin.companyName')} value={createCompanyName} onChange={(e) => setCreateCompanyName(e.target.value)} required size="small" sx={{ minWidth: 240, ...textFieldSx }} />
                   <FormControl size="small" sx={{ minWidth: 220, '& .MuiOutlinedInput-root': { borderRadius: T.radius.sm, fontFamily: T.font.body }, '& .MuiInputLabel-root': { fontFamily: T.font.body } }} required>
-                    <InputLabel id="create-company-country-label">Country</InputLabel>
-                    <Select labelId="create-company-country-label" label="Country" value={createCompanyCountry} onChange={(e) => setCreateCompanyCountry(e.target.value)}>
-                      <MenuItem value=""><em>Select country</em></MenuItem>
+                    <InputLabel id="create-company-country-label">{t('admin.country')}</InputLabel>
+                    <Select labelId="create-company-country-label" label={t('admin.country')} value={createCompanyCountry} onChange={(e) => setCreateCompanyCountry(e.target.value)}>
+                      <MenuItem value=""><em>{t('admin.selectCountry')}</em></MenuItem>
                       {countries.map((c) => (<MenuItem key={c} value={c}>{c}</MenuItem>))}
                     </Select>
                   </FormControl>
@@ -830,7 +832,7 @@ const Admin: React.FC = () => {
                     disabled={createCompanyLoading}
                     sx={{ fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', bgcolor: T.color.forest, borderRadius: T.radius.pill, px: 3, '&:hover': { bgcolor: T.color.ctaHover } }}
                   >
-                    {createCompanyLoading ? 'Creating…' : 'Create company'}
+                    {createCompanyLoading ? t('admin.creating') : t('admin.createCompany')}
                   </Button>
                 </Stack>
               </form>
@@ -840,7 +842,7 @@ const Admin: React.FC = () => {
             <Paper elevation={0} sx={sectionPaperSx}>
               <Box sx={sectionHeaderSx}>
                 <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.1rem', color: T.color.ink }}>
-                  Companies
+                  {t('admin.companies')}
                 </Typography>
               </Box>
               {companiesLoading ? (
@@ -851,14 +853,14 @@ const Admin: React.FC = () => {
                     <TableHead>
                       <TableRow>
                         <TableCell sx={tableHeadCellSx}>ID</TableCell>
-                        <TableCell sx={tableHeadCellSx}>Name</TableCell>
-                        <TableCell sx={tableHeadCellSx}>Created</TableCell>
+                        <TableCell sx={tableHeadCellSx}>{t('admin.colName')}</TableCell>
+                        <TableCell sx={tableHeadCellSx}>{t('admin.colCreated')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {companies.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={3} align="center" sx={{ ...tableCellSx, py: 4, color: T.color.muted }}>No companies</TableCell>
+                          <TableCell colSpan={3} align="center" sx={{ ...tableCellSx, py: 4, color: T.color.muted }}>{t('admin.noCompanies')}</TableCell>
                         </TableRow>
                       ) : (
                         companies.map((company) => (
@@ -881,25 +883,25 @@ const Admin: React.FC = () => {
         {activeTab === 1 && (
           <Box>
             <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.15rem', color: T.color.ink, mb: 2 }}>
-              Select a table
+              {t('admin.selectTable')}
             </Typography>
             <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mb: 3 }}>
-              {DATA_TABLES.map((t) => (
+              {DATA_TABLES.map((tbl) => (
                 <Button
-                  key={t.id}
-                  variant={dataTableId === t.id ? 'contained' : 'outlined'}
+                  key={tbl.id}
+                  variant={dataTableId === tbl.id ? 'contained' : 'outlined'}
                   size="small"
                   disableElevation
-                  onClick={() => loadDataTable(t.id)}
+                  onClick={() => loadDataTable(tbl.id)}
                   sx={{
                     fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', fontSize: '0.85rem',
                     borderRadius: T.radius.pill, px: 2.5,
-                    ...(dataTableId === t.id
+                    ...(dataTableId === tbl.id
                       ? { bgcolor: T.color.forest, color: '#fff', '&:hover': { bgcolor: T.color.ctaHover } }
                       : { borderColor: T.color.line, color: T.color.inkSoft, '&:hover': { borderColor: T.color.forest, bgcolor: T.color.mint, color: T.color.forest } }),
                   }}
                 >
-                  {t.label}
+                  {t(`admin.tables.${tbl.id}`)}
                 </Button>
               ))}
             </Stack>
@@ -907,7 +909,7 @@ const Admin: React.FC = () => {
               <>
                 <Stack direction="row" alignItems="center" gap={2} sx={{ mb: 2.5, flexWrap: 'wrap' }}>
                   <TextField
-                    size="small" placeholder="Search in table…" value={dataSearch}
+                    size="small" placeholder={t('admin.search')} value={dataSearch}
                     onChange={(e) => setDataSearch(e.target.value)}
                     sx={{ minWidth: 280, ...textFieldSx }}
                     InputProps={{ startAdornment: (<InputAdornment position="start"><Search sx={{ color: T.color.muted, fontSize: 20 }} /></InputAdornment>) }}
@@ -916,7 +918,7 @@ const Admin: React.FC = () => {
                     variant="contained" disableElevation startIcon={<Add />} onClick={openAddDialog}
                     sx={{ fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', bgcolor: T.color.forest, borderRadius: T.radius.pill, px: 3, '&:hover': { bgcolor: T.color.ctaHover } }}
                   >
-                    Add
+                    {t('admin.add')}
                   </Button>
                 </Stack>
                 {dataError && <Alert severity="error" sx={{ mb: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>{dataError}</Alert>}
@@ -946,7 +948,7 @@ const Admin: React.FC = () => {
                           {sortedRows.length === 0 ? (
                             <TableRow>
                               <TableCell colSpan={dataColumns.length} align="center" sx={{ ...tableCellSx, py: 4, color: T.color.muted }}>
-                                {dataRows.length === 0 ? 'No rows' : 'No rows match the search'}
+                                {dataRows.length === 0 ? t('admin.noRows') : t('admin.noRowsMatch')}
                               </TableCell>
                             </TableRow>
                           ) : (
@@ -966,8 +968,8 @@ const Admin: React.FC = () => {
                   </Paper>
                 )}
                 <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted, mt: 1.5 }}>
-                  {sortedRows.length} row{sortedRows.length !== 1 ? 's' : ''}
-                  {dataSearch.trim() && filteredRows.length !== dataRows.length && ` (filtered from ${dataRows.length})`}
+                  {t('admin.rowCount', { count: sortedRows.length })}
+                  {dataSearch.trim() && filteredRows.length !== dataRows.length && t('admin.filteredFrom', { total: dataRows.length })}
                 </Typography>
 
                 {/* Add dialog */}
@@ -975,21 +977,21 @@ const Admin: React.FC = () => {
                   <Box sx={{ height: 4, background: `linear-gradient(90deg, ${T.color.forest}, ${T.color.sage}, ${T.color.accent})` }} />
                   <form onSubmit={handleAddSubmit}>
                     <DialogTitle sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: '1.3rem', color: T.color.ink, pt: 3 }}>
-                      Add to {DATA_TABLES.find((t) => t.id === dataTableId)?.label ?? ''}
+                      {t('admin.addTo', { table: dataTableId ? t(`admin.tables.${dataTableId}`) : '' })}
                     </DialogTitle>
                     <DialogContent>
                       {addError && <Alert severity="error" sx={{ mb: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>{addError}</Alert>}
                       <Stack spacing={2} sx={{ pt: 1 }}>
                         {(dataTableId === 'admins' || dataTableId === 'users') && (
                           <>
-                            <TextField label="Username" value={addForm.username ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, username: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
-                            <TextField label="Email" type="email" value={addForm.email ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
-                            <TextField label="Password" type="password" value={addForm.password ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, password: e.target.value }))} required size="small" fullWidth inputProps={{ minLength: 6 }} sx={textFieldSx} />
+                            <TextField label={t('admin.username')} value={addForm.username ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, username: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
+                            <TextField label={t('admin.email')} type="email" value={addForm.email ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
+                            <TextField label={t('admin.password')} type="password" value={addForm.password ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, password: e.target.value }))} required size="small" fullWidth inputProps={{ minLength: 6 }} sx={textFieldSx} />
                             {dataTableId === 'users' && (
                               <FormControl size="small" fullWidth sx={{ '& .MuiOutlinedInput-root': { borderRadius: T.radius.sm, fontFamily: T.font.body }, '& .MuiInputLabel-root': { fontFamily: T.font.body } }}>
-                                <InputLabel id="add-user-company-label">Company</InputLabel>
-                                <Select labelId="add-user-company-label" label="Company" value={addForm.companyId ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, companyId: e.target.value }))}>
-                                  <MenuItem value=""><em>None</em></MenuItem>
+                                <InputLabel id="add-user-company-label">{t('admin.company')}</InputLabel>
+                                <Select labelId="add-user-company-label" label={t('admin.company')} value={addForm.companyId ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, companyId: e.target.value }))}>
+                                  <MenuItem value=""><em>{t('admin.none')}</em></MenuItem>
                                   {companies.map((c) => (<MenuItem key={c.id} value={String(c.id)}>{c.name} (ID:{c.id})</MenuItem>))}
                                 </Select>
                               </FormControl>
@@ -998,51 +1000,51 @@ const Admin: React.FC = () => {
                         )}
                         {dataTableId === 'companies' && (
                           <>
-                            <TextField label="Company name" value={addForm.name ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
+                            <TextField label={t('admin.companyName')} value={addForm.name ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
                             <FormControl size="small" fullWidth required sx={{ '& .MuiOutlinedInput-root': { borderRadius: T.radius.sm, fontFamily: T.font.body }, '& .MuiInputLabel-root': { fontFamily: T.font.body } }}>
-                              <InputLabel id="add-company-country-label">Country</InputLabel>
-                              <Select labelId="add-company-country-label" label="Country" value={addForm.country ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, country: e.target.value }))}>
-                                <MenuItem value=""><em>Select country</em></MenuItem>
+                              <InputLabel id="add-company-country-label">{t('admin.country')}</InputLabel>
+                              <Select labelId="add-company-country-label" label={t('admin.country')} value={addForm.country ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, country: e.target.value }))}>
+                                <MenuItem value=""><em>{t('admin.selectCountry')}</em></MenuItem>
                                 {countries.map((c) => (<MenuItem key={c} value={c}>{c}</MenuItem>))}
                               </Select>
                             </FormControl>
                           </>
                         )}
                         {dataTableId === 'emission-factor-types' && (
-                          <TextField label="Emission factor type" value={addForm.emissionFactorType ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, emissionFactorType: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
+                          <TextField label={t('admin.f.efType')} value={addForm.emissionFactorType ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, emissionFactorType: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
                         )}
                         {dataTableId === 'nominators' && (
-                          <TextField label="Nominator" value={addForm.nominator ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, nominator: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
+                          <TextField label={t('admin.f.nominator')} value={addForm.nominator ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, nominator: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
                         )}
                         {dataTableId === 'denominators' && (
-                          <TextField label="Denominator" value={addForm.denominator ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, denominator: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
+                          <TextField label={t('admin.f.denominator')} value={addForm.denominator ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, denominator: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
                         )}
                         {dataTableId === 'emission-factors' && (
                           <>
-                            <TextField label="Sector" value={addForm.sector ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, sector: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
-                            <TextField label="Subsector" value={addForm.subsector ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, subsector: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
-                            <TextField label="Subsubsector" value={addForm.subsubsector ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, subsubsector: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
-                            <TextField label="Emission factor name" value={addForm.emissionFactorName ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, emissionFactorName: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
-                            <TextField label="Emission factor type ID" type="number" value={addForm.emissionFactorTypeId ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, emissionFactorTypeId: e.target.value }))} size="small" fullWidth sx={textFieldSx} />
-                            <TextField label="Nominator ID" type="number" value={addForm.nominatorId ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, nominatorId: e.target.value }))} size="small" fullWidth sx={textFieldSx} />
-                            <TextField label="Denominator ID" type="number" value={addForm.denominatorId ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, denominatorId: e.target.value }))} size="small" fullWidth sx={textFieldSx} />
-                            <TextField label="Emission factor value ID" type="number" value={addForm.emissionFactorValueId ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, emissionFactorValueId: e.target.value }))} size="small" fullWidth sx={textFieldSx} />
-                            <TextField label="Created by user ID" type="number" value={addForm.createdByUserId ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, createdByUserId: e.target.value }))} size="small" fullWidth sx={textFieldSx} />
+                            <TextField label={t('admin.f.sector')} value={addForm.sector ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, sector: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
+                            <TextField label={t('admin.f.subsector')} value={addForm.subsector ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, subsector: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
+                            <TextField label={t('admin.f.subsubsector')} value={addForm.subsubsector ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, subsubsector: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
+                            <TextField label={t('admin.f.efName')} value={addForm.emissionFactorName ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, emissionFactorName: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
+                            <TextField label={t('admin.f.efTypeId')} type="number" value={addForm.emissionFactorTypeId ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, emissionFactorTypeId: e.target.value }))} size="small" fullWidth sx={textFieldSx} />
+                            <TextField label={t('admin.f.nominatorId')} type="number" value={addForm.nominatorId ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, nominatorId: e.target.value }))} size="small" fullWidth sx={textFieldSx} />
+                            <TextField label={t('admin.f.denominatorId')} type="number" value={addForm.denominatorId ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, denominatorId: e.target.value }))} size="small" fullWidth sx={textFieldSx} />
+                            <TextField label={t('admin.f.efValueId')} type="number" value={addForm.emissionFactorValueId ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, emissionFactorValueId: e.target.value }))} size="small" fullWidth sx={textFieldSx} />
+                            <TextField label={t('admin.f.createdBy')} type="number" value={addForm.createdByUserId ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, createdByUserId: e.target.value }))} size="small" fullWidth sx={textFieldSx} />
                           </>
                         )}
                         {dataTableId === 'emission-factor-values' && (
                           <>
-                            <TextField label="Value" type="number" value={addForm.value ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, value: e.target.value }))} required size="small" fullWidth inputProps={{ step: 'any' }} sx={textFieldSx} />
-                            <TextField label="Source name" value={addForm.sourceName ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, sourceName: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
-                            <TextField label="Source URL" value={addForm.sourceUrl ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, sourceUrl: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
-                            <TextField label="Source author" value={addForm.sourceAuthor ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, sourceAuthor: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
+                            <TextField label={t('admin.f.value')} type="number" value={addForm.value ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, value: e.target.value }))} required size="small" fullWidth inputProps={{ step: 'any' }} sx={textFieldSx} />
+                            <TextField label={t('admin.f.sourceName')} value={addForm.sourceName ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, sourceName: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
+                            <TextField label={t('admin.f.sourceUrl')} value={addForm.sourceUrl ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, sourceUrl: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
+                            <TextField label={t('admin.f.sourceAuthor')} value={addForm.sourceAuthor ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, sourceAuthor: e.target.value }))} required size="small" fullWidth sx={textFieldSx} />
                             <TextField label="CO2" type="number" value={addForm.co2 ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, co2: e.target.value }))} size="small" fullWidth inputProps={{ step: 'any' }} sx={textFieldSx} />
                             <TextField label="CH4" type="number" value={addForm.ch4 ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, ch4: e.target.value }))} size="small" fullWidth inputProps={{ step: 'any' }} sx={textFieldSx} />
                             <TextField label="N2O" type="number" value={addForm.n2o ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, n2o: e.target.value }))} size="small" fullWidth inputProps={{ step: 'any' }} sx={textFieldSx} />
-                            <TextField label="Description" value={addForm.description ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, description: e.target.value }))} size="small" fullWidth multiline sx={textFieldSx} />
-                            <TextField label="Year" type="number" value={addForm.year ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, year: e.target.value }))} size="small" fullWidth sx={textFieldSx} />
-                            <TextField label="Location" value={addForm.location ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, location: e.target.value }))} size="small" fullWidth sx={textFieldSx} />
-                            <TextField label="Tags (comma-separated)" value={addForm.tags ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, tags: e.target.value }))} size="small" fullWidth placeholder="tag1, tag2" sx={textFieldSx} />
+                            <TextField label={t('admin.f.description')} value={addForm.description ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, description: e.target.value }))} size="small" fullWidth multiline sx={textFieldSx} />
+                            <TextField label={t('admin.f.year')} type="number" value={addForm.year ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, year: e.target.value }))} size="small" fullWidth sx={textFieldSx} />
+                            <TextField label={t('admin.f.location')} value={addForm.location ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, location: e.target.value }))} size="small" fullWidth sx={textFieldSx} />
+                            <TextField label={t('admin.f.tags')} value={addForm.tags ?? ''} onChange={(e) => setAddForm((f) => ({ ...f, tags: e.target.value }))} size="small" fullWidth placeholder="tag1, tag2" sx={textFieldSx} />
                           </>
                         )}
                       </Stack>
@@ -1052,14 +1054,14 @@ const Admin: React.FC = () => {
                         onClick={() => setAddDialogOpen(false)} disabled={addLoading}
                         sx={{ fontFamily: T.font.body, textTransform: 'none', borderRadius: T.radius.pill, px: 3, color: T.color.muted }}
                       >
-                        Cancel
+                        {t('admin.cancel')}
                       </Button>
                       <Button
                         type="submit" variant="contained" disableElevation disabled={addLoading}
                         startIcon={addLoading ? <CircularProgress size={18} sx={{ color: '#fff' }} /> : <Add />}
                         sx={{ fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', bgcolor: T.color.forest, borderRadius: T.radius.pill, px: 3, '&:hover': { bgcolor: T.color.ctaHover } }}
                       >
-                        {addLoading ? 'Adding…' : 'Add'}
+                        {addLoading ? t('admin.adding') : t('admin.add')}
                       </Button>
                     </DialogActions>
                   </form>

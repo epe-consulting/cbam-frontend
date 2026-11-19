@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Container,
   Box,
@@ -73,6 +74,7 @@ const tableCellSx = {
 };
 
 const ReportsList: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [reports, setReports] = useState<BlobReportItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,7 +87,7 @@ const ReportsList: React.FC = () => {
       setError(null);
       const meResult = await apiRequest<{ success: boolean; user?: { companyId?: number | null } }>('/users/me');
       if (!meResult?.data?.success || meResult.data.user?.companyId == null) {
-        setError('Could not determine your company. Please check your account settings.');
+        setError(t('reports.noCompany'));
         setLoading(false);
         return;
       }
@@ -94,12 +96,12 @@ const ReportsList: React.FC = () => {
       if (result.success) {
         setReports(result.reports);
       } else {
-        setError(result.error ?? 'Failed to load reports.');
+        setError(result.error ?? t('reports.loadFailed'));
       }
       setLoading(false);
     };
     fetchReports();
-  }, []);
+  }, [t]);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '—';
@@ -126,7 +128,7 @@ const ReportsList: React.FC = () => {
       setActionError(null);
       await openReportAuthenticated(report);
     } catch (e) {
-      setActionError(e instanceof Error ? e.message : 'Failed to open report');
+      setActionError(e instanceof Error ? e.message : t('reports.openFailed'));
     }
   };
 
@@ -135,7 +137,7 @@ const ReportsList: React.FC = () => {
       setActionError(null);
       await downloadReportAuthenticated(report);
     } catch (e) {
-      setActionError(e instanceof Error ? e.message : 'Failed to download report');
+      setActionError(e instanceof Error ? e.message : t('reports.downloadFailed'));
     }
   };
 
@@ -151,14 +153,14 @@ const ReportsList: React.FC = () => {
             '&:hover': { bgcolor: T.color.mint, color: T.color.forest },
           }}
         >
-          Back to Dashboard
+          {t('reports.backToDashboard')}
         </Button>
       </Box>
       <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: { xs: '1.6rem', md: '2rem' }, color: T.color.ink, letterSpacing: '-0.02em', mb: 0.5 }}>
-        All Reports
+        {t('reports.title')}
       </Typography>
       <Typography sx={{ fontFamily: T.font.body, color: T.color.muted, lineHeight: 1.6, mb: 3 }}>
-        Reports generated and stored for your company.
+        {t('reports.subtitle')}
       </Typography>
 
       {loading && (
@@ -193,17 +195,17 @@ const ReportsList: React.FC = () => {
             <TableHead>
               <TableRow>
                 <TableCell sx={tableHeadCellSx}>#</TableCell>
-                <TableCell sx={tableHeadCellSx}>Report Name</TableCell>
-                <TableCell sx={tableHeadCellSx}>Last Modified</TableCell>
-                <TableCell sx={tableHeadCellSx}>Size</TableCell>
-                <TableCell sx={{ ...tableHeadCellSx, textAlign: 'center' }}>Actions</TableCell>
+                <TableCell sx={tableHeadCellSx}>{t('reports.colName')}</TableCell>
+                <TableCell sx={tableHeadCellSx}>{t('reports.colModified')}</TableCell>
+                <TableCell sx={tableHeadCellSx}>{t('reports.colSize')}</TableCell>
+                <TableCell sx={{ ...tableHeadCellSx, textAlign: 'center' }}>{t('reports.colActions')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {reports.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ ...tableCellSx, py: 5, color: T.color.muted }}>
-                    No reports yet. Generate one from the dashboard.
+                    {t('reports.empty')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -219,7 +221,7 @@ const ReportsList: React.FC = () => {
                     <TableCell sx={tableCellSx}>{formatSize(report.contentLength)}</TableCell>
                     <TableCell sx={{ ...tableCellSx, textAlign: 'center' }}>
                       <Box display="flex" gap={0.5} justifyContent="center">
-                        <Tooltip title="Open in new tab">
+                        <Tooltip title={t('reports.open')}>
                           <IconButton
                             size="small"
                             onClick={() => handleOpen(report)}
@@ -228,7 +230,7 @@ const ReportsList: React.FC = () => {
                             <OpenInNew sx={{ fontSize: 20 }} />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Download">
+                        <Tooltip title={t('reports.download')}>
                           <IconButton
                             size="small"
                             onClick={() => handleDownload(report)}

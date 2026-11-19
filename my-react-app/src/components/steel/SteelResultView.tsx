@@ -165,7 +165,7 @@ export function SteelResultView({ calculationId, result }: { calculationId: numb
           {warnings.map((w, i) => (
             <Alert key={`${w.code}-${i}`} severity={w.severity === 'ERROR' ? 'error' : 'warning'} sx={{ borderRadius: T.radius.sm, fontFamily: T.font.body }}>
               <Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem' }}>
-                {(isBs ? (w.message_bs || WARNING_FALLBACK[w.code] || w.message) : (w.message || WARNING_FALLBACK[w.code] || w.message_bs)) || w.code}
+                {t(`steel.res.code.${w.code}`, { defaultValue: (isBs ? w.message_bs : undefined) || WARNING_FALLBACK[w.code] || w.message || w.message_bs || w.code })}
               </Typography>
               {w.context && Object.keys(w.context).length > 0 && (
                 <Typography sx={{ fontFamily: T.font.body, fontSize: '0.78rem', opacity: 0.8 }}>

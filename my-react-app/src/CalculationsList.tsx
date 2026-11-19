@@ -418,7 +418,7 @@ const CalculationsList: React.FC = () => {
                             }}
                           />
                         </TableCell>
-                        <TableCell sx={tableCellSx}>{calc.currentStep ?? '—'}</TableCell>
+                        <TableCell sx={tableCellSx}>{calc.currentStep ? t(`dashboard.step.${calc.currentStep}`, { defaultValue: calc.currentStep.replace(/_/g, ' ') }) : '—'}</TableCell>
                         <TableCell sx={tableCellSx}>
                           {calc.status === 'COMPLETED' ? (
                             emissionsMap[calc.id] != null ? (

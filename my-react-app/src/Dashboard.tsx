@@ -66,6 +66,7 @@ import {
   TrendingUp,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { tr } from './i18n';
 import LanguageSwitcher from './components/LanguageSwitcher';
 
 /* ─── Design tokens (shared across Panonia) ─── */
@@ -124,25 +125,25 @@ function formatRelativeDate(iso?: string): string {
   if (Number.isNaN(d.getTime())) return '';
   const diffMs = Date.now() - d.getTime();
   const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins} min ago`;
+  if (mins < 1) return tr('dashboard.justNow');
+  if (mins < 60) return tr('dashboard.minAgo', { n: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return tr('dashboard.hAgo', { n: hours });
   const days = Math.floor(hours / 24);
-  if (days < 14) return `${days}d ago`;
+  if (days < 14) return tr('dashboard.dAgo', { n: days });
   return d.toLocaleDateString();
 }
 
 function statusChip(status: DashboardCalculationItem['status']) {
   switch (status) {
     case 'COMPLETED':
-      return { label: 'Completed', bg: T.color.mint, color: T.color.forest };
+      return { label: tr('dashboard.status.COMPLETED'), bg: T.color.mint, color: T.color.forest };
     case 'IN_PROGRESS':
-      return { label: 'In progress', bg: '#EBF2FF', color: '#1A4B8E' };
+      return { label: tr('dashboard.status.IN_PROGRESS'), bg: '#EBF2FF', color: '#1A4B8E' };
     case 'CANCELLED':
-      return { label: 'Cancelled', bg: '#FDEDEC', color: '#C0392B' };
+      return { label: tr('dashboard.status.CANCELLED'), bg: '#FDEDEC', color: '#C0392B' };
     default:
-      return { label: 'Draft', bg: T.color.accentLight, color: '#8A6A20' };
+      return { label: tr('dashboard.status.DRAFT'), bg: T.color.accentLight, color: '#8A6A20' };
   }
 }
 
@@ -217,7 +218,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       setCalculationsList(calcResult.data.calculations);
       setCalculationsCount(calcResult.data.calculations.length);
     } else {
-      setCalculationsError(calcResult?.data?.message ?? 'Failed to load calculations');
+      setCalculationsError(calcResult?.data?.message ?? tr('dashboard.loadCalcsFailed'));
     }
     setCalculationsLoading(false);
   }, []);
@@ -342,14 +343,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     try {
       const meResult = await apiRequest<{ success: boolean; user?: { id: number; companyId?: number | null } }>('/users/me');
       if (meResult === null || !meResult.data.success || !meResult.data.user) {
-        setNewCalcError('Session expired or not authenticated');
+        setNewCalcError(t('dashboard.sessionExpired'));
         setNewCalcLoading(false);
         return;
       }
       const user = meResult.data.user;
       const companyId = user.companyId ?? 0;
       if (!companyId) {
-        setNewCalcError('Your account has no company assigned. Please contact your administrator.');
+        setNewCalcError(t('dashboard.noCompany'));
         setNewCalcLoading(false);
         return;
       }
@@ -369,7 +370,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       setNewCalcLoading(false);
       navigate(`/dashboard/new-calculation/${calculationId}`);
     } catch (err) {
-      setNewCalcError(err instanceof Error ? err.message : 'Failed to create calculation');
+      setNewCalcError(err instanceof Error ? err.message : t('dashboard.createFailed'));
       setNewCalcLoading(false);
     }
   };
@@ -388,29 +389,29 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     accentIdx: number;
   }> = [
     {
-      title: 'CBAM Calculations',
-      description: 'All emissions calculations for your products',
+      title: t('dashboard.card.calcTitle'),
+      description: t('dashboard.card.calcDesc'),
       icon: <Calculate />,
       count: calculationsCount !== null ? String(calculationsCount) : '—',
-      label: 'Total calculations',
+      label: t('dashboard.card.calcLabel'),
       seeAllHref: '/dashboard/calculations',
       accentIdx: 0,
     },
     {
-      title: 'Reports',
-      description: 'Generated CBAM reports ready to download',
+      title: t('dashboard.card.reportsTitle'),
+      description: t('dashboard.card.reportsDesc'),
       icon: <Description />,
       count: reportsCount !== null ? String(reportsCount) : '—',
-      label: 'Stored reports',
+      label: t('dashboard.card.reportsLabel'),
       seeAllHref: '/dashboard/reports',
       accentIdx: 1,
     },
     {
-      title: 'Completed',
-      description: 'Calculations finished and ready for reporting',
+      title: t('dashboard.card.doneTitle'),
+      description: t('dashboard.card.doneDesc'),
       icon: <CheckCircleOutline />,
       count: calculationsCount !== null ? String(completedCount) : '—',
-      label: inProgressCount > 0 ? `${inProgressCount} still in progress` : 'No open drafts',
+      label: inProgressCount > 0 ? t('dashboard.card.stillInProgress', { n: inProgressCount }) : t('dashboard.card.noDrafts'),
       seeAllHref: '/dashboard/calculations',
       accentIdx: 2,
     },
@@ -419,31 +420,31 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const gettingStartedSteps = [
     {
       done: (calculationsCount ?? 0) > 0,
-      title: 'Start a CBAM calculation',
-      desc: 'Enter product and process data for your installation.',
+      title: t('dashboard.gs.startTitle'),
+      desc: t('dashboard.gs.startDesc'),
       action: () => handleNewCalculation(),
-      actionLabel: 'New calculation',
+      actionLabel: t('dashboard.newCalc'),
     },
     {
       done: completedCount > 0,
-      title: 'Finish at least one calculation',
-      desc: 'Complete the wizard so embedded emissions are computed.',
+      title: t('dashboard.gs.finishTitle'),
+      desc: t('dashboard.gs.finishDesc'),
       action: () => navigate('/dashboard/calculations'),
-      actionLabel: 'View calculations',
+      actionLabel: t('dashboard.viewCalcs'),
     },
     {
       done: (reportsCount ?? 0) > 0,
-      title: 'Generate a CBAM report',
-      desc: 'Turn completed calculations into a shareable report.',
+      title: t('dashboard.gs.reportTitle'),
+      desc: t('dashboard.gs.reportDesc'),
       action: handleGenerateReport,
-      actionLabel: 'Generate report',
+      actionLabel: t('dashboard.genReport'),
     },
     {
       done: Boolean(companyName),
-      title: 'Confirm company & installation details',
-      desc: 'Keep operator and installation data up to date in Settings.',
+      title: t('dashboard.gs.companyTitle'),
+      desc: t('dashboard.gs.companyDesc'),
       action: () => navigate('/dashboard/settings'),
-      actionLabel: 'Open settings',
+      actionLabel: t('dashboard.openSettings'),
     },
   ];
 
@@ -557,12 +558,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               >
                 <Box>
                   <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: { xs: '1.6rem', md: '2.2rem' }, color: T.color.ink, letterSpacing: '-0.02em', mb: 0.5 }}>
-                    {loading ? 'Loading…' : `Welcome back, ${userName}!`}
+                    {loading ? t('dashboard.loading') : t('dashboard.welcome', { name: userName })}
                   </Typography>
                   <Typography sx={{ fontFamily: T.font.body, fontSize: '1.05rem', color: T.color.muted, lineHeight: 1.6 }}>
                     {companyName
-                      ? `${companyName} · CBAM calculations & reports`
-                      : 'Manage your CBAM calculations and emissions reports'}
+                      ? t('dashboard.subtitleCompany', { company: companyName })
+                      : t('dashboard.subtitle')}
                   </Typography>
                 </Box>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ width: { xs: '100%', md: 'auto' } }}>
@@ -578,7 +579,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                       '&:hover': { bgcolor: T.color.ctaHover },
                     }}
                   >
-                    {newCalcLoading ? 'Creating…' : 'New calculation'}
+                    {newCalcLoading ? t('dashboard.creating') : t('dashboard.newCalc')}
                   </Button>
                   <Button
                     variant="outlined"
@@ -590,7 +591,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                       '&:hover': { borderColor: T.color.forest, bgcolor: T.color.mint, color: T.color.forest },
                     }}
                   >
-                    Generate report
+                    {t('dashboard.genReport')}
                   </Button>
                 </Stack>
               </Box>
@@ -648,7 +649,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                                 '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
                               }}
                             >
-                              See all
+                              {t('dashboard.seeAll')}
                             </Button>
                           )}
                         </CardContent>
@@ -664,14 +665,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                   <Paper elevation={0} sx={{ ...sectionPaperSx, p: { xs: 3, md: 3.5 }, height: '100%' }}>
                     <Box display="flex" alignItems="center" justifyContent="space-between" mb={2.5}>
                       <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.2rem', color: T.color.ink }}>
-                        Recent calculations
+                        {t('dashboard.recent')}
                       </Typography>
                       <Button
                         onClick={() => navigate('/dashboard/calculations')}
                         endIcon={<ArrowForward sx={{ fontSize: '16px !important' }} />}
                         sx={{ fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', color: T.color.forest, fontSize: '0.85rem' }}
                       >
-                        All
+                        {t('dashboard.all')}
                       </Button>
                     </Box>
 
@@ -685,10 +686,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                       <Box sx={{ py: 4, textAlign: 'center' }}>
                         <EditNote sx={{ fontSize: 40, color: T.color.mintDark, mb: 1 }} />
                         <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, color: T.color.ink, mb: 0.5 }}>
-                          No calculations yet
+                          {t('dashboard.noCalcs')}
                         </Typography>
                         <Typography sx={{ fontFamily: T.font.body, fontSize: '0.9rem', color: T.color.muted, mb: 2 }}>
-                          Start your first CBAM emissions calculation to see it here.
+                          {t('dashboard.noCalcsHelp')}
                         </Typography>
                         <Button
                           variant="contained"
@@ -702,7 +703,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                             '&:hover': { bgcolor: T.color.ctaHover },
                           }}
                         >
-                          Start calculation
+                          {t('dashboard.startCalc')}
                         </Button>
                       </Box>
                     ) : (
@@ -731,10 +732,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                               </Box>
                               <Box sx={{ flex: 1, minWidth: 0 }}>
                                 <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.95rem', color: T.color.ink }}>
-                                  Calculation #{calc.id}
+                                  {t('dashboard.calcNo', { id: calc.id })}
                                 </Typography>
                                 <Typography sx={{ fontFamily: T.font.body, fontSize: '0.78rem', color: T.color.muted }}>
-                                  {calc.currentStep ? `Step: ${calc.currentStep.replace(/_/g, ' ')}` : 'No step saved'}
+                                  {calc.currentStep
+                                    ? t('dashboard.stepPrefix', {
+                                        step: t(`dashboard.step.${calc.currentStep}`, { defaultValue: calc.currentStep.replace(/_/g, ' ') }),
+                                      })
+                                    : t('dashboard.noStep')}
                                   {calc.modifiedAt || calc.createdAt ? ` · ${formatRelativeDate(calc.modifiedAt || calc.createdAt)}` : ''}
                                 </Typography>
                               </Box>
@@ -757,7 +762,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                     <Box display="flex" alignItems="center" gap={1} mb={2.5}>
                       <TrendingUp sx={{ color: T.color.forest, fontSize: 22 }} />
                       <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.2rem', color: T.color.ink }}>
-                        Getting started
+                        {t('dashboard.gs.title')}
                       </Typography>
                     </Box>
                     <Stack spacing={2}>
@@ -804,36 +809,40 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               {/* Tools & resources */}
               <Paper elevation={0} sx={{ ...sectionPaperSx, p: { xs: 3, md: 3.5 } }}>
                 <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.2rem', color: T.color.ink, mb: 2.5 }}>
-                  Tools & resources
+                  {t('dashboard.tools.title')}
                 </Typography>
                 <Grid container spacing={2}>
                   {[
                     {
                       icon: <CompareArrows />,
-                      title: 'CBAM cost calculator',
-                      desc: 'Compare actual emissions vs EU default values before you report.',
+                      key: 'cost',
+                      title: t('dashboard.tools.costTitle'),
+                      desc: t('dashboard.tools.costDesc'),
                       onClick: () => navigate('/cost-calculator'),
                     },
                     {
                       icon: <MenuBook />,
-                      title: 'CBAM guide',
-                      desc: 'Timelines, certificates, default values, and who CBAM affects.',
+                      key: 'guide',
+                      title: t('dashboard.tools.guideTitle'),
+                      desc: t('dashboard.tools.guideDesc'),
                       onClick: () => navigate('/cbam-guide'),
                     },
                     {
                       icon: <Settings />,
-                      title: 'Company settings',
-                      desc: 'Update company profile and installation details used in reports.',
+                      key: 'settings',
+                      title: t('dashboard.tools.settingsTitle'),
+                      desc: t('dashboard.tools.settingsDesc'),
                       onClick: () => navigate('/dashboard/settings'),
                     },
                     {
                       icon: <Description />,
-                      title: 'Report library',
-                      desc: 'Browse and download previously generated CBAM reports.',
+                      key: 'reports',
+                      title: t('dashboard.tools.reportsTitle'),
+                      desc: t('dashboard.tools.reportsDesc'),
                       onClick: () => navigate('/dashboard/reports'),
                     },
                   ].map((tool) => (
-                    <Grid size={{ xs: 12, sm: 6 }} key={tool.title}>
+                    <Grid size={{ xs: 12, sm: 6 }} key={tool.key}>
                       <Box
                         onClick={tool.onClick}
                         sx={{

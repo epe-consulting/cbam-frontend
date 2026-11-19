@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { usePageLanguage } from './i18n/useAppLanguage';
 import type { RefObject, SVGProps } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -742,7 +743,7 @@ export default function Features() {
   const [heroVisible, setHeroVisible] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [language, setLanguage] = useState<Lang>("en");
+  const [language, setLanguage] = usePageLanguage();
 
   useEffect(() => {
     const t = setTimeout(() => setHeroVisible(true), 100);

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { apiRequest } from './utils/api';
 import { formatEmissions, formatResultItem, UNIT_T_CO2E, unitLabel, UNIT_SEE } from './utils/formatEmissions';
 import {
@@ -517,6 +518,7 @@ function yesNoLabel(v: YesNoUnknown): string {
 }
 
 const GenerateReport: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const dashCtx = useDashboardCalculations();
   const calculations = dashCtx?.calculations ?? [];
@@ -1104,9 +1106,9 @@ ${methodsBlock}
     const fileName = `CBAM-${kind}-${reportingYear}-${timestamp}.html`;
     const result = await uploadReportToBlob(companyId, fileName, html);
     if (result.success) {
-      setUploadResult({ success: true, message: 'Report saved to storage.' });
+      setUploadResult({ success: true, message: t('genReport.saved') });
     } else {
-      setUploadResult({ success: false, message: result.error || 'Upload failed.' });
+      setUploadResult({ success: false, message: result.error || t('genReport.uploadFailed') });
     }
     setUploading(false);
   };
@@ -1126,7 +1128,7 @@ ${methodsBlock}
         <Alert severity="error" sx={{ mb: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>{fetchError}</Alert>
         <Button startIcon={<ArrowBack />} onClick={() => navigate('/dashboard')}
           sx={{ fontFamily: T.font.body, textTransform: 'none', color: T.color.muted, borderRadius: T.radius.pill }}>
-          Back to Dashboard
+          {t('genReport.backToDashboard')}
         </Button>
       </Container>
     );
@@ -1147,14 +1149,14 @@ ${methodsBlock}
             '&:hover': { bgcolor: T.color.mint, color: T.color.forest },
           }}
         >
-          Back to Dashboard
+          {t('genReport.backToDashboard')}
         </Button>
         <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: { xs: '1.6rem', md: '2rem' }, color: T.color.ink, letterSpacing: '-0.02em', mb: 0.5 }}>
-          Generate CBAM Emissions Report
+          {t('genReport.title')}
         </Typography>
         <Typography sx={{ fontFamily: T.font.body, color: T.color.muted, lineHeight: 1.6 }}>
-          Build the operator&apos;s emissions report and its summary (Regulation (EU) 2025/2547, Annex IV).
-          Values from your calculation are filled automatically — only enter what the tool does not already capture.
+          {t('genReport.intro')}
+          {t('genReport.subtitle')}
         </Typography>
       </Box>
 
@@ -1169,50 +1171,50 @@ ${methodsBlock}
             '& .MuiTabs-indicator': { bgcolor: T.color.forest },
           }}
         >
-          <Tab value="full" label="Full operator's emissions report" />
-          <Tab value="summary" label="Summary emissions report" />
+          <Tab value="full" label={t('genReport.tabFull')} />
+          <Tab value="summary" label={t('genReport.tabSummary')} />
         </Tabs>
         <Box sx={{ px: 3, pb: 2, pt: 1 }}>
           <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>
             {reportTab === 'full'
-              ? 'Annex IV §1.1 — full report for the verifier (includes monitoring-plan detail and activity data).'
-              : 'Annex IV §1.2 — summary shared with authorised CBAM declarants (commercially sensitive detail omitted).'}
+              ? t('genReport.tabFullHelp')
+              : t('genReport.tabSummaryHelp')}
           </Typography>
         </Box>
       </Paper>
 
       <Paper elevation={0} sx={{ ...sectionPaperSx, p: { xs: 3, md: 4 }, mb: 3 }}>
         <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.15rem', color: T.color.ink, mb: 2.5 }}>
-          Select calculation &amp; installation
+          {t('genReport.selectSection')}
         </Typography>
         <Grid container spacing={3} alignItems="center">
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
-              select fullWidth label="CBAM Calculation" value={selectedCalcId}
+              select fullWidth label={t('genReport.calc')} value={selectedCalcId}
               onChange={(e) => setSelectedCalcId(e.target.value ? Number(e.target.value) : '')}
               disabled={calcsLoading}
-              helperText={completedCalcs.length === 0 && !calcsLoading ? 'No completed calculations available' : 'Auto-fills emissions, goods, precursors, and Al sector parameters'}
+              helperText={completedCalcs.length === 0 && !calcsLoading ? t('genReport.noCompletedCalcs') : t('genReport.calcHelp')}
               sx={textFieldSx}
             >
-              <MenuItem value=""><em>— Select a calculation —</em></MenuItem>
+              <MenuItem value=""><em>{t('genReport.selectCalc')}</em></MenuItem>
               {calculations.map((c: DashboardCalculationItem) => (
                 <MenuItem key={c.id} value={c.id}>
-                  Calculation #{c.id} — {c.status} — {c.currentStep ?? 'N/A'}
+                  {t('genReport.calcOption', { id: c.id, status: c.status, step: c.currentStep ?? t('genReport.na') })}
                 </MenuItem>
               ))}
             </TextField>
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
-              select fullWidth label="Installation Site" value={selectedInstId}
+              select fullWidth label={t('genReport.installation')} value={selectedInstId}
               onChange={(e) => setSelectedInstId(e.target.value ? Number(e.target.value) : '')}
-              helperText={installations.length === 0 ? 'No installations — add them in Settings' : ''}
+              helperText={installations.length === 0 ? t('genReport.noInstallations') : ''}
               sx={textFieldSx}
             >
-              <MenuItem value=""><em>— Select an installation —</em></MenuItem>
+              <MenuItem value=""><em>{t('genReport.selectInstallation')}</em></MenuItem>
               {installations.map((inst) => (
                 <MenuItem key={inst.id} value={inst.id}>
-                  {inst.installationName || `Installation #${inst.id}`}{inst.country ? ` — ${inst.country}` : ''}
+                  {inst.installationName || t('genReport.installationN', { id: inst.id })}{inst.country ? ` — ${inst.country}` : ''}
                 </MenuItem>
               ))}
             </TextField>
@@ -1220,42 +1222,40 @@ ${methodsBlock}
 
           {(resultLoading || selectedCalcId) && (
             <Grid size={12}>
-              {resultLoading && <Typography sx={{ fontFamily: T.font.body, color: T.color.muted }}>Loading calculation data…</Typography>}
+              {resultLoading && <Typography sx={{ fontFamily: T.font.body, color: T.color.muted }}>{t('genReport.loadingCalc')}</Typography>}
               {!resultLoading && selectedCalcId && (
                 <Box sx={{ p: 2.5, bgcolor: T.color.mint, borderRadius: T.radius.sm, border: `1px solid ${T.color.mintDark}` }}>
                   <Box display="flex" alignItems="center" gap={1} mb={1}>
                     <AutoAwesome sx={{ color: T.color.forest, fontSize: 18 }} />
                     <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.92rem', color: T.color.forest }}>
-                      Auto-filled from tool
+                      {t('genReport.autoFilled')}
                     </Typography>
                   </Box>
                   <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.inkSoft }}>
-                    Category: {productInfo.productCategory ?? '—'} · Period: {reportingPeriodText} · Year: {reportingYear}
+                    {t('genReport.calcMeta', { category: productInfo.productCategory ?? '—', period: reportingPeriodText, year: reportingYear })}
                   </Typography>
                   {isSteelCategory(productInfo.productCategory) && (
                     <Alert severity="warning" sx={{ my: 1, borderRadius: T.radius.sm, fontFamily: T.font.body }}>
-                      This report template covers aluminium only. Iron &amp; steel results are not summed into the
-                      direct/indirect totals here — see the steel result view of the calculation.
+                      {t('genReport.steelOnlyAlu')}
                     </Alert>
                   )}
                   <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.inkSoft }}>
-                    Direct emissions (CBAM): {toolDirectTotal != null ? formatEmissions(toolDirectTotal, UNIT_T_CO2E) : '—'}
+                    {t('genReport.directCbam', { value: toolDirectTotal != null ? formatEmissions(toolDirectTotal, UNIT_T_CO2E) : '—' })}
                     {isAnnexII && (
-                      <> · Indirect: <em>not applicable (Annex II)</em></>
+                      <> · {t('genReport.indirect')}: <em>{t('genReport.notApplicableAnnexII')}</em></>
                     )}
                     {!isAnnexII && toolIndirectTotal != null && (
-                      <> · Indirect: {formatEmissions(toolIndirectTotal, UNIT_T_CO2E)}</>
+                      <> · {t('genReport.indirect')}: {formatEmissions(toolIndirectTotal, UNIT_T_CO2E)}</>
                     )}
                   </Typography>
                   {directFromAnswer && (
                     <Typography sx={{ fontFamily: T.font.body, fontSize: '0.8rem', color: T.color.muted, mt: 0.5 }}>
-                      Direct total from answer ALU_TOTAL_DIRECT_EMISSIONS: {directFromAnswer}
+                      {t('genReport.directFromAnswer', { value: directFromAnswer })}
                     </Typography>
                   )}
                   {isAnnexII && (
                     <Alert severity="info" sx={{ mt: 1.5, borderRadius: T.radius.sm, fontFamily: T.font.body, bgcolor: T.color.warmWhite }}>
-                      Aluminium is listed in Annex II of Regulation (EU) 2023/956 — only direct emissions are reported.
-                      Electricity-related figures from the tool are excluded from CBAM embedded emissions.
+                      {t('genReport.annexIIInfo')}
                     </Alert>
                   )}
                 </Box>
@@ -1270,55 +1270,55 @@ ${methodsBlock}
         <AccordionSummary expandIcon={<ExpandMore />} sx={accordionSummarySx}>
           <Chip label="1" size="small" sx={sectionChipSx} />
           <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.05rem', color: T.color.ink }}>
-            Operator &amp; installation identification
+            {t('genReport.s1')}
           </Typography>
         </AccordionSummary>
         <AccordionDetails sx={{ px: { xs: 2, md: 3 }, pb: 3 }}>
           <Typography sx={{ fontFamily: T.font.body, fontSize: '0.8rem', color: T.color.muted, mb: 2 }}>
-            Prefilled from your profile and selected installation. Add the English address if missing.
+            {t('genReport.s1Help')}
           </Typography>
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, md: 6 }}>
-              <TextField fullWidth label="Operator name" value={producer.legalName}
+              <TextField fullWidth label={t('genReport.operatorName')} value={producer.legalName}
                 onChange={(e) => setProducer((p) => ({ ...p, legalName: e.target.value }))}
                 slotProps={{ inputLabel: { shrink: true } }} sx={readOnlyFieldSx} />
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
-              <TextField fullWidth label="Registration number" value={producer.registrationNumber}
+              <TextField fullWidth label={t('genReport.registrationNumber')} value={producer.registrationNumber}
                 onChange={(e) => setProducer((p) => ({ ...p, registrationNumber: e.target.value }))}
                 slotProps={{ inputLabel: { shrink: true } }} sx={readOnlyFieldSx} />
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
-              <TextField fullWidth label="Country" value={producer.country}
+              <TextField fullWidth label={t('genReport.country')} value={producer.country}
                 onChange={(e) => setProducer((p) => ({ ...p, country: e.target.value }))}
                 slotProps={{ inputLabel: { shrink: true } }} sx={readOnlyFieldSx} />
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
-              <TextField fullWidth label="Contact person" value={producer.contactPerson}
+              <TextField fullWidth label={t('genReport.contactPerson')} value={producer.contactPerson}
                 onChange={(e) => setProducer((p) => ({ ...p, contactPerson: e.target.value }))}
                 slotProps={{ inputLabel: { shrink: true } }} sx={readOnlyFieldSx} />
             </Grid>
             <Grid size={12}>
-              <TextField fullWidth label="Full address in English (operator)" value={manual.operatorAddressEn}
+              <TextField fullWidth label={t('genReport.addressEn')} value={manual.operatorAddressEn}
                 onChange={(e) => setManualField('operatorAddressEn', e.target.value)}
-                helperText="Required by Annex IV — not always stored in the tool"
+                helperText={t('genReport.addressEnHelp')}
                 slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
             </Grid>
           </Grid>
           <Divider sx={{ my: 3, borderColor: T.color.lineFaint }} />
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, md: 6 }}>
-              <TextField fullWidth label="Installation name" value={installation.installationName}
+              <TextField fullWidth label={t('genReport.installationName')} value={installation.installationName}
                 onChange={(e) => setInstallation((p) => ({ ...p, installationName: e.target.value }))}
                 slotProps={{ inputLabel: { shrink: true } }} sx={readOnlyFieldSx} />
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
-              <TextField fullWidth label="CBAM Registry installation ID" value={installation.cbamRegistryId}
+              <TextField fullWidth label={t('genReport.registryId')} value={installation.cbamRegistryId}
                 onChange={(e) => setInstallation((p) => ({ ...p, cbamRegistryId: e.target.value }))}
                 slotProps={{ inputLabel: { shrink: true } }} sx={readOnlyFieldSx} />
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
-              <TextField fullWidth label="Address" value={installation.address}
+              <TextField fullWidth label={t('genReport.address')} value={installation.address}
                 onChange={(e) => setInstallation((p) => ({ ...p, address: e.target.value }))}
                 slotProps={{ inputLabel: { shrink: true } }} sx={readOnlyFieldSx} />
             </Grid>
@@ -1328,7 +1328,7 @@ ${methodsBlock}
                 slotProps={{ inputLabel: { shrink: true } }} sx={readOnlyFieldSx} />
             </Grid>
             <Grid size={{ xs: 12, md: 3 }}>
-              <TextField fullWidth label="Coordinates" value={installation.coordinates}
+              <TextField fullWidth label={t('genReport.coordinates')} value={installation.coordinates}
                 onChange={(e) => setInstallation((p) => ({ ...p, coordinates: e.target.value }))}
                 slotProps={{ inputLabel: { shrink: true } }} sx={readOnlyFieldSx} />
             </Grid>
@@ -1341,17 +1341,17 @@ ${methodsBlock}
         <AccordionSummary expandIcon={<ExpandMore />} sx={accordionSummarySx}>
           <Chip label="2" size="small" sx={sectionChipSx} />
           <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.05rem', color: T.color.ink }}>
-            Installation characterisation {showFullOnly ? '(monitoring plan)' : '(summary)'}
+            {t('genReport.s2')} {showFullOnly ? t('genReport.s2Full') : t('genReport.s2Summary')}
           </Typography>
         </AccordionSummary>
         <AccordionDetails sx={{ px: { xs: 2, md: 3 }, pb: 3 }}>
           <Alert severity="warning" sx={{ mb: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>
-            These fields are required by Annex IV and are not collected in the calculation wizard — please complete them here.
+            {t('genReport.s2Warning')}
           </Alert>
           <Grid container spacing={2}>
             <Grid size={12}>
               <TextField fullWidth multiline minRows={2}
-                label="CBAM production processes and routes"
+                label={t('genReport.processes')}
                 value={manual.cbamProcesses}
                 onChange={(e) => setManualField('cbamProcesses', e.target.value)}
                 helperText={productionRouteDefault ? `Suggested from tool: ${productionRouteDefault}` : undefined}
@@ -1361,21 +1361,21 @@ ${methodsBlock}
               <>
                 <Grid size={12}>
                   <TextField fullWidth multiline minRows={2}
-                    label="Non-CBAM production processes at the installation"
+                    label={t('genReport.nonCbamProcesses')}
                     value={manual.nonCbamProcesses}
                     onChange={(e) => setManualField('nonCbamProcesses', e.target.value)}
                     slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
                 </Grid>
                 <Grid size={12}>
                   <TextField fullWidth multiline minRows={2}
-                    label="Top materials leading to process emissions (up to 5)"
+                    label={t('genReport.topMaterials')}
                     value={manual.topProcessMaterials}
                     onChange={(e) => setManualField('topProcessMaterials', e.target.value)}
                     slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
                 </Grid>
                 <Grid size={12}>
                   <TextField fullWidth multiline minRows={2}
-                    label="Continuous emissions measurement (GHGs & main sources), if any"
+                    label={t('genReport.cems')}
                     value={manual.continuousMeasurement}
                     onChange={(e) => setManualField('continuousMeasurement', e.target.value)}
                     slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
@@ -1387,14 +1387,14 @@ ${methodsBlock}
           {topFuels.length > 0 && (
             <Box mt={2}>
               <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.88rem', color: T.color.muted, mb: 1 }}>
-                Top fuels / source streams (from calculation)
+                {t('genReport.topFuels')}
               </Typography>
               <TableContainer>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={tableHeadCellSx}>Fuel / stream</TableCell>
-                      <TableCell sx={tableHeadCellSx}>Amount</TableCell>
+                      <TableCell sx={tableHeadCellSx}>{t('genReport.colFuel')}</TableCell>
+                      <TableCell sx={tableHeadCellSx}>{t('genReport.colAmount')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1413,10 +1413,10 @@ ${methodsBlock}
           <Divider sx={{ my: 3, borderColor: T.color.lineFaint }} />
 
           {([
-            { key: 'zeroRatedFuels' as const, label: 'Zero-rated fuels used?', detail: 'zeroRatedFuelsEvidence' as const, detailLabel: 'How zero-rating is demonstrated' },
-            { key: 'measurableHeat' as const, label: 'Measurable heat imported/exported?', detail: 'measurableHeatInstallations' as const, detailLabel: 'Other installations involved' },
-            { key: 'wasteGases' as const, label: 'Waste gases produced/used/imported/exported?', detail: 'wasteGasesInstallations' as const, detailLabel: 'Other installations involved' },
-            { key: 'co2Transfer' as const, label: 'CO₂ transfer / capture applies?', detail: 'co2TransferContact' as const, detailLabel: 'Receiving installation / contact' },
+            { key: 'zeroRatedFuels' as const, label: t('genReport.q.zeroRated'), detail: 'zeroRatedFuelsEvidence' as const, detailLabel: t('genReport.q.zeroRatedDetail') },
+            { key: 'measurableHeat' as const, label: t('genReport.q.heat'), detail: 'measurableHeatInstallations' as const, detailLabel: t('genReport.q.otherInstallations') },
+            { key: 'wasteGases' as const, label: t('genReport.q.wasteGases'), detail: 'wasteGasesInstallations' as const, detailLabel: t('genReport.q.otherInstallations') },
+            { key: 'co2Transfer' as const, label: t('genReport.q.co2Transfer'), detail: 'co2TransferContact' as const, detailLabel: t('genReport.q.co2TransferDetail') },
           ]).map((item) => (
             <Box key={item.key} mb={2}>
               <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.88rem', color: T.color.inkSoft, mb: 0.5 }}>
@@ -1428,11 +1428,11 @@ ${methodsBlock}
                 onChange={(e) => setManualField(item.key, e.target.value as YesNoUnknown)}
               >
                 <FormControlLabel value="yes" control={<Radio sx={{ color: T.color.muted, '&.Mui-checked': { color: T.color.forest } }} />}
-                  label={<Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem' }}>Yes</Typography>} />
+                  label={<Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem' }}>{t('genReport.yes')}</Typography>} />
                 <FormControlLabel value="no" control={<Radio sx={{ color: T.color.muted, '&.Mui-checked': { color: T.color.forest } }} />}
-                  label={<Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem' }}>No</Typography>} />
+                  label={<Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem' }}>{t('genReport.no')}</Typography>} />
                 <FormControlLabel value="unknown" control={<Radio sx={{ color: T.color.muted, '&.Mui-checked': { color: T.color.forest } }} />}
-                  label={<Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem' }}>Not specified</Typography>} />
+                  label={<Typography sx={{ fontFamily: T.font.body, fontSize: '0.88rem' }}>{t('genReport.notSpecified')}</Typography>} />
               </RadioGroup>
               {manual[item.key] === 'yes' && (
                 <TextField fullWidth sx={{ ...textFieldSx, mt: 1 }} label={item.detailLabel}
@@ -1445,7 +1445,7 @@ ${methodsBlock}
 
           {showFullOnly && (
             <TextField fullWidth sx={{ ...textFieldSx, mt: 1 }}
-              label="New installation — monitoring period (months), if applicable"
+              label={t('genReport.newInstallation')}
               value={manual.newInstallationMonths}
               onChange={(e) => setManualField('newInstallationMonths', e.target.value)}
               slotProps={{ inputLabel: { shrink: true } }} />
@@ -1453,7 +1453,7 @@ ${methodsBlock}
 
           {isAnnexII && (
             <Alert severity="info" sx={{ mt: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>
-              Points on electricity consumption for embedded <em>indirect</em> emissions (Annex IV §§9–12 / 15(e)) do not apply to aluminium (Annex II).
+              {t('genReport.annexIIElectricity')}
             </Alert>
           )}
         </AccordionDetails>
@@ -1464,16 +1464,16 @@ ${methodsBlock}
         <AccordionSummary expandIcon={<ExpandMore />} sx={accordionSummarySx}>
           <Chip label="3" size="small" sx={sectionChipSx} />
           <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.05rem', color: T.color.ink }}>
-            Goods &amp; embedded emissions
+            {t('genReport.s3')}
           </Typography>
         </AccordionSummary>
         <AccordionDetails sx={{ px: { xs: 2, md: 3 }, pb: 3 }}>
           <Box sx={{ p: 2, mb: 2, bgcolor: T.color.cream, borderRadius: T.radius.sm, border: `1px solid ${T.color.lineFaint}` }}>
             <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.9rem', color: T.color.ink }}>
-              Total direct emissions: {toolDirectTotal != null ? formatEmissions(toolDirectTotal, UNIT_T_CO2E) : '—'}
+              {t('genReport.totalDirect', { value: toolDirectTotal != null ? formatEmissions(toolDirectTotal, UNIT_T_CO2E) : '—' })}
             </Typography>
             <Typography sx={{ fontFamily: T.font.body, fontSize: '0.82rem', color: T.color.muted }}>
-              Specific direct embedded emissions are auto-calculated as direct total ÷ product quantity (tCO₂e/t) when quantity is available. Override if you need a different attribution.
+              {t('genReport.specificHelp')}
             </Typography>
           </Box>
 
@@ -1481,15 +1481,15 @@ ${methodsBlock}
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell sx={tableHeadCellSx}>Good</TableCell>
+                  <TableCell sx={tableHeadCellSx}>{t('genReport.colGood')}</TableCell>
                   <TableCell sx={tableHeadCellSx}>CN</TableCell>
-                  <TableCell sx={tableHeadCellSx}>Route</TableCell>
-                  <TableCell sx={tableHeadCellSx}>Qty (t)</TableCell>
-                  <TableCell sx={tableHeadCellSx}>Origin</TableCell>
-                  <TableCell sx={tableHeadCellSx}>Specific direct (tCO₂e/t)</TableCell>
-                  <TableCell sx={tableHeadCellSx}>Indirect</TableCell>
-                  <TableCell sx={tableHeadCellSx}>Share defaults %</TableCell>
-                  <TableCell sx={tableHeadCellSx}>Free allocation</TableCell>
+                  <TableCell sx={tableHeadCellSx}>{t('genReport.colRoute')}</TableCell>
+                  <TableCell sx={tableHeadCellSx}>{t('genReport.colQty')}</TableCell>
+                  <TableCell sx={tableHeadCellSx}>{t('genReport.colOrigin')}</TableCell>
+                  <TableCell sx={tableHeadCellSx}>{t('genReport.colSpecificDirect')}</TableCell>
+                  <TableCell sx={tableHeadCellSx}>{t('genReport.colIndirect')}</TableCell>
+                  <TableCell sx={tableHeadCellSx}>{t('genReport.colDefaultShare')}</TableCell>
+                  <TableCell sx={tableHeadCellSx}>{t('genReport.colFreeAllocation')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -1543,7 +1543,7 @@ ${methodsBlock}
                     <TableCell sx={tableCellSx}>
                       {isAnnexII ? (
                         <Typography sx={{ fontFamily: T.font.body, fontSize: '0.8rem', fontStyle: 'italic', color: T.color.muted }}>
-                          N/A
+                          {t('genReport.na')}
                         </Typography>
                       ) : (
                         <Typography sx={{ fontFamily: T.font.body, fontSize: '0.8rem', color: T.color.muted }}>—</Typography>
@@ -1567,18 +1567,18 @@ ${methodsBlock}
           </TableContainer>
           <Button size="small" onClick={() => setProducts((prev) => [...prev, emptyProduct()])}
             sx={{ mt: 1.5, fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', color: T.color.forest, borderRadius: T.radius.pill }}>
-            + Add good
+            {t('genReport.addGood')}
           </Button>
 
           <Divider sx={{ my: 3, borderColor: T.color.lineFaint }} />
 
           <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.92rem', color: T.color.muted, mb: 1.5 }}>
-            Precursors {precursors.length ? '(from calculation — complete origin operator fields if needed)' : '(none in calculation — add if relevant)'}
+            {t('genReport.precursors')} {precursors.length ? t('genReport.precursorsFromCalc') : t('genReport.precursorsNone')}
           </Typography>
           {precursors.length === 0 ? (
             <Button size="small" onClick={() => setPrecursors([emptyPrecursor()])}
               sx={{ fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', color: T.color.forest }}>
-              + Add precursor row
+              {t('genReport.addPrecursorRow')}
             </Button>
           ) : (
             <>
@@ -1587,15 +1587,15 @@ ${methodsBlock}
                   <TableHead>
                     <TableRow>
                       <TableCell sx={tableHeadCellSx}>CN</TableCell>
-                      <TableCell sx={tableHeadCellSx}>Name</TableCell>
-                      <TableCell sx={tableHeadCellSx}>Origin</TableCell>
-                      <TableCell sx={tableHeadCellSx}>Qty (t)</TableCell>
-                      <TableCell sx={tableHeadCellSx}>Type</TableCell>
-                      <TableCell sx={tableHeadCellSx}>Specific embedded (tCO₂e/t)</TableCell>
-                      <TableCell sx={tableHeadCellSx}>Period</TableCell>
-                      <TableCell sx={tableHeadCellSx}>Origin operator</TableCell>
-                      <TableCell sx={tableHeadCellSx}>Origin installation</TableCell>
-                      <TableCell sx={tableHeadCellSx}>CBAM ID</TableCell>
+                      <TableCell sx={tableHeadCellSx}>{t('genReport.colName')}</TableCell>
+                      <TableCell sx={tableHeadCellSx}>{t('genReport.colOrigin')}</TableCell>
+                      <TableCell sx={tableHeadCellSx}>{t('genReport.colQty')}</TableCell>
+                      <TableCell sx={tableHeadCellSx}>{t('genReport.colType')}</TableCell>
+                      <TableCell sx={tableHeadCellSx}>{t('genReport.colSpecificEmbedded')}</TableCell>
+                      <TableCell sx={tableHeadCellSx}>{t('genReport.colPeriod')}</TableCell>
+                      <TableCell sx={tableHeadCellSx}>{t('genReport.colOriginOperator')}</TableCell>
+                      <TableCell sx={tableHeadCellSx}>{t('genReport.colOriginInstallation')}</TableCell>
+                      <TableCell sx={tableHeadCellSx}>{t('genReport.colCbamId')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1613,8 +1613,8 @@ ${methodsBlock}
                             onChange={(e) => setPrecursor(i, 'valueType', e.target.value)}
                             InputProps={{ sx: { fontFamily: T.font.body } }}>
                             <MenuItem value="">—</MenuItem>
-                            <MenuItem value="actual">Actual</MenuItem>
-                            <MenuItem value="default">Default</MenuItem>
+                            <MenuItem value="actual">{t('genReport.actual')}</MenuItem>
+                            <MenuItem value="default">{t('genReport.default')}</MenuItem>
                           </TextField>
                         </TableCell>
                         <TableCell sx={tableCellSx}>
@@ -1641,7 +1641,7 @@ ${methodsBlock}
               </TableContainer>
               <Button size="small" onClick={() => setPrecursors((prev) => [...prev, emptyPrecursor()])}
                 sx={{ mt: 1.5, fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', color: T.color.forest }}>
-                + Add precursor
+                {t('genReport.addPrecursor')}
               </Button>
             </>
           )}
@@ -1654,26 +1654,26 @@ ${methodsBlock}
           <AccordionSummary expandIcon={<ExpandMore />} sx={accordionSummarySx}>
             <Chip label="4" size="small" sx={sectionChipSx} />
             <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.05rem', color: T.color.ink }}>
-              Aluminium sector-specific parameters
+              {t('genReport.s4Alu')}
             </Typography>
           </AccordionSummary>
           <AccordionDetails sx={{ px: { xs: 2, md: 3 }, pb: 3 }}>
             <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted, mb: 2 }}>
-              Prefilled from additional questions in the calculation tool (Annex IV point 2).
+              {t('genReport.s4AluHelp')}
             </Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 4 }}>
-                <TextField fullWidth label="Scrap tonnes per 1 t product" value={sectorParams.scrapTonnes}
+                <TextField fullWidth label={t('genReport.scrapTonnes')} value={sectorParams.scrapTonnes}
                   onChange={(e) => setSectorParams((p) => ({ ...p, scrapTonnes: e.target.value }))}
                   slotProps={{ inputLabel: { shrink: true } }} sx={readOnlyFieldSx} />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
-                <TextField fullWidth label="% pre-consumer scrap" value={sectorParams.preConsumerScrapPct}
+                <TextField fullWidth label={t('genReport.preConsumer')} value={sectorParams.preConsumerScrapPct}
                   onChange={(e) => setSectorParams((p) => ({ ...p, preConsumerScrapPct: e.target.value }))}
                   slotProps={{ inputLabel: { shrink: true } }} sx={readOnlyFieldSx} />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
-                <TextField fullWidth label="% other elements (if >1%)" value={sectorParams.otherElementsPct}
+                <TextField fullWidth label={t('genReport.otherElements')} value={sectorParams.otherElementsPct}
                   onChange={(e) => setSectorParams((p) => ({ ...p, otherElementsPct: e.target.value }))}
                   slotProps={{ inputLabel: { shrink: true } }} sx={readOnlyFieldSx} />
               </Grid>
@@ -1687,23 +1687,23 @@ ${methodsBlock}
         <AccordionSummary expandIcon={<ExpandMore />} sx={accordionSummarySx}>
           <Chip label={isAluminium ? '5' : '4'} size="small" sx={sectionChipSx} />
           <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.05rem', color: T.color.ink }}>
-            Data quality, attribution &amp; free allocation
+            {t('genReport.s5')}
           </Typography>
         </AccordionSummary>
         <AccordionDetails sx={{ px: { xs: 2, md: 3 }, pb: 3 }}>
           <Grid container spacing={2}>
             <Grid size={12}>
               <TextField fullWidth multiline minRows={2}
-                label="Data quality and methods used"
+                label={t('genReport.dataQuality')}
                 value={manual.dataQualityMethods}
                 onChange={(e) => setManualField('dataQualityMethods', e.target.value)}
-                helperText="Whether emissions are fully from monitoring or any defaults were used"
+                helperText={t('genReport.dataQualityHelp')}
                 slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
             </Grid>
             {showFullOnly && (
               <Grid size={12}>
                 <TextField fullWidth multiline minRows={2}
-                  label="How attributed direct emissions of each production process were calculated"
+                  label={t('genReport.attribution')}
                   value={manual.attributionMethod}
                   onChange={(e) => setManualField('attributionMethod', e.target.value)}
                   slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
@@ -1715,14 +1715,14 @@ ${methodsBlock}
                   onChange={(e) => setManualField('benchmarksConfirm', e.target.checked)}
                   sx={{ color: T.color.muted, '&.Mui-checked': { color: T.color.forest } }} />}
                 label={<Typography sx={{ fontFamily: T.font.body, fontSize: '0.92rem' }}>
-                  Confirmation that applicable CBAM benchmarks were used
+                  {t('genReport.benchmarksConfirm')}
                 </Typography>} />
               <FormControlLabel
                 control={<Checkbox checked={manual.freeAllocationMethodConfirm}
                   onChange={(e) => setManualField('freeAllocationMethodConfirm', e.target.checked)}
                   sx={{ color: T.color.muted, '&.Mui-checked': { color: T.color.forest } }} />}
                 label={<Typography sx={{ fontFamily: T.font.body, fontSize: '0.92rem' }}>
-                  Confirmation of methods used for specific embedded free allocation
+                  {t('genReport.freeAllocationConfirm')}
                 </Typography>} />
             </Grid>
           </Grid>
@@ -1734,23 +1734,23 @@ ${methodsBlock}
         <AccordionSummary expandIcon={<ExpandMore />} sx={accordionSummarySx}>
           <Chip label={isAluminium ? '6' : '5'} size="small" sx={sectionChipSx} />
           <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.05rem', color: T.color.ink }}>
-            Declaration
+            {t('genReport.declaration')}
           </Typography>
         </AccordionSummary>
         <AccordionDetails sx={{ px: { xs: 2, md: 3 }, pb: 3 }}>
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, md: 4 }}>
-              <TextField fullWidth label="Name" value={manual.declarationName}
+              <TextField fullWidth label={t('genReport.colName')} value={manual.declarationName}
                 onChange={(e) => setManualField('declarationName', e.target.value)}
                 slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
-              <TextField fullWidth label="Position" value={manual.declarationPosition}
+              <TextField fullWidth label={t('genReport.position')} value={manual.declarationPosition}
                 onChange={(e) => setManualField('declarationPosition', e.target.value)}
                 slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
-              <TextField fullWidth label="Date" type="date" value={manual.declarationDate}
+              <TextField fullWidth label={t('genReport.date')} type="date" value={manual.declarationDate}
                 onChange={(e) => setManualField('declarationDate', e.target.value)}
                 slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
             </Grid>
@@ -1763,7 +1763,7 @@ ${methodsBlock}
           <AccordionSummary expandIcon={<ExpandMore />} sx={accordionSummarySx}>
             <Chip label="A" size="small" sx={{ ...sectionChipSx, bgcolor: T.color.sage }} />
             <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.05rem', color: T.color.ink }}>
-              Calculation breakdown (appendix — from tool)
+              {t('genReport.appendix')}
             </Typography>
           </AccordionSummary>
           <AccordionDetails sx={{ px: { xs: 2, md: 3 }, pb: 3 }}>
@@ -1771,9 +1771,9 @@ ${methodsBlock}
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={tableHeadCellSx}>Formula</TableCell>
-                    <TableCell sx={tableHeadCellSx}>Class</TableCell>
-                    <TableCell sx={{ ...tableHeadCellSx, textAlign: 'right' }}>Result</TableCell>
+                    <TableCell sx={tableHeadCellSx}>{t('genReport.colFormula')}</TableCell>
+                    <TableCell sx={tableHeadCellSx}>{t('genReport.colClass')}</TableCell>
+                    <TableCell sx={{ ...tableHeadCellSx, textAlign: 'right' }}>{t('genReport.colResult')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -1785,8 +1785,8 @@ ${methodsBlock}
                         <TableCell sx={tableCellSx}>{item.formulaCode}</TableCell>
                         <TableCell sx={tableCellSx}>
                           {isInd
-                            ? (isAnnexII ? 'Indirect (excluded — Annex II)' : 'Indirect')
-                            : 'Direct / attributed'}
+                            ? (isAnnexII ? t('genReport.indirectExcluded') : t('genReport.indirect'))
+                            : t('genReport.directAttributed')}
                         </TableCell>
                         <TableCell sx={{ ...tableCellSx, textAlign: 'right' }}>
                           {formatResultItem(item.resultValue, item.unit)}
@@ -1804,7 +1804,7 @@ ${methodsBlock}
       <Paper elevation={0} sx={{ ...sectionPaperSx, p: { xs: 3, md: 4 }, mt: 1 }}>
         {missingFields.length > 0 && (
           <Alert severity="warning" sx={{ borderRadius: T.radius.sm, fontFamily: T.font.body }}>
-            <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.88rem', mb: 0.5 }}>Missing fields:</Typography>
+            <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, fontSize: '0.88rem', mb: 0.5 }}>{t('genReport.missingFields')}</Typography>
             {missingFields.map((f, i) => (
               <Typography key={i} sx={{ fontFamily: T.font.body, fontSize: '0.85rem' }}>• {f}</Typography>
             ))}
@@ -1823,7 +1823,7 @@ ${methodsBlock}
             '&:hover': { bgcolor: T.color.ctaHover },
           }}
         >
-          {pdfBusy ? 'Preparing PDF…' : `Download ${reportTab === 'full' ? 'full' : 'summary'} PDF`}
+          {pdfBusy ? t('genReport.preparingPdf') : reportTab === 'full' ? t('genReport.downloadFull') : t('genReport.downloadSummary')}
         </Button>
         <Button
           variant="contained" size="large" disableElevation startIcon={<CloudUpload />}
@@ -1834,7 +1834,7 @@ ${methodsBlock}
             '&:hover': { bgcolor: T.color.blueHover },
           }}
         >
-          {uploading ? 'Uploading…' : 'Upload report'}
+          {uploading ? t('genReport.uploading') : t('genReport.upload')}
         </Button>
       </Box>
       {uploadResult && (

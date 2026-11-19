@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Container,
@@ -77,9 +78,10 @@ const textFieldSx = {
 };
 
 const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
+  const { t } = useTranslation();
   const location = useLocation();
   const redirectFrom = (location.state as { from?: string } | null)?.from;
-  const loginPrompt = redirectFrom ? 'Log in to continue.' : null;
+  const loginPrompt = redirectFrom ? t('login.prompt') : null;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -115,11 +117,11 @@ const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
         }
         onLoginSuccess();
       } else {
-        setError(data.message || 'Login failed. Please check your credentials.');
+        setError(data.message || t('login.failed'));
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError('Unable to connect to the server. Please try again later.');
+      setError(t('login.noServer'));
     } finally {
       setLoading(false);
     }
@@ -128,11 +130,11 @@ const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
   const handleForgotPassword = (e: React.FormEvent) => {
     e.preventDefault();
     if (!forgotPasswordEmail) {
-      setForgotPasswordMessage('Please enter your email address');
+      setForgotPasswordMessage(t('login.enterEmail'));
       return;
     }
     console.log('Password reset request for:', forgotPasswordEmail);
-    setForgotPasswordMessage('Password reset instructions have been sent to your email address.');
+    setForgotPasswordMessage(t('login.resetSent'));
     setTimeout(() => {
       setShowForgotPassword(false);
       setForgotPasswordEmail('');
@@ -162,7 +164,7 @@ const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
             '&:hover': { bgcolor: T.color.mint, color: T.color.forest },
           }}
         >
-          Back to Home
+          {t('login.backHome')}
         </Button>
 
         <Paper elevation={0} sx={{ p: { xs: 4, md: 5 }, borderRadius: T.radius.xl, border: `1px solid ${T.color.line}`, bgcolor: T.color.warmWhite }}>
@@ -177,7 +179,7 @@ const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
               </Typography>
             </Box>
             <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: '1.5rem', color: T.color.ink, mb: 0.5 }}>
-              Welcome Back
+              {t('login.welcome')}
             </Typography>
             {loginPrompt && (
               <Alert severity="info" sx={{ mb: 2, textAlign: 'left', fontFamily: T.font.body }}>
@@ -185,7 +187,7 @@ const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
               </Alert>
             )}
             <Typography sx={{ fontFamily: T.font.body, fontSize: '0.95rem', color: T.color.muted, lineHeight: 1.6 }}>
-              Sign in to your CBAM compliance account
+              {t('login.subtitle')}
             </Typography>
           </Box>
 
@@ -199,14 +201,14 @@ const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
             <Box component="form" onSubmit={handleSubmit}>
               <Stack spacing={2.5}>
                 <TextField
-                  fullWidth label="Email Address" type="email" value={email}
+                  fullWidth label={t('login.email')} type="email" value={email}
                   onChange={(e) => setEmail(e.target.value)} required
                   InputProps={{ startAdornment: <Email sx={{ mr: 1, color: T.color.muted, fontSize: 20 }} /> }}
                   sx={textFieldSx}
                 />
 
                 <TextField
-                  fullWidth label="Password" type="password" value={password}
+                  fullWidth label={t('login.password')} type="password" value={password}
                   onChange={(e) => setPassword(e.target.value)} required
                   InputProps={{ startAdornment: <Lock sx={{ mr: 1, color: T.color.muted, fontSize: 20 }} /> }}
                   sx={textFieldSx}
@@ -224,7 +226,7 @@ const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
                   {loading ? (
                     <CircularProgress size={24} sx={{ color: '#fff' }} />
                   ) : (
-                    'Sign In'
+                    t('login.signIn')
                   )}
                 </Button>
               </Stack>
@@ -233,14 +235,14 @@ const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
             <Box component="form" onSubmit={handleForgotPassword}>
               <Stack spacing={2.5}>
                 <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.2rem', color: T.color.ink, textAlign: 'center' }}>
-                  Reset Your Password
+                  {t('login.resetTitle')}
                 </Typography>
                 <Typography sx={{ fontFamily: T.font.body, fontSize: '0.92rem', color: T.color.muted, textAlign: 'center', mb: 1, lineHeight: 1.6 }}>
-                  Enter your email address and we'll send you instructions to reset your password.
+                  {t('login.resetText')}
                 </Typography>
 
                 <TextField
-                  fullWidth label="Email Address" type="email" value={forgotPasswordEmail}
+                  fullWidth label={t('login.email')} type="email" value={forgotPasswordEmail}
                   onChange={(e) => setForgotPasswordEmail(e.target.value)} required
                   InputProps={{ startAdornment: <Email sx={{ mr: 1, color: T.color.muted, fontSize: 20 }} /> }}
                   sx={textFieldSx}
@@ -261,7 +263,7 @@ const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
                       '&:hover': { bgcolor: T.color.ctaHover },
                     }}
                   >
-                    Send Reset Instructions
+                    {t('login.sendReset')}
                   </Button>
                   <Button
                     variant="outlined" size="large"
@@ -272,7 +274,7 @@ const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
                       '&:hover': { borderColor: T.color.forest, bgcolor: T.color.mint, color: T.color.forest },
                     }}
                   >
-                    Cancel
+                    {t('login.cancel')}
                   </Button>
                 </Stack>
               </Stack>
@@ -292,7 +294,7 @@ const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
                   }}
                   sx={{ fontFamily: T.font.body, fontSize: '0.88rem', fontWeight: 600, color: T.color.forest, textDecorationColor: T.color.mintDark, '&:hover': { color: T.color.ctaHover } }}
                 >
-                  Forgot your password?
+                  {t('login.forgot')}
                 </Link>
               </Typography>
             </Box>
@@ -301,7 +303,7 @@ const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
 
         <Box textAlign="center" mt={4}>
           <Typography sx={{ fontFamily: T.font.body, fontSize: '0.82rem', color: T.color.muted }}>
-            © {new Date().getFullYear()} Panonia. All rights reserved.
+            © {new Date().getFullYear()} Panonia. {t('login.rights')}
           </Typography>
         </Box>
       </Container>

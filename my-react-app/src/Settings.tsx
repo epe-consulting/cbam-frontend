@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { apiRequest } from './utils/api';
 import {
   Container,
@@ -154,6 +155,7 @@ const emptyInstForm = (): InstallationForm => ({
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -203,12 +205,12 @@ const Settings: React.FC = () => {
           fetchInstallations(u.companyId);
         }
       } else {
-        setFetchError('Failed to load your profile. Please try again.');
+        setFetchError(t('settings.loadFailed'));
       }
       setLoading(false);
     };
     fetchUser();
-  }, []);
+  }, [t]);
 
   const fetchInstallations = async (companyId: number) => {
     setInstLoading(true);
@@ -219,7 +221,7 @@ const Settings: React.FC = () => {
     if (res?.data?.success && Array.isArray(res.data.installations)) {
       setInstallations(res.data.installations);
     } else {
-      setInstError('Failed to load installations');
+      setInstError(t('settings.instLoadFailed'));
     }
     setInstLoading(false);
   };
@@ -232,8 +234,8 @@ const Settings: React.FC = () => {
         method: 'PATCH',
         body: JSON.stringify({ username: username.trim() }),
       });
-      if (!result) { setUserError('Session expired'); return; }
-      if (!result.data.success) { setUserError(result.data.message || 'Failed to update profile'); return; }
+      if (!result) { setUserError(t('settings.sessionExpired')); return; }
+      if (!result.data.success) { setUserError(result.data.message || t('settings.profileUpdateFailed')); return; }
       if (result.data.user) {
         setUserData(result.data.user);
         setUsername(result.data.user.username || '');
@@ -241,14 +243,14 @@ const Settings: React.FC = () => {
       }
       setUserSuccess(true);
     } catch (err) {
-      setUserError(err instanceof Error ? err.message : 'An error occurred');
+      setUserError(err instanceof Error ? err.message : t('settings.errorOccurred'));
     } finally {
       setUserSaving(false);
     }
   };
 
   const handleSaveCompany = async () => {
-    if (!userData?.companyId) { setCompanyError('No company assigned'); return; }
+    if (!userData?.companyId) { setCompanyError(t('settings.noCompany')); return; }
     setCompanySaving(true);
     setCompanyError(null);
     try {
@@ -264,8 +266,8 @@ const Settings: React.FC = () => {
           contactPerson: companyContactPerson.trim(),
         }),
       });
-      if (!result) { setCompanyError('Session expired'); return; }
-      if (!result.data.success) { setCompanyError(result.data.message || 'Failed to update company'); return; }
+      if (!result) { setCompanyError(t('settings.sessionExpired')); return; }
+      if (!result.data.success) { setCompanyError(result.data.message || t('settings.companyUpdateFailed')); return; }
       if (result.data.company) {
         setCompanyName(result.data.company.name || '');
         setCompanyCountry(result.data.company.country || '');
@@ -274,7 +276,7 @@ const Settings: React.FC = () => {
       }
       setCompanySuccess(true);
     } catch (err) {
-      setCompanyError(err instanceof Error ? err.message : 'An error occurred');
+      setCompanyError(err instanceof Error ? err.message : t('settings.errorOccurred'));
     } finally {
       setCompanySaving(false);
     }
@@ -304,7 +306,7 @@ const Settings: React.FC = () => {
 
   const handleSaveInstallation = async () => {
     if (!instForm.installationName.trim()) {
-      setInstFormError('Installation name is required');
+      setInstFormError(t('settings.instNameRequired'));
       return;
     }
     setInstSaving(true);
@@ -330,7 +332,7 @@ const Settings: React.FC = () => {
       setInstSuccess(true);
       if (userData?.companyId) fetchInstallations(userData.companyId);
     } catch (err) {
-      setInstFormError(err instanceof Error ? err.message : 'An error occurred');
+      setInstFormError(err instanceof Error ? err.message : t('settings.errorOccurred'));
     } finally {
       setInstSaving(false);
     }
@@ -345,7 +347,7 @@ const Settings: React.FC = () => {
       setInstSuccess(true);
       if (userData?.companyId) fetchInstallations(userData.companyId);
     } catch {
-      setInstError('Failed to delete installation');
+      setInstError(t('settings.instDeleteFailed'));
     } finally {
       setDeleteLoading(false);
     }
@@ -378,7 +380,7 @@ const Settings: React.FC = () => {
           onClick={() => navigate('/dashboard')}
           sx={{ fontFamily: T.font.body, fontWeight: 500, textTransform: 'none', color: T.color.muted, borderRadius: T.radius.pill, '&:hover': { bgcolor: T.color.mint, color: T.color.forest } }}
         >
-          Back to Dashboard
+          {t('settings.backToDashboard')}
         </Button>
       </Container>
     );
@@ -397,13 +399,13 @@ const Settings: React.FC = () => {
             '&:hover': { bgcolor: T.color.mint, color: T.color.forest },
           }}
         >
-          Back to Dashboard
+          {t('settings.backToDashboard')}
         </Button>
         <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, fontSize: { xs: '1.6rem', md: '2rem' }, color: T.color.ink, letterSpacing: '-0.02em', mb: 0.5 }}>
-          Settings
+          {t('settings.title')}
         </Typography>
         <Typography sx={{ fontFamily: T.font.body, color: T.color.muted, lineHeight: 1.6 }}>
-          Manage your profile, company information and installation sites
+          {t('settings.subtitle')}
         </Typography>
       </Box>
 
@@ -414,20 +416,20 @@ const Settings: React.FC = () => {
             <Person />
           </Box>
           <Box>
-            <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.15rem', color: T.color.ink }}>Your Profile</Typography>
-            <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>Update your personal information</Typography>
+            <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.15rem', color: T.color.ink }}>{t('settings.profileTitle')}</Typography>
+            <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>{t('settings.profileSubtitle')}</Typography>
           </Box>
         </Box>
         <Divider sx={{ mb: 3, borderColor: T.color.lineFaint }} />
         {userError && <Alert severity="error" sx={{ mb: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }} onClose={() => setUserError(null)}>{userError}</Alert>}
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField fullWidth label="Username" value={username} onChange={e => setUsername(e.target.value)}
+            <TextField fullWidth label={t('settings.username')} value={username} onChange={e => setUsername(e.target.value)}
               variant="outlined" slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField fullWidth label="Email" type="email" value={email} variant="outlined" disabled
-              slotProps={{ inputLabel: { shrink: true } }} helperText="Contact an administrator to change your email" sx={textFieldSx} />
+            <TextField fullWidth label={t('settings.email')} type="email" value={email} variant="outlined" disabled
+              slotProps={{ inputLabel: { shrink: true } }} helperText={t('settings.emailHelp')} sx={textFieldSx} />
           </Grid>
           <Grid size={12}>
             <Box display="flex" justifyContent="flex-end">
@@ -437,7 +439,7 @@ const Settings: React.FC = () => {
                   fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', borderRadius: T.radius.pill,
                   bgcolor: T.color.forest, '&:hover': { bgcolor: T.color.ctaHover },
                 }}>
-                {userSaving ? 'Saving…' : 'Save Profile'}
+                {userSaving ? t('settings.saving') : t('settings.saveProfile')}
               </Button>
             </Box>
           </Grid>
@@ -451,9 +453,9 @@ const Settings: React.FC = () => {
             <Business />
           </Box>
           <Box>
-            <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.15rem', color: T.color.ink }}>Company Information</Typography>
+            <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.15rem', color: T.color.ink }}>{t('settings.companyTitle')}</Typography>
             <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>
-              {userData?.companyId ? 'Update your company details' : 'No company assigned — contact your administrator'}
+              {userData?.companyId ? t('settings.companySubtitle') : t('settings.companyNone')}
             </Typography>
           </Box>
         </Box>
@@ -462,25 +464,25 @@ const Settings: React.FC = () => {
         {userData?.companyId ? (
           <Grid container spacing={3}>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Company Name" value={companyName}
+              <TextField fullWidth label={t('settings.companyName')} value={companyName}
                 onChange={e => setCompanyName(e.target.value)} variant="outlined"
                 slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Country" value={companyCountry}
+              <TextField fullWidth label={t('settings.country')} value={companyCountry}
                 onChange={e => setCompanyCountry(e.target.value)} variant="outlined"
                 slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Registration Number" value={companyRegistrationNumber}
+              <TextField fullWidth label={t('settings.registrationNumber')} value={companyRegistrationNumber}
                 onChange={e => setCompanyRegistrationNumber(e.target.value)} variant="outlined"
                 slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Contact Person" value={companyContactPerson}
+              <TextField fullWidth label={t('settings.contactPerson')} value={companyContactPerson}
                 onChange={e => setCompanyContactPerson(e.target.value)} variant="outlined"
                 slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx}
-                placeholder="Name / email" />
+                placeholder={t('settings.contactPlaceholder')} />
             </Grid>
             <Grid size={12}>
               <Box display="flex" justifyContent="flex-end">
@@ -490,14 +492,14 @@ const Settings: React.FC = () => {
                     fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', borderRadius: T.radius.pill,
                     bgcolor: T.color.forest, '&:hover': { bgcolor: T.color.ctaHover },
                   }}>
-                  {companySaving ? 'Saving…' : 'Save Company'}
+                  {companySaving ? t('settings.saving') : t('settings.saveCompany')}
                 </Button>
               </Box>
             </Grid>
           </Grid>
         ) : (
           <Alert severity="info" sx={{ borderRadius: T.radius.sm, fontFamily: T.font.body }}>
-            Your account does not have a company assigned. Please contact your administrator to assign you to a company.
+            {t('settings.noCompanyInfo')}
           </Alert>
         )}
       </Paper>
@@ -511,8 +513,8 @@ const Settings: React.FC = () => {
                 <Factory />
               </Box>
               <Box>
-                <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.15rem', color: T.color.ink }}>Installation Sites</Typography>
-                <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>Manage your production sites</Typography>
+                <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.15rem', color: T.color.ink }}>{t('settings.instTitle')}</Typography>
+                <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>{t('settings.instSubtitle')}</Typography>
               </Box>
             </Box>
             <Button variant="contained" disableElevation startIcon={<Add />} onClick={openAddInstallation}
@@ -520,7 +522,7 @@ const Settings: React.FC = () => {
                 fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', borderRadius: T.radius.pill,
                 bgcolor: T.color.forest, '&:hover': { bgcolor: T.color.ctaHover },
               }}>
-              Add Installation
+              {t('settings.addInstallation')}
             </Button>
           </Box>
           <Divider sx={{ mb: 3, borderColor: T.color.lineFaint }} />
@@ -529,18 +531,18 @@ const Settings: React.FC = () => {
           {instLoading ? (
             <Skeleton variant="rectangular" height={200} sx={{ borderRadius: T.radius.md }} />
           ) : installations.length === 0 ? (
-            <Alert severity="info" sx={{ borderRadius: T.radius.sm, fontFamily: T.font.body }}>No installation sites added yet. Click "Add Installation" to create one.</Alert>
+            <Alert severity="info" sx={{ borderRadius: T.radius.sm, fontFamily: T.font.body }}>{t('settings.noInstallations')}</Alert>
           ) : (
             <TableContainer>
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={tableHeadCellSx}>Name</TableCell>
-                    <TableCell sx={tableHeadCellSx}>Country</TableCell>
-                    <TableCell sx={tableHeadCellSx}>Address</TableCell>
+                    <TableCell sx={tableHeadCellSx}>{t('settings.colName')}</TableCell>
+                    <TableCell sx={tableHeadCellSx}>{t('settings.country')}</TableCell>
+                    <TableCell sx={tableHeadCellSx}>{t('settings.colAddress')}</TableCell>
                     <TableCell sx={tableHeadCellSx}>UN/LOCODE</TableCell>
-                    <TableCell sx={tableHeadCellSx}>CBAM Registry ID</TableCell>
-                    <TableCell sx={{ ...tableHeadCellSx, textAlign: 'center' }}>Actions</TableCell>
+                    <TableCell sx={tableHeadCellSx}>{t('settings.colRegistryId')}</TableCell>
+                    <TableCell sx={{ ...tableHeadCellSx, textAlign: 'center' }}>{t('settings.colActions')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -588,7 +590,7 @@ const Settings: React.FC = () => {
         PaperProps={{ sx: dialogPaperSx }}>
         <Box sx={dialogAccentBar()} />
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: T.font.display, fontWeight: 600, fontSize: '1.15rem', color: T.color.ink }}>
-          {instEditId ? 'Edit Installation' : 'Add Installation'}
+          {instEditId ? t('settings.editInstallation') : t('settings.addInstallation')}
           <IconButton onClick={() => setInstDialogOpen(false)} size="small"
             sx={{ color: T.color.muted, '&:hover': { bgcolor: T.color.mint, color: T.color.forest } }}>
             <Close />
@@ -598,17 +600,17 @@ const Settings: React.FC = () => {
           {instFormError && <Alert severity="error" sx={{ mb: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>{instFormError}</Alert>}
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid size={12}>
-              <TextField fullWidth label="Installation Name" required value={instForm.installationName}
+              <TextField fullWidth label={t('settings.installationName')} required value={instForm.installationName}
                 onChange={e => setInstForm(p => ({ ...p, installationName: e.target.value }))}
                 slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
             </Grid>
             <Grid size={12}>
-              <TextField fullWidth label="Address" value={instForm.address}
+              <TextField fullWidth label={t('settings.colAddress')} value={instForm.address}
                 onChange={e => setInstForm(p => ({ ...p, address: e.target.value }))}
                 slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Country" value={instForm.country}
+              <TextField fullWidth label={t('settings.country')} value={instForm.country}
                 onChange={e => setInstForm(p => ({ ...p, country: e.target.value }))}
                 slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
             </Grid>
@@ -618,17 +620,17 @@ const Settings: React.FC = () => {
                 slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Latitude" value={instForm.latitude} type="number"
+              <TextField fullWidth label={t('settings.latitude')} value={instForm.latitude} type="number"
                 onChange={e => setInstForm(p => ({ ...p, latitude: e.target.value }))}
-                slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} placeholder="e.g. 48.8566" />
+                slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} placeholder={t('settings.latPlaceholder')} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Longitude" value={instForm.longitude} type="number"
+              <TextField fullWidth label={t('settings.longitude')} value={instForm.longitude} type="number"
                 onChange={e => setInstForm(p => ({ ...p, longitude: e.target.value }))}
-                slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} placeholder="e.g. 2.3522" />
+                slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} placeholder={t('settings.lonPlaceholder')} />
             </Grid>
             <Grid size={12}>
-              <TextField fullWidth label="CBAM Registry Installation ID" value={instForm.cbamRegistryInstallationId}
+              <TextField fullWidth label={t('settings.registryInstallationId')} value={instForm.cbamRegistryInstallationId}
                 onChange={e => setInstForm(p => ({ ...p, cbamRegistryInstallationId: e.target.value }))}
                 slotProps={{ inputLabel: { shrink: true } }} sx={textFieldSx} />
             </Grid>
@@ -637,14 +639,14 @@ const Settings: React.FC = () => {
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button onClick={() => setInstDialogOpen(false)}
             sx={{ fontFamily: T.font.body, fontWeight: 500, textTransform: 'none', color: T.color.muted, borderRadius: T.radius.pill }}>
-            Cancel
+            {t('settings.cancel')}
           </Button>
           <Button variant="contained" disableElevation onClick={handleSaveInstallation} disabled={instSaving}
             sx={{
               fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', borderRadius: T.radius.pill,
               bgcolor: T.color.forest, '&:hover': { bgcolor: T.color.ctaHover },
             }}>
-            {instSaving ? 'Saving…' : instEditId ? 'Update' : 'Create'}
+            {instSaving ? t('settings.saving') : instEditId ? t('settings.update') : t('settings.create')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -654,24 +656,24 @@ const Settings: React.FC = () => {
         PaperProps={{ sx: dialogPaperSx }}>
         <Box sx={dialogAccentBar(`linear-gradient(90deg, ${T.color.error}, #E74C3C, ${T.color.accent})`)} />
         <DialogTitle sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.1rem', color: T.color.ink }}>
-          Delete Installation
+          {t('settings.deleteTitle')}
         </DialogTitle>
         <DialogContent>
           <Typography sx={{ fontFamily: T.font.body, color: T.color.inkSoft, lineHeight: 1.6 }}>
-            Are you sure you want to delete this installation site? This action cannot be undone.
+            {t('settings.deleteText')}
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button onClick={() => setDeleteConfirmId(null)}
             sx={{ fontFamily: T.font.body, fontWeight: 500, textTransform: 'none', color: T.color.muted, borderRadius: T.radius.pill }}>
-            Cancel
+            {t('settings.cancel')}
           </Button>
           <Button variant="contained" disableElevation onClick={handleDeleteInstallation} disabled={deleteLoading}
             sx={{
               fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', borderRadius: T.radius.pill,
               bgcolor: T.color.error, '&:hover': { bgcolor: '#A93226' },
             }}>
-            {deleteLoading ? 'Deleting…' : 'Delete'}
+            {deleteLoading ? t('settings.deleting') : t('settings.delete')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -679,15 +681,15 @@ const Settings: React.FC = () => {
       {/* Success snackbars */}
       <Snackbar open={userSuccess} autoHideDuration={3000} onClose={() => setUserSuccess(false)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert severity="success" onClose={() => setUserSuccess(false)} sx={{ fontFamily: T.font.body, borderRadius: T.radius.sm }}>Profile updated successfully</Alert>
+        <Alert severity="success" onClose={() => setUserSuccess(false)} sx={{ fontFamily: T.font.body, borderRadius: T.radius.sm }}>{t('settings.profileSaved')}</Alert>
       </Snackbar>
       <Snackbar open={companySuccess} autoHideDuration={3000} onClose={() => setCompanySuccess(false)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert severity="success" onClose={() => setCompanySuccess(false)} sx={{ fontFamily: T.font.body, borderRadius: T.radius.sm }}>Company updated successfully</Alert>
+        <Alert severity="success" onClose={() => setCompanySuccess(false)} sx={{ fontFamily: T.font.body, borderRadius: T.radius.sm }}>{t('settings.companySaved')}</Alert>
       </Snackbar>
       <Snackbar open={instSuccess} autoHideDuration={3000} onClose={() => setInstSuccess(false)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert severity="success" onClose={() => setInstSuccess(false)} sx={{ fontFamily: T.font.body, borderRadius: T.radius.sm }}>Installation saved successfully</Alert>
+        <Alert severity="success" onClose={() => setInstSuccess(false)} sx={{ fontFamily: T.font.body, borderRadius: T.radius.sm }}>{t('settings.instSaved')}</Alert>
       </Snackbar>
     </Container>
   );

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { usePageLanguage } from './i18n/useAppLanguage';
 import { useNavigate } from 'react-router-dom';
 import {
   AppBar,
@@ -231,7 +232,7 @@ const copy: Record<
 
 const Pricing: React.FC = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState<Lang>('en');
+  const [language, setLanguage] = usePageLanguage();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const t = copy[language];
 

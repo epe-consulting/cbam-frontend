@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import bs from './locales/bs.json';
 import en from './locales/en.json';
+import tr from './locales/tr.json';
 import i18n, { lazyLabels, productCategoryLabel } from './index';
 
 type Tree = { [k: string]: string | string[] | Tree };
@@ -13,14 +14,15 @@ function flatKeys(tree: Tree, prefix = ''): string[] {
 describe('locale files', () => {
   afterAll(() => i18n.changeLanguage('bs'));
 
-  it('bs and en define exactly the same keys', () => {
+  it('bs, en and tr define exactly the same keys', () => {
     expect(flatKeys(en as Tree).sort()).toEqual(flatKeys(bs as Tree).sort());
+    expect(flatKeys(tr as Tree).sort()).toEqual(flatKeys(bs as Tree).sort());
   });
 
   it('no translation is empty', () => {
-    for (const tree of [bs, en] as Tree[]) {
+    for (const [lang, tree] of [['bs', bs], ['en', en], ['tr', tr]] as [string, Tree][]) {
       flatKeys(tree).forEach((key) => {
-        expect(String(i18n.getResource(tree === bs ? 'bs' : 'en', 'translation', key)).trim(), key).not.toBe('');
+        expect(String(i18n.getResource(lang, 'translation', key)).trim(), key).not.toBe('');
       });
     }
   });

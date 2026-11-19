@@ -1,6 +1,7 @@
 // Form-state helpers for import lines (kept apart from the editor component for fast refresh).
 
 import { suggestDefaultPathwaySefa } from './engine.ts';
+import { tr } from '../i18n';
 import type { ActualDataSource, DeductionClaim, ImportLine } from './types.ts';
 
 /** Form state for one line; numbers are kept as strings while editing. */
@@ -80,10 +81,10 @@ export function draftToLine(d: LineDraft): ImportLine {
 export function validateDraft(d: LineDraft, index: number): string | null {
   const q = Number(d.quantity);
   if (!d.cn || !d.country || !Number.isFinite(q) || q <= 0) {
-    return `Line ${index + 1}: enter a CN code, country of origin and a positive quantity.`;
+    return tr('cc.d.required', { n: index + 1 });
   }
   if (d.actualSee.trim() !== '' && effectiveSefa(d).trim() === '') {
-    return `Line ${index + 1}: enter the supplier's SEFA for the actual-emissions scenario, or clear actual SEE.`;
+    return tr('cc.d.sefa', { n: index + 1 });
   }
   return null;
 }

@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { tr, withLanguage } from './i18n';
 import { useNavigate } from 'react-router-dom';
 import {
   Alert,
@@ -28,6 +30,7 @@ import { Add, ArrowBack, Calculate, DeleteOutline, Download, East, Shield } from
 import {
   calculate,
   compareByYear,
+  labelText,
   sensitivity,
   type CompareInput,
   type Comparison,
@@ -121,6 +124,8 @@ function emptyCostItem(partial: Partial<CostItem> & Pick<CostItem, 'label' | 'sc
 
 const CostCalculator: React.FC = () => {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.resolvedLanguage || i18n.language;
   const isLoggedIn = Boolean(localStorage.getItem('token'));
 
   const [drafts, setDrafts] = useState<LineDraft[]>(() => [
@@ -159,7 +164,7 @@ const CostCalculator: React.FC = () => {
   // Prefills are user-provided planning assumptions, not official market rates.
   const [costItems, setCostItems] = useState<CostItem[]>(() => [
     emptyCostItem({
-      label: 'Consultancy / emissions calculation (user estimate; 1,200–2,400 BAM)',
+      label: tr('cc.p.defaultConsultancy'),
       scenario: 'ACTUAL',
       occurrence: 'ONE_OFF',
       basis: 'PER_INSTALLATION',
@@ -172,14 +177,14 @@ const CostCalculator: React.FC = () => {
     }),
     emptyCostItem({
       // No built-in verifier price (none in the sources): the user enters a quote.
-      label: "Independent verification (enter your verifier's quote)",
+      label: tr('cc.p.defaultVerification'),
       scenario: 'ACTUAL',
       occurrence: 'ANNUAL',
       basis: 'PER_INSTALLATION',
       payer: 'PRODUCER',
     }),
     emptyCostItem({
-      label: 'Other reporting or administration',
+      label: tr('cc.p.defaultOther'),
       scenario: 'ACTUAL',
       occurrence: 'ANNUAL',
       basis: 'PER_REPORTING_PERIOD',
@@ -192,7 +197,8 @@ const CostCalculator: React.FC = () => {
   const [fullInput, setFullInput] = useState<CompareInput | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   // Each import year is compared on its own (certificates are surrendered per calendar year).
-  const yearComparisons = useMemo(() => (fullInput ? compareByYear(fullInput) : []), [fullInput]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lang: engine texts are translated at calculation time
+  const yearComparisons = useMemo(() => (fullInput ? compareByYear(fullInput) : []), [fullInput, lang]);
   const selected = yearComparisons.find((y) => y.year === selectedYear) ?? yearComparisons[0] ?? null;
   const comparison: Comparison | null = selected?.comparison ?? null;
   const lastInput: CompareInput | null = selected?.input ?? null;
@@ -244,21 +250,27 @@ const CostCalculator: React.FC = () => {
     setSelectedYear(Math.min(...(withActual.length ? withActual : input.lines.map((l) => l.importYear))));
   };
 
-  const sensRows = useMemo(() => (lastInput ? sensitivity(lastInput) : []), [lastInput]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lang: see yearComparisons
+  const sensRows = useMemo(() => (lastInput ? sensitivity(lastInput) : []), [lastInput, lang]);
   const lineResults = useMemo(
     () => (fullInput ? calculate(fullInput.lines, fullInput.prices, fullInput.priceCase, fullInput.importer) : []),
-    [fullInput],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- lang: see yearComparisons
+    [fullInput, lang],
   );
 
   const conclusionFor = (y: YearComparison) => conclusionForAudience(y.comparison, audience, view);
-  const audienceLabel = audience === 'EXPORTER' ? 'Non-EU exporter view' : 'EU importer view';
+  const audienceLabel = () => tr(audience === 'EXPORTER' ? 'cc.p.viewExporter' : 'cc.p.viewImporter');
+  /** Comparisons recomputed in English for the export files. */
+  const englishComparisons = () => (fullInput ? compareByYear(fullInput) : []);
 
   const handleExportPdf = () => {
     if (!fullInput || !yearComparisons.length) return;
-    downloadComparisonPdf(
-      fullInput,
-      yearComparisons.map((y) => ({ ...y, conclusion: conclusionFor(y) })),
-      audienceLabel,
+    withLanguage('en', () =>
+      downloadComparisonPdf(
+        fullInput,
+        englishComparisons().map((y) => ({ ...y, conclusion: conclusionFor(y) })),
+        audienceLabel(),
+      ),
     );
   };
 
@@ -268,18 +280,19 @@ const CostCalculator: React.FC = () => {
 
   const handleExportJson = () => {
     if (!fullInput || !yearComparisons.length) return;
-    const payload = { ...buildExportPayload(fullInput, yearComparisons, conclusionFor), audience: audienceLabel };
+    const payload = withLanguage('en', () => ({
+      ...buildExportPayload(fullInput, englishComparisons(), conclusionFor),
+      audience: audienceLabel(),
+    }));
     downloadText(`cbam-cost-comparison-${Date.now()}.json`, JSON.stringify(payload, null, 2), 'application/json');
   };
 
   const handleExportCsv = () => {
     if (!fullInput || !yearComparisons.length) return;
-    const payload = buildExportPayload(fullInput, yearComparisons, conclusionFor);
-    downloadText(
-      `cbam-cost-comparison-${Date.now()}.csv`,
-      toComparisonCsv(payload, [['audience', audienceLabel]]),
-      'text/csv;charset=utf-8',
+    const csv = withLanguage('en', () =>
+      toComparisonCsv(buildExportPayload(fullInput, englishComparisons(), conclusionFor), [['audience', audienceLabel()]]),
     );
+    downloadText(`cbam-cost-comparison-${Date.now()}.csv`, csv, 'text/csv;charset=utf-8');
   };
 
   return (
@@ -299,7 +312,7 @@ const CostCalculator: React.FC = () => {
             onClick={() => navigate('/')}
             sx={{ fontFamily: T.font.body, textTransform: 'none', color: T.color.inkSoft, mr: 1 }}
           >
-            Home
+            {t('cc.p.home')}
           </Button>
           <Box display="flex" alignItems="center" gap={1} sx={{ flexGrow: 1 }}>
             <Box
@@ -316,7 +329,7 @@ const CostCalculator: React.FC = () => {
               <Shield sx={{ color: '#fff', fontSize: 18 }} />
             </Box>
             <Typography sx={{ fontFamily: T.font.display, fontWeight: 700, color: T.color.ink }}>
-              Cost calculator
+              {t('cc.p.title')}
             </Typography>
           </Box>
           {isLoggedIn ? (
@@ -324,14 +337,14 @@ const CostCalculator: React.FC = () => {
               onClick={() => navigate('/dashboard')}
               sx={{ fontFamily: T.font.body, textTransform: 'none', color: T.color.forest, fontWeight: 600 }}
             >
-              Dashboard
+              {t('cc.p.dashboard')}
             </Button>
           ) : (
             <Button
               onClick={() => navigate('/login')}
               sx={{ fontFamily: T.font.body, textTransform: 'none', color: T.color.forest, fontWeight: 600 }}
             >
-              Login
+              {t('cc.p.login')}
             </Button>
           )}
         </Toolbar>
@@ -340,7 +353,7 @@ const CostCalculator: React.FC = () => {
       <Container maxWidth="md" sx={{ py: { xs: 4, md: 6 }, px: { xs: 2, md: 3 }, maxWidth: '1100px !important' }}>
         <Chip
           icon={<Calculate sx={{ fontSize: 16 }} />}
-          label="Default values vs actual emissions"
+          label={t('cc.p.chip')}
           sx={{
             fontFamily: T.font.body,
             fontWeight: 600,
@@ -364,13 +377,13 @@ const CostCalculator: React.FC = () => {
             mb: 1,
           }}
         >
-          {audience === 'EXPORTER' ? 'Why measure real emissions?' : 'Is measuring worth it?'}
+          {audience === 'EXPORTER' ? t('cc.p.h1Exporter') : t('cc.p.h1Importer')}
         </Typography>
         <Typography sx={{ color: T.color.muted, mb: 2, maxWidth: 720, lineHeight: 1.6 }}>
           {audience === 'EXPORTER'
-            ? 'For non-EU exporters: compare what your EU buyer pays in CBAM certificates under official defaults versus your actual (verified) emissions — after the calculation and verification costs you enter below.'
-            : 'For EU importers: compare total CBAM-related costs using official default values versus actual emissions plus calculation and verification costs.'}{' '}
-          Same goods, quantities, origin and price assumptions in both scenarios.
+            ? t('cc.p.introExporter')
+            : t('cc.p.introImporter')}{' '}
+          {t('cc.p.introSame')}
         </Typography>
 
         <ToggleButtonGroup
@@ -399,8 +412,8 @@ const CostCalculator: React.FC = () => {
             },
           }}
         >
-          <ToggleButton value="EXPORTER">Non-EU exporter</ToggleButton>
-          <ToggleButton value="IMPORTER">EU importer</ToggleButton>
+          <ToggleButton value="EXPORTER">{t('cc.p.audExporter')}</ToggleButton>
+          <ToggleButton value="IMPORTER">{t('cc.p.audImporter')}</ToggleButton>
         </ToggleButtonGroup>
 
         {audience === 'EXPORTER' && (
@@ -414,11 +427,11 @@ const CostCalculator: React.FC = () => {
             }}
           >
             <Typography sx={{ fontFamily: T.font.body, fontWeight: 700, color: T.color.ink, mb: 1.5 }}>
-              Why actual emissions can be cheaper than defaults
+              {t('cc.p.whyTitle')}
             </Typography>
             <Stack component="ul" spacing={1} sx={{ m: 0, pl: 2.5, color: T.color.inkSoft }}>
               {EXPORTER_WHY_ACTUALS.map((line) => (
-                <Typography component="li" key={line.text.slice(0, 40)} sx={{ fontSize: '0.95rem', lineHeight: 1.55 }}>
+                <Typography component="li" key={line.source + line.text.slice(0, 20)} sx={{ fontSize: '0.95rem', lineHeight: 1.55 }}>
                   {line.text}{' '}
                   <Typography component="span" sx={{ fontSize: '0.8rem', color: T.color.muted }}>
                     ({line.source})
@@ -441,12 +454,10 @@ const CostCalculator: React.FC = () => {
         >
           <Stack spacing={2.5}>
             <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, color: T.color.inkSoft }}>
-              Import lines
+              {t('cc.p.linesTitle')}
             </Typography>
             <Typography sx={{ color: T.color.muted, fontSize: '0.9rem', mt: -1 }}>
-              Add one line per product, origin and import period. Official defaults are looked up from IR 2025/2621
-              for each line. Actual SEE and SEFA are optional per line; lines without them use default values in
-              both scenarios.
+              {t('cc.p.linesHelp')}
             </Typography>
 
             {drafts.map((d, i) => (
@@ -472,18 +483,16 @@ const CostCalculator: React.FC = () => {
               onClick={addDraft}
               sx={{ alignSelf: 'flex-start', textTransform: 'none', color: T.color.forest, fontFamily: T.font.body }}
             >
-              Add import line
+              {t('cc.p.addLine')}
             </Button>
 
             <Divider sx={{ borderColor: T.color.lineFaint }} />
 
             <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, color: T.color.inkSoft }}>
-              Other CBAM imports by the same importer (50 t exemption)
+              {t('cc.p.otherTitle')}
             </Typography>
             <Typography sx={{ color: T.color.muted, fontSize: '0.9rem', mt: -1 }}>
-              The 50 t threshold applies to the importer&rsquo;s total net mass of CBAM goods per calendar year, all CN
-              codes together (hydrogen and electricity excluded). Enter imports not listed above. Leave empty if
-              unknown: lines totalling 50 t or less will then show &ldquo;insufficient information&rdquo;.
+              {t('cc.p.otherHelp')}
             </Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               {importYears.map((y) => (
@@ -491,7 +500,7 @@ const CostCalculator: React.FC = () => {
                   key={y}
                   fullWidth
                   type="number"
-                  label={`Other CBAM imports in ${y} (t)`}
+                  label={t('cc.p.otherField', { year: y })}
                   value={otherImports[y] ?? ''}
                   onChange={(e) => setOtherImports((o) => ({ ...o, [y]: e.target.value }))}
                   inputProps={{ min: 0, step: 'any' }}
@@ -503,17 +512,16 @@ const CostCalculator: React.FC = () => {
             <Divider sx={{ borderColor: T.color.lineFaint }} />
 
             <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, color: T.color.inkSoft }}>
-              Certificate price assumptions (EUR / certificate)
+              {t('cc.p.priceTitle')}
             </Typography>
             <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>
-              Assumed prices for forecasting only — not official prices. Edit them to your own low, central and high
-              view. Results using these prices are labelled “Forecast”.
+              {t('cc.p.priceHelp')}
             </Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
                 fullWidth
                 type="number"
-                label="Low"
+                label={t('cc.p.low')}
                 value={priceLow}
                 onChange={(e) => setPriceLow(e.target.value)}
                 sx={textFieldSx}
@@ -521,7 +529,7 @@ const CostCalculator: React.FC = () => {
               <TextField
                 fullWidth
                 type="number"
-                label="Central"
+                label={t('cc.p.central')}
                 value={priceCentral}
                 onChange={(e) => setPriceCentral(e.target.value)}
                 sx={textFieldSx}
@@ -529,7 +537,7 @@ const CostCalculator: React.FC = () => {
               <TextField
                 fullWidth
                 type="number"
-                label="High"
+                label={t('cc.p.high')}
                 value={priceHigh}
                 onChange={(e) => setPriceHigh(e.target.value)}
                 sx={textFieldSx}
@@ -537,21 +545,20 @@ const CostCalculator: React.FC = () => {
               <TextField
                 select
                 fullWidth
-                label="Price case"
+                label={t('cc.p.priceCase')}
                 value={priceCase}
                 onChange={(e) => setPriceCase(e.target.value as PriceCase)}
                 sx={textFieldSx}
               >
-                <MenuItem value="low">Low</MenuItem>
-                <MenuItem value="central">Central</MenuItem>
-                <MenuItem value="high">High</MenuItem>
+                <MenuItem value="low">{t('cc.p.low')}</MenuItem>
+                <MenuItem value="central">{t('cc.p.central')}</MenuItem>
+                <MenuItem value="high">{t('cc.p.high')}</MenuItem>
               </TextField>
             </Stack>
             {has2026 && (
               <>
                 <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>
-                  Official 2026 quarterly prices (optional). 2026 imports use the quarterly average price of the
-                  quarter of importation (Art. 21(1a)). An entered price replaces the assumed price for that quarter.
+                  {t('cc.p.official2026Help')}
                 </Typography>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                   {([1, 2, 3, 4] as const).map((q) => (
@@ -559,7 +566,7 @@ const CostCalculator: React.FC = () => {
                       key={q}
                       fullWidth
                       type="number"
-                      label={`Official 2026 Q${q} price`}
+                      label={t('cc.p.official2026Field', { q })}
                       value={official2026[q]}
                       onChange={(e) => setOfficial2026((o) => ({ ...o, [q]: e.target.value }))}
                       sx={textFieldSx}
@@ -573,7 +580,7 @@ const CostCalculator: React.FC = () => {
 
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
               <Typography sx={{ fontFamily: T.font.body, fontWeight: 600, color: T.color.inkSoft, flex: 1 }}>
-                Calculation, verification & admin costs (EUR)
+                {t('cc.p.costsTitle')}
               </Typography>
               <FormControlLabel
                 control={
@@ -586,28 +593,28 @@ const CostCalculator: React.FC = () => {
                 label={
                   <Typography sx={{ fontFamily: T.font.body, fontSize: '0.9rem' }}>
                     {audience === 'EXPORTER'
-                      ? 'Include exporter verification costs (combined view)'
-                      : 'Combined producer–importer view'}
+                      ? t('cc.p.combinedExporter')
+                      : t('cc.p.combinedImporter')}
                   </Typography>
                 }
               />
               <TextField
                 select
                 size="small"
-                label="Cost case"
+                label={t('cc.p.costCase')}
                 value={costCase}
                 onChange={(e) => setCostCase(e.target.value as CostCase)}
                 sx={{ minWidth: 120, ...textFieldSx }}
               >
-                <MenuItem value="low">Low</MenuItem>
-                <MenuItem value="central">Central</MenuItem>
-                <MenuItem value="high">High</MenuItem>
+                <MenuItem value="low">{t('cc.p.low')}</MenuItem>
+                <MenuItem value="central">{t('cc.p.central')}</MenuItem>
+                <MenuItem value="high">{t('cc.p.high')}</MenuItem>
               </TextField>
             </Stack>
             <Typography sx={{ color: T.color.muted, fontSize: '0.85rem', mt: -1 }}>
               {audience === 'EXPORTER'
-                ? 'Prefills treat consultancy and verification as paid by the producer/exporter. Use allocation share if one installation fee covers several customers. Costs with amount 0 are ignored.'
-                : 'Enter your own estimates. Use allocation share to avoid double-counting installation-level fees across products or customers. Costs with amount 0 are ignored. Producer-only costs appear only in the combined view.'}
+                ? t('cc.p.costsHelpExporter')
+                : t('cc.p.costsHelpImporter')}
             </Typography>
 
             {costItems.map((item) => (
@@ -624,13 +631,13 @@ const CostCalculator: React.FC = () => {
                   <Stack direction="row" spacing={1} alignItems="center">
                     <TextField
                       fullWidth
-                      label="Cost label"
+                      label={t('cc.p.costLabel')}
                       value={item.label}
                       onChange={(e) => updateCostItem(item.id, { label: e.target.value })}
                       sx={textFieldSx}
                     />
                     <IconButton
-                      aria-label="Remove cost item"
+                      aria-label={t('cc.p.removeCost')}
                       onClick={() => setCostItems((items) => items.filter((i) => i.id !== item.id))}
                     >
                       <DeleteOutline />
@@ -640,7 +647,7 @@ const CostCalculator: React.FC = () => {
                     <TextField
                       fullWidth
                       type="number"
-                      label="Central €"
+                      label={t('cc.p.centralEur')}
                       value={item.amount.central}
                       onChange={(e) =>
                         updateCostItem(item.id, {
@@ -652,7 +659,7 @@ const CostCalculator: React.FC = () => {
                     <TextField
                       fullWidth
                       type="number"
-                      label="Low €"
+                      label={t('cc.p.lowEur')}
                       value={item.amount.low ?? ''}
                       onChange={(e) =>
                         updateCostItem(item.id, {
@@ -667,7 +674,7 @@ const CostCalculator: React.FC = () => {
                     <TextField
                       fullWidth
                       type="number"
-                      label="High €"
+                      label={t('cc.p.highEur')}
                       value={item.amount.high ?? ''}
                       onChange={(e) =>
                         updateCostItem(item.id, {
@@ -684,46 +691,46 @@ const CostCalculator: React.FC = () => {
                     <TextField
                       select
                       fullWidth
-                      label="Scenario"
+                      label={t('cc.p.scenario')}
                       value={item.scenario}
                       onChange={(e) => updateCostItem(item.id, { scenario: e.target.value as CostScenario })}
                       sx={textFieldSx}
                     >
-                      <MenuItem value="ACTUAL">Actual emissions path</MenuItem>
-                      <MenuItem value="DEFAULT">Default values path</MenuItem>
+                      <MenuItem value="ACTUAL">{t('cc.p.pathActual')}</MenuItem>
+                      <MenuItem value="DEFAULT">{t('cc.p.pathDefault')}</MenuItem>
                     </TextField>
                     <TextField
                       select
                       fullWidth
-                      label="Occurrence"
+                      label={t('cc.p.occurrence')}
                       value={item.occurrence}
                       onChange={(e) =>
                         updateCostItem(item.id, { occurrence: e.target.value as CostOccurrence })
                       }
                       sx={textFieldSx}
                     >
-                      <MenuItem value="ONE_OFF">One-off (first year)</MenuItem>
-                      <MenuItem value="ANNUAL">Annual / recurring</MenuItem>
+                      <MenuItem value="ONE_OFF">{t('cc.p.oneOff')}</MenuItem>
+                      <MenuItem value="ANNUAL">{t('cc.p.annual')}</MenuItem>
                     </TextField>
                     <TextField
                       select
                       fullWidth
-                      label="Basis"
+                      label={t('cc.p.basis')}
                       value={item.basis}
                       onChange={(e) => updateCostItem(item.id, { basis: e.target.value as CostBasis })}
                       sx={textFieldSx}
                     >
-                      <MenuItem value="PER_INSTALLATION">Per installation</MenuItem>
-                      <MenuItem value="PER_REPORTING_PERIOD">Per reporting period</MenuItem>
-                      <MenuItem value="PER_PRODUCT">Per product</MenuItem>
-                      <MenuItem value="PER_SUPPLIER">Per supplier</MenuItem>
+                      <MenuItem value="PER_INSTALLATION">{t('cc.p.perInstallation')}</MenuItem>
+                      <MenuItem value="PER_REPORTING_PERIOD">{t('cc.p.perPeriod')}</MenuItem>
+                      <MenuItem value="PER_PRODUCT">{t('cc.p.perProduct')}</MenuItem>
+                      <MenuItem value="PER_SUPPLIER">{t('cc.p.perSupplier')}</MenuItem>
                     </TextField>
                   </Stack>
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                     <TextField
                       fullWidth
                       type="number"
-                      label="Count"
+                      label={t('cc.p.count')}
                       value={item.count}
                       onChange={(e) => updateCostItem(item.id, { count: Number(e.target.value) || 0 })}
                       sx={textFieldSx}
@@ -731,26 +738,26 @@ const CostCalculator: React.FC = () => {
                     <TextField
                       fullWidth
                       type="number"
-                      label="Allocation share (0–1)"
+                      label={t('cc.p.share')}
                       value={item.allocationShare}
                       onChange={(e) =>
                         updateCostItem(item.id, { allocationShare: Number(e.target.value) || 0 })
                       }
                       inputProps={{ min: 0, max: 1, step: 0.01 }}
                       sx={textFieldSx}
-                      helperText="e.g. 0.25 if this import is 25% of the installation volume covered by the fee"
+                      helperText={t('cc.p.shareHelp')}
                     />
                     <TextField
                       select
                       fullWidth
-                      label="Who pays"
+                      label={t('cc.p.payer')}
                       value={item.payer}
                       onChange={(e) => updateCostItem(item.id, { payer: e.target.value as CostPayer })}
                       sx={textFieldSx}
                     >
-                      <MenuItem value="IMPORTER">Importer (direct)</MenuItem>
-                      <MenuItem value="PASSED_ON">Passed on to importer</MenuItem>
-                      <MenuItem value="PRODUCER">Producer (not passed on)</MenuItem>
+                      <MenuItem value="IMPORTER">{t('cc.p.payerImporter')}</MenuItem>
+                      <MenuItem value="PASSED_ON">{t('cc.p.payerPassed')}</MenuItem>
+                      <MenuItem value="PRODUCER">{t('cc.p.payerProducer')}</MenuItem>
                     </TextField>
                   </Stack>
                 </Stack>
@@ -762,12 +769,12 @@ const CostCalculator: React.FC = () => {
               onClick={() =>
                 setCostItems((items) => [
                   ...items,
-                  emptyCostItem({ label: 'Additional cost', scenario: 'ACTUAL' }),
+                  emptyCostItem({ label: t('cc.p.additionalCost'), scenario: 'ACTUAL' }),
                 ])
               }
               sx={{ alignSelf: 'flex-start', textTransform: 'none', color: T.color.forest, fontFamily: T.font.body }}
             >
-              Add cost item
+              {t('cc.p.addCost')}
             </Button>
 
             {error && (
@@ -793,7 +800,7 @@ const CostCalculator: React.FC = () => {
                 '&:hover': { bgcolor: T.color.ctaHover },
               }}
             >
-              Compare costs
+              {t('cc.p.compare')}
             </Button>
           </Stack>
         </Box>
@@ -810,7 +817,7 @@ const CostCalculator: React.FC = () => {
           >
             {yearComparisons.length > 1 && (
               <Box sx={{ mb: 2 }}>
-                <Typography sx={{ fontWeight: 700, color: T.color.ink, mb: 1 }}>Import year compared</Typography>
+                <Typography sx={{ fontWeight: 700, color: T.color.ink, mb: 1 }}>{t('cc.p.yearCompared')}</Typography>
                 <ToggleButtonGroup
                   exclusive
                   size="small"
@@ -824,10 +831,7 @@ const CostCalculator: React.FC = () => {
                   ))}
                 </ToggleButtonGroup>
                 <Typography sx={{ fontSize: '0.85rem', color: T.color.muted, mt: 1 }}>
-                  Each import year is compared separately: certificates are surrendered per calendar year (Art. 22(1))
-                  and the 50 t threshold is assessed per year (Art. 2a). One-off costs are counted once, in{' '}
-                  {yearComparisons.find((y) => y.oneOffIncluded)?.year} (the first year with actual data); other
-                  years show recurring costs.
+                  {t('cc.p.yearHelp', { year: yearComparisons.find((y) => y.oneOffIncluded)?.year })}
                 </Typography>
               </Box>
             )}
@@ -846,23 +850,22 @@ const CostCalculator: React.FC = () => {
 
             {audience === 'EXPORTER' && comparison.comparable && view === 'IMPORTER' && (
               <Alert severity="info" sx={{ fontFamily: T.font.body, mb: 2 }}>
-                Importer-only view hides producer-paid verification/consultancy. Turn on combined view to see
-                your exporter cost burden against the buyer’s certificate saving.
+                {t('cc.p.importerOnlyInfo')}
               </Alert>
             )}
 
             {lineResults.length > 0 && (
               <>
-                <Typography sx={{ fontWeight: 700, color: T.color.ink, mb: 1 }}>Import lines</Typography>
+                <Typography sx={{ fontWeight: 700, color: T.color.ink, mb: 1 }}>{t('cc.p.linesTitle')}</Typography>
                 <Box sx={{ overflowX: 'auto', mb: 3 }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
                         <TableCell sx={{ fontWeight: 700 }}>#</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>CN / origin / period</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700 }}>Mass (t)</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>Default values</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>Actual emissions</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>{t('cc.p.colCnOrigin')}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700 }}>{t('cc.p.colMass')}</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>{t('cc.p.colDefault')}</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>{t('cc.p.colActual')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -873,15 +876,15 @@ const CostCalculator: React.FC = () => {
                               size="small"
                               label={
                                 isActual && !r.actualScenario
-                                  ? 'no actual data — default used'
-                                  : s.status.replace(/_/g, ' ').toLowerCase()
+                                  ? t('cc.p.noActualUsed')
+                                  : t(`cc.p.status.${s.status}`, { defaultValue: s.status.replace(/_/g, ' ').toLowerCase() })
                               }
                               color={s.status === 'ESTIMATED' ? 'success' : s.status === 'EXEMPT' ? 'info' : s.status === 'OUT_OF_SCOPE' ? 'default' : 'warning'}
                               variant="outlined"
                             />
                             {s.status === 'ESTIMATED' && (
                               <Typography sx={{ fontSize: '0.85rem', mt: 0.5 }}>
-                                {fmtNum(s.certificates, 3)} certificates · {fmtEur(s.certificateCost)}
+                                {t('cc.p.certsCost', { n: fmtNum(s.certificates, 3), cost: fmtEur(s.certificateCost) })}
                               </Typography>
                             )}
                             {s.reasons.map((reason) => (
@@ -912,18 +915,18 @@ const CostCalculator: React.FC = () => {
                   </Table>
                 </Box>
 
-                <Typography sx={{ fontWeight: 700, color: T.color.ink, mb: 1 }}>Annual summary (importer level)</Typography>
+                <Typography sx={{ fontWeight: 700, color: T.color.ink, mb: 1 }}>{t('cc.p.annualSummary')}</Typography>
                 <Box sx={{ overflowX: 'auto', mb: 3 }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ fontWeight: 700 }}>Import year</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700 }}>Lines mass (t)</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700 }}>Certificates (default)</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700 }}>Certificate cost (default)</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700 }}>Certificates (actual)</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700 }}>Certificate cost (actual)</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>{t('cc.p.colYear')}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700 }}>{t('cc.p.colLinesMass')}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700 }}>{t('cc.p.colCertsDefault')}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700 }}>{t('cc.p.colCostDefault')}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700 }}>{t('cc.p.colCertsActual')}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700 }}>{t('cc.p.colCostActual')}</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>{t('cc.p.colStatus')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -944,12 +947,12 @@ const CostCalculator: React.FC = () => {
                             <TableCell align="right">{a.incomplete ? '—' : fmtEur(a.certificateCost)}</TableCell>
                             <TableCell sx={{ fontSize: '0.8rem' }}>
                               {d.incomplete || a.incomplete
-                                ? 'Incomplete — some lines could not be estimated'
+                                ? t('cc.p.stIncomplete')
                                 : exempt
-                                  ? 'Exempt lines included (≤ 50 t)'
-                                  : 'Estimated'}
-                              {(d.forecast || a.forecast) && ' · Forecast'}
-                              {a.planning && ' · Planning (unverified actuals)'}
+                                  ? t('cc.p.stExempt')
+                                  : t('cc.p.stEstimated')}
+                              {(d.forecast || a.forecast) && t('cc.p.stForecast')}
+                              {a.planning && t('cc.p.stPlanning')}
                             </TableCell>
                           </TableRow>
                         );
@@ -962,45 +965,44 @@ const CostCalculator: React.FC = () => {
 
             {(comparison.default.totals.incomplete || comparison.actual.totals.incomplete) && (
               <Alert severity="warning" sx={{ mb: 2, fontFamily: T.font.body }}>
-                Partial totals: the comparison below covers only lines that could be estimated. Lines marked
-                “insufficient info” or “not implemented” are excluded, not counted as €0.
+                {t('cc.p.partialTotals')}
               </Alert>
             )}
             <Typography sx={{ fontWeight: 700, color: T.color.ink, mb: 1 }}>
-              {audience === 'EXPORTER' ? 'Cost comparison (exporter lens)' : 'Cost comparison'}
-              {selected ? ` — import year ${selected.year}` : ''}
+              {audience === 'EXPORTER' ? t('cc.p.cmpExporter') : t('cc.p.cmp')}
+              {selected ? t('cc.p.cmpYear', { year: selected.year }) : ''}
             </Typography>
             <Box sx={{ overflowX: 'auto', mb: 3 }}>
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 700 }}>Cost component</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>{t('cc.p.colComponent')}</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 700 }}>
-                      Official default values
+                      {t('cc.p.colOfficialDefault')}
                     </TableCell>
                     <TableCell align="right" sx={{ fontWeight: 700 }}>
-                      Actual emissions + verification
+                      {t('cc.p.colActualVerif')}
                     </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   <TableRow>
-                    <TableCell>CBAM certificate cost</TableCell>
+                    <TableCell>{t('cc.p.rowCertCost')}</TableCell>
                     <TableCell align="right">{fmtEur(comparison.default.certificateCost)}</TableCell>
                     <TableCell align="right">{fmtEur(comparison.actual.certificateCost)}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell>Emissions calculation / data prep (one-off)</TableCell>
+                    <TableCell>{t('cc.p.rowOneOff')}</TableCell>
                     <TableCell align="right">{fmtEur(comparison.default.oneOff)}</TableCell>
                     <TableCell align="right">{fmtEur(comparison.actual.oneOff)}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell>Verification & other annual costs</TableCell>
+                    <TableCell>{t('cc.p.rowAnnual')}</TableCell>
                     <TableCell align="right">{fmtEur(comparison.default.annual)}</TableCell>
                     <TableCell align="right">{fmtEur(comparison.actual.annual)}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 700 }}>Total estimated cost (first year)</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>{t('cc.p.rowTotalFirst')}</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 700 }}>
                       {fmtEur(comparison.default.firstYearTotal)}
                     </TableCell>
@@ -1009,12 +1011,12 @@ const CostCalculator: React.FC = () => {
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell>Recurring annual total</TableCell>
+                    <TableCell>{t('cc.p.rowRecurring')}</TableCell>
                     <TableCell align="right">{fmtEur(comparison.default.recurringTotal)}</TableCell>
                     <TableCell align="right">{fmtEur(comparison.actual.recurringTotal)}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell>Cost per tonne (first year)</TableCell>
+                    <TableCell>{t('cc.p.rowPerTonne')}</TableCell>
                     <TableCell align="right">{fmtEur(comparison.default.costPerTonneFirstYear)}</TableCell>
                     <TableCell align="right">{fmtEur(comparison.actual.costPerTonneFirstYear)}</TableCell>
                   </TableRow>
@@ -1025,58 +1027,58 @@ const CostCalculator: React.FC = () => {
             <Stack spacing={1} mb={3}>
               <Typography sx={{ color: T.color.inkSoft }}>
                 {audience === 'EXPORTER'
-                  ? 'Certificate cost for your EU buyer (default − actual): '
-                  : 'Certificate-cost difference (default − actual): '}
+                  ? t('cc.p.certDiffExporter')
+                  : t('cc.p.certDiff')}
                 <strong>{fmtEur(comparison.certificateSaving)}</strong>
-                {comparison.certificateSaving < 0 ? ' (actual path has higher certificate cost)' : ''}
+                {comparison.certificateSaving < 0 ? t('cc.p.actualHigher') : ''}
               </Typography>
               <Typography sx={{ color: T.color.inkSoft }}>
                 {audience === 'EXPORTER'
-                  ? 'Your additional calculation / verification costs (first year): '
-                  : 'Additional calculation / verification costs (first year): '}
+                  ? t('cc.p.addCostsExporter')
+                  : t('cc.p.addCosts')}
                 <strong>{fmtEur(comparison.additionalCostsFirstYear)}</strong>
               </Typography>
               <Typography sx={{ color: T.color.inkSoft }}>
-                {audience === 'EXPORTER' ? 'Net effect first year (combined): ' : 'Net saving first year: '}
+                {audience === 'EXPORTER' ? t('cc.p.netFirstExporter') : t('cc.p.netFirst')}
                 <strong>
                   {comparison.netSavingFirstYear >= 0
                     ? fmtEur(comparison.netSavingFirstYear)
-                    : `additional cost ${fmtEur(comparison.netSavingFirstYear)}`}
+                    : t('cc.p.additionalCostValue', { v: fmtEur(comparison.netSavingFirstYear) })}
                 </strong>
               </Typography>
               <Typography sx={{ color: T.color.inkSoft }}>
-                {audience === 'EXPORTER' ? 'Net effect recurring: ' : 'Net saving recurring: '}
+                {audience === 'EXPORTER' ? t('cc.p.netRecExporter') : t('cc.p.netRec')}
                 <strong>
                   {comparison.netSavingRecurring >= 0
                     ? fmtEur(comparison.netSavingRecurring)
-                    : `additional cost ${fmtEur(comparison.netSavingRecurring)}`}
+                    : t('cc.p.additionalCostValue', { v: fmtEur(comparison.netSavingRecurring) })}
                 </strong>{' '}
-                / year
+                {t('cc.p.perYear')}
               </Typography>
               <Typography sx={{ color: T.color.inkSoft }}>
-                Break-even (first year): {comparison.breakEvenFirstYear.explanation}
+                {t('cc.p.beFirst')}{comparison.breakEvenFirstYear.explanation}
                 {comparison.breakEvenFirstYear.quantityTonnes != null && (
                   <> (~{fmtNum(comparison.breakEvenFirstYear.quantityTonnes, 1)} t)</>
                 )}
               </Typography>
               <Typography sx={{ color: T.color.inkSoft }}>
-                Break-even (recurring): {comparison.breakEvenRecurring.explanation}
+                {t('cc.p.beRec')}{comparison.breakEvenRecurring.explanation}
               </Typography>
             </Stack>
 
             {sensRows.length > 0 && (
               <>
-                <Typography sx={{ fontWeight: 700, color: T.color.ink, mb: 1 }}>Sensitivity</Typography>
+                <Typography sx={{ fontWeight: 700, color: T.color.ink, mb: 1 }}>{t('cc.p.sensitivity')}</Typography>
                 <Box sx={{ overflowX: 'auto', mb: 3 }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ fontWeight: 700 }}>Assumption</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>{t('cc.p.colAssumption')}</TableCell>
                         <TableCell align="right" sx={{ fontWeight: 700 }}>
-                          Net saving first year
+                          {t('cc.p.colNetFirst')}
                         </TableCell>
                         <TableCell align="right" sx={{ fontWeight: 700 }}>
-                          Net saving recurring
+                          {t('cc.p.colNetRec')}
                         </TableCell>
                       </TableRow>
                     </TableHead>
@@ -1100,29 +1102,29 @@ const CostCalculator: React.FC = () => {
                 sx={{ mb: 3, border: `1px solid ${T.color.line}`, borderRadius: T.radius.sm, p: 2, fontFamily: T.font.body }}
               >
                 <Box component="summary" sx={{ cursor: 'pointer', fontWeight: 700, color: T.color.ink }}>
-                  Calculation steps and sources
+                  {t('cc.p.stepsTitle')}
                 </Box>
                 {lineResults.map((r) => (
                   <Box key={r.line.id} sx={{ mt: 2 }}>
-                    <Typography sx={{ fontSize: '0.85rem', color: T.color.muted }}>Scope: {r.scopeNote}</Typography>
+                    <Typography sx={{ fontSize: '0.85rem', color: T.color.muted }}>{t('cc.p.scope')}{r.scopeNote}</Typography>
                     {r.thresholdNote && (
                       <Typography sx={{ fontSize: '0.85rem', color: T.color.muted }}>
-                        Threshold: {r.thresholdNote}
+                        {t('cc.p.threshold')}{r.thresholdNote}
                       </Typography>
                     )}
                     {(
                       [
-                        ['Official default values', r.defaultScenario],
-                        ['Actual emissions', r.actualScenario],
+                        [t('cc.p.colOfficialDefault'), r.defaultScenario],
+                        [t('cc.p.colActual'), r.actualScenario],
                       ] as const
                     ).map(([title, s]) =>
                       s ? (
                         <Box key={title} sx={{ mt: 1.5 }}>
                           <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                             <Typography sx={{ fontWeight: 700, color: T.color.inkSoft }}>{title}</Typography>
-                            <Chip size="small" label={s.status.replace(/_/g, ' ').toLowerCase()} />
+                            <Chip size="small" label={t(`cc.p.status.${s.status}`, { defaultValue: s.status.replace(/_/g, ' ').toLowerCase() })} />
                             {s.labels.map((l) => (
-                              <Chip key={l} size="small" variant="outlined" label={l} />
+                              <Chip key={l} size="small" variant="outlined" label={labelText(l)} />
                             ))}
                           </Stack>
                           {s.reasons.map((reason) => (
@@ -1138,7 +1140,7 @@ const CostCalculator: React.FC = () => {
                                 </Typography>
                                 {st.source && (
                                   <Typography sx={{ fontSize: '0.78rem', color: T.color.muted }}>
-                                    Source: {st.source}
+                                    {t('cc.p.source')}{st.source}
                                   </Typography>
                                 )}
                               </li>
@@ -1158,21 +1160,21 @@ const CostCalculator: React.FC = () => {
                 onClick={handleExportPdf}
                 sx={{ textTransform: 'none', color: T.color.forest, fontFamily: T.font.body }}
               >
-                Export PDF summary
+                {t('cc.p.exportPdf')}
               </Button>
               <Button
                 startIcon={<Download />}
                 onClick={handleExportCsv}
                 sx={{ textTransform: 'none', color: T.color.forest, fontFamily: T.font.body }}
               >
-                Export CSV
+                {t('cc.p.exportCsv')}
               </Button>
               <Button
                 startIcon={<Download />}
                 onClick={handleExportJson}
                 sx={{ textTransform: 'none', color: T.color.forest, fontFamily: T.font.body }}
               >
-                Export JSON
+                {t('cc.p.exportJson')}
               </Button>
               <Button
                 variant="contained"
@@ -1192,15 +1194,15 @@ const CostCalculator: React.FC = () => {
                   '&:hover': { bgcolor: T.color.ctaHover },
                 }}
               >
-                {isLoggedIn ? 'Start a CBAM calculation' : 'Log in to start calculating'}
+                {isLoggedIn ? t('cc.p.startCalc') : t('cc.p.loginToStart')}
               </Button>
             </Stack>
+            {lang !== 'en' && (
+              <Typography sx={{ fontSize: '0.8rem', color: T.color.muted, mt: -1, mb: 2 }}>{t('cc.p.exportNote')}</Typography>
+            )}
 
             <Alert severity="warning" sx={{ fontFamily: T.font.body, fontSize: '0.85rem' }}>
-              Screening estimate only. Default values and benchmarks come from IR (EU) 2025/2621 and
-              2025/2620 extracts in this app. Foreign carbon-price deductions are not quantified (see open
-              questions). CBAM factor / CSCF use Guidance Doc. No. 4 pending binding acts in the source
-              folder. Not legal advice.
+              {t('cc.p.disclaimer')}
             </Alert>
           </Box>
         )}

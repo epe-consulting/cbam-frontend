@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { usePageLanguage } from './i18n/useAppLanguage';
 import { useNavigate } from 'react-router-dom';
 import {
   AppBar,
@@ -232,7 +233,7 @@ const Privacy: React.FC = () => {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [language, setLanguage] = useState<Lang>('en');
+  const [language, setLanguage] = usePageLanguage();
   const t = translations[language];
 
   useEffect(() => {
