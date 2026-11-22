@@ -580,7 +580,16 @@
     "qtyPositive": "Sıfırdan büyük bir miktar girin.",
     "sodaAsh": "Soda külü",
     "limestone": "Kireç taşı",
-    "nothing": "Hiçbiri"
+    "nothing": "Hiçbiri",
+    "carbonate": {
+      "MGCO3": "Magnezyum karbonat (MgCO₃)",
+      "BACO3": "Baryum karbonat (BaCO₃)",
+      "LI2CO3": "Lityum karbonat (Li₂CO₃)",
+      "K2CO3": "Potasyum karbonat (K₂CO₃)",
+      "SRCO3": "Stronsiyum karbonat (SrCO₃)",
+      "NAHCO3": "Sodyum bikarbonat (NaHCO₃)",
+      "FECO3": "Demir(II) karbonat (FeCO₃)"
+    }
   },
   "alu": {
     "ext": {

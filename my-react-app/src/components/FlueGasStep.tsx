@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Box, Button, Checkbox, FormControl, FormControlLabel, FormGroup, FormLabel, Grid, TextField, Typography } from '@mui/material';
 import { ArrowBack, ArrowForward } from '@mui/icons-material';
 import type { QuestionWithOptions } from '../hooks/useQuestionsByStep';
 import {
+  FLUE_GAS_CARBONATES,
   FLUE_GAS_LIMESTONE_QTY_Q,
   FLUE_GAS_SODA_ASH_QTY_Q,
   FLUE_GAS_TREATMENT_Q,
@@ -9,6 +11,8 @@ import {
   flueGasComplete,
   flueGasSelection,
   isPositiveQuantity,
+  type CarbonateKey,
+  type FlueGasQuantities,
   type FlueGasSelection,
 } from '../utils/flueGas';
 import { useTranslation } from 'react-i18next';
@@ -47,11 +51,14 @@ export interface FlueGasStepProps {
 
 /**
  * Step 9 (aluminium, primary and secondary routes): flue gas treatment.
- * Soda ash and limestone can both be ticked for the same production process; each gets its own
- * quantity (IR (EU) 2025/2547 Annex II B.9.1.1, Method A: CO2 per carbonate consumed).
+ * Any carbonate of IR (EU) 2025/2547 Annex II, Section G, Table 3 (p. 63) can be ticked for the
+ * same production process; each gets its own quantity (Annex II B.9.1.1, Method A: CO2 per
+ * carbonate consumed). A carbonate whose quantity question is not loaded (database before
+ * post-045) is not shown.
  */
 export function FlueGasStep({ questionsFromApi, getAnswer, setAnswer, onBack, onNext }: FlueGasStepProps) {
   const { t } = useTranslation();
+  const [pending, setPending] = useState<CarbonateKey[]>([]);
   const byCode = (code: string) => questionsFromApi.find((q) => q.code === code);
   const treatQ = byCode(FLUE_GAS_TREATMENT_Q);
   const sodaQ = byCode(FLUE_GAS_SODA_ASH_QTY_Q);
@@ -65,14 +72,28 @@ export function FlueGasStep({ questionsFromApi, getAnswer, setAnswer, onBack, on
     );
   }
 
-  const sel = flueGasSelection(getAnswer(treatQ.id));
-  const sodaQty = getAnswer(sodaQ.id);
-  const limeQty = getAnswer(limeQ.id);
+  const carbonates = FLUE_GAS_CARBONATES.map((c) => ({ key: c.key, q: byCode(c.qtyQuestion) })).filter(
+    (c): c is { key: CarbonateKey; q: QuestionWithOptions } => c.q != null,
+  );
+  const quantities: FlueGasQuantities = {};
+  carbonates.forEach((c) => {
+    quantities[c.key] = getAnswer(c.q.id);
+  });
+  const stored = flueGasSelection(getAnswer(treatQ.id), quantities);
+  // Ticked boxes whose quantity is not typed yet (with several carbonates the code alone does not say which).
+  const ticked = new Set<CarbonateKey>(stored.nothing ? [] : [...stored.ticked, ...pending]);
+  const sel: FlueGasSelection = { ticked: [...ticked], nothing: stored.nothing };
 
   const apply = (next: FlueGasSelection) => {
     void setAnswer(treatQ.id, flueGasCode(next));
-    if (!next.sodaAsh) void setAnswer(sodaQ.id, '');
-    if (!next.limestone) void setAnswer(limeQ.id, '');
+    carbonates.forEach((c) => {
+      if (!next.ticked.includes(c.key)) void setAnswer(c.q.id, '');
+    });
+    setPending(next.ticked);
+  };
+  const toggle = (key: CarbonateKey, on: boolean) => {
+    const rest = sel.ticked.filter((k) => k !== key);
+    apply({ ticked: on ? [...rest, key] : rest, nothing: false });
   };
 
   const optionLabel = (code: string, fallback: string) => treatQ.options.find((o) => o.code === code)?.label ?? fallback;
@@ -105,25 +126,31 @@ export function FlueGasStep({ questionsFromApi, getAnswer, setAnswer, onBack, on
             <Typography sx={{ mb: 1, fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>{treatQ.helpText}</Typography>
           )}
           <FormGroup>
-            <FormControlLabel
-              sx={labelSx}
-              control={<Checkbox sx={checkboxSx} checked={sel.sodaAsh} onChange={(_, on) => apply({ ...sel, sodaAsh: on, nothing: false })} />}
-              label={optionLabel('SODA_ASH', t('flueGas.sodaAsh'))}
-            />
-            {sel.sodaAsh && qtyField(sodaQ, sodaQty)}
-            <FormControlLabel
-              sx={labelSx}
-              control={<Checkbox sx={checkboxSx} checked={sel.limestone} onChange={(_, on) => apply({ ...sel, limestone: on, nothing: false })} />}
-              label={optionLabel('LIMESTONE', t('flueGas.limestone'))}
-            />
-            {sel.limestone && qtyField(limeQ, limeQty)}
+            {carbonates.map((c) => (
+              <Box key={c.key}>
+                <FormControlLabel
+                  sx={labelSx}
+                  control={
+                    <Checkbox sx={checkboxSx} checked={ticked.has(c.key)} onChange={(_, on) => toggle(c.key, on)} />
+                  }
+                  label={
+                    c.key === 'SODA_ASH'
+                      ? optionLabel('SODA_ASH', t('flueGas.sodaAsh'))
+                      : c.key === 'LIMESTONE'
+                        ? optionLabel('LIMESTONE', t('flueGas.limestone'))
+                        : t(`flueGas.carbonate.${c.key}`)
+                  }
+                />
+                {ticked.has(c.key) && qtyField(c.q, quantities[c.key] ?? '')}
+              </Box>
+            ))}
             <FormControlLabel
               sx={labelSx}
               control={
                 <Checkbox
                   sx={checkboxSx}
                   checked={sel.nothing}
-                  onChange={(_, on) => apply({ sodaAsh: false, limestone: false, nothing: on })}
+                  onChange={(_, on) => apply({ ticked: [], nothing: on })}
                 />
               }
               label={optionLabel('NOTHING', t('flueGas.nothing'))}
@@ -154,7 +181,7 @@ export function FlueGasStep({ questionsFromApi, getAnswer, setAnswer, onBack, on
             disableElevation
             endIcon={<ArrowForward sx={{ fontSize: '18px !important' }} />}
             onClick={onNext}
-            disabled={!flueGasComplete(sel, sodaQty, limeQty)}
+            disabled={!flueGasComplete(sel, quantities)}
             sx={{
               fontFamily: T.font.body, fontWeight: 600, textTransform: 'none', borderRadius: T.radius.pill,
               bgcolor: T.color.forest, '&:hover': { bgcolor: T.color.ctaHover },

@@ -580,7 +580,16 @@
     "qtyPositive": "Enter a quantity greater than zero.",
     "sodaAsh": "Soda ash",
     "limestone": "Limestone",
-    "nothing": "Nothing"
+    "nothing": "Nothing",
+    "carbonate": {
+      "MGCO3": "Magnesium carbonate (MgCO₃)",
+      "BACO3": "Barium carbonate (BaCO₃)",
+      "LI2CO3": "Lithium carbonate (Li₂CO₃)",
+      "K2CO3": "Potassium carbonate (K₂CO₃)",
+      "SRCO3": "Strontium carbonate (SrCO₃)",
+      "NAHCO3": "Sodium bicarbonate (NaHCO₃)",
+      "FECO3": "Iron(II) carbonate (FeCO₃)"
+    }
   },
   "alu": {
     "ext": {

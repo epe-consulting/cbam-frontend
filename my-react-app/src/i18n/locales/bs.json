@@ -580,7 +580,16 @@
     "qtyPositive": "Unesite količinu veću od nule.",
     "sodaAsh": "Kalcinirana soda (natrijev karbonat)",
     "limestone": "Krečnjak",
-    "nothing": "Ništa"
+    "nothing": "Ništa",
+    "carbonate": {
+      "MGCO3": "Magnezijev karbonat (MgCO₃)",
+      "BACO3": "Barijev karbonat (BaCO₃)",
+      "LI2CO3": "Litijev karbonat (Li₂CO₃)",
+      "K2CO3": "Kalijev karbonat (K₂CO₃)",
+      "SRCO3": "Stroncijev karbonat (SrCO₃)",
+      "NAHCO3": "Natrijev hidrogenkarbonat (NaHCO₃)",
+      "FECO3": "Željezov(II) karbonat (FeCO₃)"
+    }
   },
   "alu": {
     "ext": {

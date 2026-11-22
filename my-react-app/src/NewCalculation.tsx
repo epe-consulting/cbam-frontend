@@ -28,9 +28,12 @@ import {
 import { AnodeStep } from './components/AnodeStep';
 import { FlueGasStep } from './components/FlueGasStep';
 import {
+  FLUE_GAS_CARBONATES,
   FLUE_GAS_LIMESTONE_QTY_Q,
   FLUE_GAS_SODA_ASH_QTY_Q,
   FLUE_GAS_TREATMENT_Q,
+  type CarbonateKey,
+  type FlueGasQuantities,
   flueGasCode,
   flueGasComplete,
   flueGasSelection,
@@ -1144,7 +1147,7 @@ const NewCalculation: React.FC = () => {
         // validation or API error
       }
     } else if (step === 9) {
-      // Flue gas: soda ash and/or limestone, each with its own quantity (see utils/flueGas.ts).
+      // Flue gas: one or more carbonates of Table 3, each with its own quantity (see utils/flueGas.ts).
       // Saved here instead of the generic save above: that one deletes unanswered questions of the
       // step, which would also delete the quantities saved on the other production route's visit.
       const byCode = (code: string) => questionsFromApi?.find((q: { code: string }) => q.code === code);
@@ -1152,14 +1155,20 @@ const NewCalculation: React.FC = () => {
       const sodaQ = byCode(FLUE_GAS_SODA_ASH_QTY_Q);
       const limeQ = byCode(FLUE_GAS_LIMESTONE_QTY_Q);
       if (!treatQ || !sodaQ || !limeQ || calculationId == null) return;
-      const sel = flueGasSelection(getAnswer(treatQ.id));
-      const sodaQty = getAnswer(sodaQ.id);
-      const limeQty = getAnswer(limeQ.id);
-      if (!flueGasComplete(sel, sodaQty, limeQty)) return;
+      const qtyQuestions = FLUE_GAS_CARBONATES.map((c) => ({ key: c.key, q: byCode(c.qtyQuestion) })).filter(
+        (c): c is { key: CarbonateKey; q: NonNullable<typeof treatQ> } => c.q != null,
+      );
+      const quantities: FlueGasQuantities = {};
+      qtyQuestions.forEach((c) => {
+        quantities[c.key] = getAnswer(c.q.id);
+      });
+      const sel = flueGasSelection(getAnswer(treatQ.id), quantities);
+      if (!flueGasComplete(sel, quantities)) return;
       const normalise = (v: string) => v.trim().replace(',', '.');
       await saveAnswer(treatQ.id, flueGasCode(sel));
-      if (sel.sodaAsh) await saveAnswer(sodaQ.id, normalise(sodaQty));
-      if (sel.limestone) await saveAnswer(limeQ.id, normalise(limeQty));
+      for (const c of qtyQuestions) {
+        if (sel.ticked.includes(c.key)) await saveAnswer(c.q.id, normalise(quantities[c.key] ?? ''));
+      }
       try {
         stepStackRef.current.push(currentStepCode);
         await patchCalculationWizard(calculationId, { currentStep: 'SABIRNA_TACKA' });
