@@ -52,3 +52,33 @@ export function filterAluminiumCn(list: CnCodeDto[], input: string): CnCodeDto[]
       || c.description.toLowerCase().includes(q);
   });
 }
+
+/**
+ * Production process of an aluminium good: CN 7601 (unwrought aluminium) or the aluminium products
+ * (7603–7616). One calculation covers ONE production process (user decision 2026-11-22), so that one SEE
+ * for all its goods is correct: IR (EU) 2025/2547 Annex III A, Eq. 57 (p. 71) attributes emissions per
+ * production process. Null when the code is empty or not 4–8 digits.
+ */
+export type AluminiumProcess = 'UNWROUGHT' | 'PRODUCTS';
+
+export function aluminiumProcessOf(cn: string | null | undefined): AluminiumProcess | null {
+  const d = cnDigitsOf(cn);
+  if (!/^\d{4,8}$/.test(d)) return null;
+  return d.startsWith('7601') ? 'UNWROUGHT' : 'PRODUCTS';
+}
+
+/** True when the goods mix CN 7601 with other aluminium goods (two production processes). */
+export function mixesAluminiumProcesses(cns: (string | null | undefined)[]): boolean {
+  const kinds = new Set(cns.map(aluminiumProcessOf).filter((k): k is AluminiumProcess => k != null));
+  return kinds.size > 1;
+}
+
+/**
+ * Declaration choice (ALU_DECLARATION_PRODUCT: 'unwrought' = CN 7601, 'products' = aluminium products)
+ * must match the goods entered in the product details. True when nothing contradicts it.
+ */
+export function declarationMatchesGoods(declaration: string, cns: (string | null | undefined)[]): boolean {
+  const want: AluminiumProcess | null = declaration === 'unwrought' ? 'UNWROUGHT' : declaration === 'products' ? 'PRODUCTS' : null;
+  if (want == null) return true;
+  return cns.map(aluminiumProcessOf).every((k) => k == null || k === want);
+}

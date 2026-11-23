@@ -69,3 +69,22 @@ describe('Back from the additional questions', () => {
       .toBe('ALU_FLUE_GAS_TREATMENT');
   });
 });
+
+describe('Aluminium II (AL2_*) back navigation', () => {
+  it('static chain after a reload (aluminium2 spec §4.2)', () => {
+    expect(inferPreviousStepFallback('AL2_GENERAL', lookup({}))).toBe('CBAM_PRODUCT_DETAILS');
+    expect(inferPreviousStepFallback('AL2_PFC', lookup({}))).toBe('AL2_DIRECT_EMISSIONS');
+    expect(inferPreviousStepFallback('AL2_REPORTING_PARAMS', lookup({}))).toBe('AL2_PRECURSORS');
+  });
+
+  it('COMPLETE goes back to the last step of the chosen path', () => {
+    expect(inferPreviousStepFallback('COMPLETE', lookup({ AL2_DATA_SOURCE: 'DEFAULT_VALUES' }))).toBe('AL2_GENERAL');
+    expect(inferPreviousStepFallback('COMPLETE', lookup({ AL2_DATA_SOURCE: 'ACTUAL_VALUES' }))).toBe('AL2_REPORTING_PARAMS');
+  });
+
+  it('steel and cement answers keep their own result', () => {
+    expect(inferPreviousStepFallback('COMPLETE', lookup({ IS_DATA_SOURCE: 'ACTUAL_VALUES' }))).toBe('IS_REPORTING_PARAMS');
+    expect(inferPreviousStepFallback('COMPLETE', lookup({ CE_DATA_SOURCE: 'ACTUAL_VALUES' }))).toBe('CE_PRECURSORS');
+    expect(inferPreviousStepFallback('COMPLETE', lookup({}))).toBeNull();
+  });
+});

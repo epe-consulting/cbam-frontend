@@ -7,7 +7,9 @@ import {
   Typography,
   Paper,
   CircularProgress,
+  Alert,
 } from '@mui/material';
+import { declarationMatchesGoods } from './utils/aluminiumProduct';
 import { ArrowBack } from '@mui/icons-material';
 import { useProductCategories } from './hooks/useProductCategories';
 import { useAppLanguage } from './i18n/useAppLanguage';
@@ -28,9 +30,12 @@ import {
 import { AnodeStep } from './components/AnodeStep';
 import { FlueGasStep } from './components/FlueGasStep';
 import {
+  FLUE_GAS_CARBONATES,
   FLUE_GAS_LIMESTONE_QTY_Q,
   FLUE_GAS_SODA_ASH_QTY_Q,
   FLUE_GAS_TREATMENT_Q,
+  type CarbonateKey,
+  type FlueGasQuantities,
   flueGasCode,
   flueGasComplete,
   flueGasSelection,
@@ -72,6 +77,16 @@ import {
 } from './utils/cementSteps';
 import { CementWizardStep } from './components/cement/CementWizardStep';
 import { CementProductDetailsStep } from './components/cement/CementProductDetailsStep';
+import {
+  isAluminium2Category,
+  isAl2StepCode,
+  al2StepNumber,
+  al2PeriodError,
+  toAl2ProductRow,
+  type Al2ProductRow,
+} from './utils/aluminium2Steps';
+import { Al2WizardStep } from './components/aluminium2/Al2WizardStep';
+import { Al2ProductDetailsStep } from './components/aluminium2/Al2ProductDetailsStep';
 import { useTranslation } from 'react-i18next';
 
 /* ─── Design tokens (shared across Panonia) ─── */
@@ -125,6 +140,7 @@ const NewCalculation: React.FC = () => {
   const stepStackRef = useRef<string[]>([]);
   const returningToElectricityStepRef = useRef(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [declarationError, setDeclarationError] = useState<string | null>(null);
   const [createLoading, setCreateLoading] = useState(false);
   const [calculationLoading, setCalculationLoading] = useState(false);
   const [aluminumProductType, setAluminumProductType] = useState('');
@@ -207,6 +223,8 @@ const NewCalculation: React.FC = () => {
   const { answers, getAnswer, setAnswer, saveAnswer, clearAllLocalAnswers, deleteAnswersForQuestions, refetch: refetchAnswers } = useCalculationAnswers(calculationId);
   const isSteel = isSteelCategory(category);
   const isCement = isCementCategory(category);
+  // Aluminium II: exact category match, never the old 'Aluminium' (aluminium2 spec §3.1, FE-1)
+  const isAl2 = isAluminium2Category(category);
   const [steelSaving, setSteelSaving] = useState(false);
   const [steelSaveError, setSteelSaveError] = useState<string | null>(null);
 
@@ -254,7 +272,7 @@ const NewCalculation: React.FC = () => {
       case 'ALU_PPA_CONSUMPTION_ONLY': return 11;
       case 'SABIRNA_TACKA': return 99;
       case 'COMPLETE': return 12;
-      default: return steelStepNumber(code) ?? cementStepNumber(code) ?? 1;
+      default: return steelStepNumber(code) ?? cementStepNumber(code) ?? al2StepNumber(code) ?? 1;
     }
   };
 
@@ -553,6 +571,33 @@ const NewCalculation: React.FC = () => {
     return () => { cancelled = true; };
   }, [calculationId, isCement]);
 
+  // Aluminium II: same as cement – reload all product rows on resume (aluminium2 spec §4.5).
+  const al2ProductsHydratedRef = useRef(false);
+  useEffect(() => {
+    if (calculationId == null || !isAl2 || al2ProductsHydratedRef.current) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const ids = await getQuestionIdsByCode();
+        const values = await getAnswerValuesByCode(calculationId, ids);
+        const rows = parseJsonRows<Al2ProductRow>(values.CBAM_PRODUCT_ENTRY);
+        if (cancelled) return;
+        al2ProductsHydratedRef.current = true;
+        if (rows.length === 0) return;
+        setProductDetailEntries(rows.map((r, i) => ({
+          id: i + 1,
+          productName: r.product_name ?? '',
+          cnCode: r.cn_code ?? '',
+          quantity: r.quantity ?? '',
+          countryOfOrigin: r.country_of_origin ?? '',
+        })));
+      } catch {
+        // keep in-session entries
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [calculationId, isAl2]);
+
   const getLocalStateForQuestionCode = (code: string): string => {
     switch (code) {
       case 'ALU_DECLARATION_PRODUCT': return aluminumProductType;
@@ -781,7 +826,7 @@ const NewCalculation: React.FC = () => {
   };
 
   const handleNext = async () => {
-    if (calculationId != null && questionsFromApi?.length && !isSteelStepCode(currentStepCode) && !isCementStepCode(currentStepCode) && !(step === 5 && (currentStepCode === 'FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT')) && step !== 13 && step !== 9) {
+    if (calculationId != null && questionsFromApi?.length && !isSteelStepCode(currentStepCode) && !isCementStepCode(currentStepCode) && !isAl2StepCode(currentStepCode) && !(step === 5 && (currentStepCode === 'FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_INPUT' || currentStepCode === 'ALU_SECONDARY_FUEL_RELATED' || currentStepCode === 'ALU_PRODUCTS_REMAINING_FUEL_INPUT')) && step !== 13 && step !== 9) {
       const questionIds = questionsFromApi.map((q: QuestionWithOptions) => q.id);
       const valuesToSave: { questionId: number; value: string }[] = [];
       const anodeTypeQuestion = questionsFromApi?.find((q: { code: string }) => q.code === 'ALU_ANODE_TYPE');
@@ -825,6 +870,14 @@ const NewCalculation: React.FC = () => {
           return;
         }
       }
+      if (isAluminium2Category(category)) {
+        // AL2_E_PERIOD (aluminium2 spec §1.5, §7)
+        const periodError = al2PeriodError(reportingPeriodFrom, reportingPeriodTo);
+        if (periodError) {
+          setReportingPeriodError(periodError);
+          return;
+        }
+      }
       setReportingPeriodError(null);
       if (calculationId == null) {
         setCreateError(t('wizard.waitForCalculation'));
@@ -861,7 +914,7 @@ const NewCalculation: React.FC = () => {
         await saveAnswer(Number(reportingFromQuestionId), reportingPeriodFrom);
         await saveAnswer(Number(reportingToQuestionId), reportingPeriodTo);
 
-        const nextStep = category === 'Aluminium' || isSteelCategory(category) || isCementCategory(category) ? 'CBAM_PRODUCT_DETAILS' : 'FUEL_INPUT';
+        const nextStep = category === 'Aluminium' || isSteelCategory(category) || isCementCategory(category) || isAluminium2Category(category) ? 'CBAM_PRODUCT_DETAILS' : 'FUEL_INPUT';
         await patchCalculationWizard(calculationId, { currentStep: nextStep });
         stepStackRef.current.push('PRODUCT_INFO');
         setCurrentStepCode(nextStep);
@@ -952,6 +1005,31 @@ const NewCalculation: React.FC = () => {
           }
           return;
         }
+        if (isAluminium2Category(category)) {
+          // Aluminium II: spec §4.3 row shape, then backend routing (cross-step rule → AL2_GENERAL, contract §1).
+          setSteelSaving(true);
+          setSteelSaveError(null);
+          try {
+            await deleteAnswersForQuestions([productEntryQuestionIdNum]);
+            for (const entry of productDetailEntries) {
+              await saveAnswer(productEntryQuestionIdNum, JSON.stringify(toAl2ProductRow(entry)));
+            }
+            const { toStepCode } = await getNextStep(calculationId, currentStepCode);
+            stepStackRef.current.push(currentStepCode);
+            if (toStepCode === 'COMPLETE') {
+              await patchCalculationWizard(calculationId, { status: 'COMPLETED' });
+            } else {
+              await patchCalculationWizard(calculationId, { currentStep: toStepCode });
+            }
+            setCurrentStepCode(toStepCode);
+            setCalculation((c: CalculationDto | null) => (c ? { ...c, currentStep: toStepCode } : null));
+          } catch (err) {
+            setSteelSaveError(err instanceof Error ? err.message : t('aluminium2.wizard.saveFailed'));
+          } finally {
+            setSteelSaving(false);
+          }
+          return;
+        }
         await deleteAnswersForQuestions([productEntryQuestionIdNum]);
         for (const entry of productDetailEntries) {
           await saveAnswer(productEntryQuestionIdNum, JSON.stringify({
@@ -969,6 +1047,13 @@ const NewCalculation: React.FC = () => {
         return;
       }
       if (category === 'Aluminium' && !aluminumProductType) return;
+      // The declaration must fit the goods entered: CN 7601 only for "unwrought", other 76xx for "products".
+      if (category === 'Aluminium' && currentStepCode === 'ALU_DECLARATION'
+        && !declarationMatchesGoods(aluminumProductType, productDetailEntries.map((e: ProductDetailEntry) => e.cnCode))) {
+        setDeclarationError(t(aluminumProductType === 'unwrought' ? 'wizard.declUnwroughtMismatch' : 'wizard.declProductsMismatch'));
+        return;
+      }
+      setDeclarationError(null);
       if (calculationId == null) return;
       try {
         const { toStepCode } = await getNextStep(calculationId, currentStepCode);
@@ -1144,7 +1229,7 @@ const NewCalculation: React.FC = () => {
         // validation or API error
       }
     } else if (step === 9) {
-      // Flue gas: soda ash and/or limestone, each with its own quantity (see utils/flueGas.ts).
+      // Flue gas: one or more carbonates of Table 3, each with its own quantity (see utils/flueGas.ts).
       // Saved here instead of the generic save above: that one deletes unanswered questions of the
       // step, which would also delete the quantities saved on the other production route's visit.
       const byCode = (code: string) => questionsFromApi?.find((q: { code: string }) => q.code === code);
@@ -1152,14 +1237,20 @@ const NewCalculation: React.FC = () => {
       const sodaQ = byCode(FLUE_GAS_SODA_ASH_QTY_Q);
       const limeQ = byCode(FLUE_GAS_LIMESTONE_QTY_Q);
       if (!treatQ || !sodaQ || !limeQ || calculationId == null) return;
-      const sel = flueGasSelection(getAnswer(treatQ.id));
-      const sodaQty = getAnswer(sodaQ.id);
-      const limeQty = getAnswer(limeQ.id);
-      if (!flueGasComplete(sel, sodaQty, limeQty)) return;
+      const qtyQuestions = FLUE_GAS_CARBONATES.map((c) => ({ key: c.key, q: byCode(c.qtyQuestion) })).filter(
+        (c): c is { key: CarbonateKey; q: NonNullable<typeof treatQ> } => c.q != null,
+      );
+      const quantities: FlueGasQuantities = {};
+      qtyQuestions.forEach((c) => {
+        quantities[c.key] = getAnswer(c.q.id);
+      });
+      const sel = flueGasSelection(getAnswer(treatQ.id), quantities);
+      if (!flueGasComplete(sel, quantities)) return;
       const normalise = (v: string) => v.trim().replace(',', '.');
       await saveAnswer(treatQ.id, flueGasCode(sel));
-      if (sel.sodaAsh) await saveAnswer(sodaQ.id, normalise(sodaQty));
-      if (sel.limestone) await saveAnswer(limeQ.id, normalise(limeQty));
+      for (const c of qtyQuestions) {
+        if (sel.ticked.includes(c.key)) await saveAnswer(c.q.id, normalise(quantities[c.key] ?? ''));
+      }
       try {
         stepStackRef.current.push(currentStepCode);
         await patchCalculationWizard(calculationId, { currentStep: 'SABIRNA_TACKA' });
@@ -1305,13 +1396,21 @@ const NewCalculation: React.FC = () => {
       || (previousStepCode === 'CBAM_PRODUCT_DETAILS' && isSteelCategory(category))
       // Cement keeps saved answers on Back as steel (cement spec §4.5)
       || isCementStepCode(previousStepCode)
-      || (previousStepCode === 'CBAM_PRODUCT_DETAILS' && isCementCategory(category));
+      || (previousStepCode === 'CBAM_PRODUCT_DETAILS' && isCementCategory(category))
+      // Aluminium II keeps saved answers on Back as cement (aluminium2 spec §4.5)
+      || isAl2StepCode(previousStepCode)
+      || (previousStepCode === 'CBAM_PRODUCT_DETAILS' && isAluminium2Category(category));
     if (previousStepCode !== 'PRODUCT_INFO' && !keepSteelAnswers) {
       try {
         const prevQuestions = await getQuestionsWithOptions(previousStepCode);
         const prevQuestionIds = prevQuestions.map((q) => q.id);
         if (prevQuestionIds.length > 0) {
-          await deleteAnswersForQuestions(prevQuestionIds);
+          // Flue gas is visited by the primary, secondary and products stage: delete only the visit the
+          // user goes back to (from its treatment answer on), not the earlier visits' answers.
+          const anchor = previousStepCode === FLUE_GAS_TREATMENT_Q
+            ? prevQuestions.find((q) => q.code === FLUE_GAS_TREATMENT_Q)?.id
+            : undefined;
+          await deleteAnswersForQuestions(prevQuestionIds, anchor);
         }
       } catch {
         // ignore
@@ -1451,7 +1550,37 @@ const NewCalculation: React.FC = () => {
           />
         )}
 
-        {step === 2 && currentStepCode === 'CBAM_PRODUCT_DETAILS' && !isSteel && !isCement && (
+        {step === 2 && currentStepCode === 'CBAM_PRODUCT_DETAILS' && isAl2 && (
+          <Al2ProductDetailsStep
+            entries={productDetailEntries}
+            updateEntry={(index: number, updates: Partial<ProductDetailEntry>) =>
+              setProductDetailEntries((prev: ProductDetailEntry[]) =>
+                prev.map((e: ProductDetailEntry, i: number) => (i === index ? { ...e, ...updates } : e))
+              )
+            }
+            addEntry={() =>
+              setProductDetailEntries((prev: ProductDetailEntry[]) => [
+                ...prev,
+                {
+                  id: prev.length > 0 ? Math.max(...prev.map((e: ProductDetailEntry) => e.id)) + 1 : 1,
+                  productName: '',
+                  cnCode: '',
+                  quantity: '',
+                  countryOfOrigin: '',
+                },
+              ])
+            }
+            removeEntry={(index: number) =>
+              setProductDetailEntries((prev: ProductDetailEntry[]) => prev.filter((_: ProductDetailEntry, i: number) => i !== index))
+            }
+            onBack={handleBack}
+            onNext={handleNext}
+            saving={steelSaving}
+            saveError={steelSaveError}
+          />
+        )}
+
+        {step === 2 && currentStepCode === 'CBAM_PRODUCT_DETAILS' && !isSteel && !isCement && !isAl2 && (
           <ProductDetailsStep
             title={t('wizard.productDetails')}
             entries={productDetailEntries}
@@ -1482,6 +1611,9 @@ const NewCalculation: React.FC = () => {
           />
         )}
 
+        {step === 2 && currentStepCode === 'ALU_DECLARATION' && declarationError && (
+          <Alert severity="error" sx={{ mb: 2, borderRadius: T.radius.sm, fontFamily: T.font.body }}>{declarationError}</Alert>
+        )}
         {step === 2 && currentStepCode !== 'CBAM_PRODUCT_DETAILS' && (
           <QuestionStepWrapper
             questions={questionsFromApi}
@@ -1771,6 +1903,17 @@ const NewCalculation: React.FC = () => {
           />
         )}
 
+        {isAl2StepCode(currentStepCode) && calculationId != null && (
+          <Al2WizardStep
+            calculationId={calculationId}
+            stepCode={currentStepCode}
+            questions={questionsFromApi}
+            questionsLoading={questionsLoading}
+            onBack={handleBack}
+            onAdvance={advanceSteelStep}
+          />
+        )}
+
         {step === 12 && currentStepCode === 'COMPLETE' && (
           <CalculationCompleteStep
             calculationId={calculationId}
@@ -1781,6 +1924,7 @@ const NewCalculation: React.FC = () => {
             onNewCalculation={() => navigate('/dashboard/new-calculation')}
             isSteel={isSteel}
             isCement={isCement}
+            isAluminium2={isAl2}
           />
         )}
       </Paper>
