@@ -36,6 +36,7 @@ import NewCalculation from './NewCalculation';
 import CalculationsList from './CalculationsList';
 import Settings from './Settings';
 import GenerateReport from './GenerateReport';
+import MonitoringPlan from './MonitoringPlan';
 import ReportsList from './ReportsList';
 import Admin from './Admin';
 import ProtectedRoute from './ProtectedRoute';
@@ -2104,6 +2105,8 @@ const App: React.FC = () => {
           <Route path="reports" element={<ReportsList />} />
           <Route path="settings" element={<Settings />} />
           <Route path="generate-report" element={<GenerateReport />} />
+          <Route path="monitoring-plan" element={<MonitoringPlan />} />
+          <Route path="monitoring-plan/:installationId" element={<MonitoringPlan />} />
           <Route path="new-calculation" element={<NewCalculation />} />
           <Route
             path="new-calculation/:calculationId"

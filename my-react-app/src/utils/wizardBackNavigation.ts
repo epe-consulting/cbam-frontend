@@ -1,5 +1,6 @@
 import { DATA_SOURCE, STEEL_STEP_PREVIOUS } from './steelSteps';
 import { CE_DATA_SOURCE, CE_STEP_PREVIOUS } from './cementSteps';
+import { AL2_DATA_SOURCE, AL2_STEP_PREVIOUS } from './aluminium2Steps';
 
 /** Steps that auto-forward in the UI; never show as a Back destination. */
 export const HIDDEN_WIZARD_STEPS = new Set(['SABIRNA_TACKA']);
@@ -27,6 +28,8 @@ export const STEP_PREVIOUS_FALLBACK: Record<string, string> = {
   ...STEEL_STEP_PREVIOUS,
   // Cement (CE_*) – static chain, cement spec §4.2
   ...CE_STEP_PREVIOUS,
+  // Aluminium II (AL2_*) – static chain, aluminium2 spec §4.2
+  ...AL2_STEP_PREVIOUS,
 };
 
 function isProductsFlow(lookup: WizardAnswerLookup): boolean {
@@ -126,6 +129,10 @@ export function inferPreviousStepFallback(
       const ceSource = lookup.getAnswerByCode('CE_DATA_SOURCE');
       if (ceSource === CE_DATA_SOURCE.DEFAULT) return 'CE_GENERAL';
       if (ceSource === CE_DATA_SOURCE.ACTUAL) return 'CE_PRECURSORS';
+      // Aluminium II only (other calculations have no AL2_DATA_SOURCE answer → unchanged; aluminium2 spec §4.1).
+      const al2Source = lookup.getAnswerByCode('AL2_DATA_SOURCE');
+      if (al2Source === AL2_DATA_SOURCE.DEFAULT) return 'AL2_GENERAL';
+      if (al2Source === AL2_DATA_SOURCE.ACTUAL) return 'AL2_REPORTING_PARAMS';
       return null;
     }
 

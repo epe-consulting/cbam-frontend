@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { apiRequest } from './utils/api';
+import { isZeroEmbeddedOrigin } from './utils/zeroEmbeddedOrigin';
 import { formatEmissions, formatResultItem, UNIT_T_CO2E, unitLabel, UNIT_SEE } from './utils/formatEmissions';
 import {
   INDIRECT_FORMULA_CODES,
@@ -10,7 +11,21 @@ import {
   precursorKgToTonnesText,
   specificDirectText,
 } from './utils/aluminiumReportTotals';
-import { isSteelCategory } from './utils/steelSteps';
+import { tr, withLanguage } from './i18n';
+import {
+  cementParamRows,
+  al2ParamRows,
+  reportSector,
+  resultErrorCount,
+  sectorGoods,
+  sectorPrecursors,
+  sectorProcessNames,
+  sectorProcessTotals,
+  steelParamRows,
+  type CementParamRow,
+  type Al2ParamRow,
+  type SteelParamRow,
+} from './utils/sectorReport';
 import { useDashboardCalculations, type DashboardCalculationItem } from './Dashboard';
 import {
   Container,
@@ -194,6 +209,8 @@ interface CalcResult {
   reportYear: number;
   computedAt: string;
   items: ResultItem[];
+  /** Iron & steel / cement only: ERROR warnings mean a product or process has no result items. */
+  warnings?: { code?: string; severity?: string }[];
 }
 
 interface CalculationAnswerDetailRow {
@@ -217,6 +234,8 @@ interface ProductRow {
   quantity: string;
   countryOfOrigin: string;
   specificDirectEmbedded: string;
+  /** Iron & steel / cement: from the result; aluminium: not applicable (Annex II). */
+  specificIndirectEmbedded: string;
   shareDefaultValues: string;
   freeAllocation: string;
 }
@@ -303,6 +322,7 @@ const emptyProduct = (): ProductRow => ({
   quantity: '',
   countryOfOrigin: '',
   specificDirectEmbedded: '',
+  specificIndirectEmbedded: '',
   shareDefaultValues: '',
   freeAllocation: '',
 });
@@ -338,6 +358,8 @@ function reportTotalText(t: number): string {
  * Entered as kgCO2e/kg in the wizard; numerically identical in t CO2e/t.
  */
 const PRECURSOR_DEFAULT_SEE_TEXT = `10.49 (default, ${unitLabel(UNIT_SEE)})`;
+/** EU / Annex III point 1 origin: IR (EU) 2025/2547 Annex III, point B (p. 72). */
+const ZERO_ORIGIN_SEE_TEXT = `0 (origin EU / Annex III point 1 to Reg. (EU) 2023/956; IR (EU) 2025/2547 Annex III B)`;
 
 function parseNum(v: string | null | undefined): number | null {
   if (v == null || String(v).trim() === '') return null;
@@ -456,10 +478,12 @@ function mapPrecursorRows(rows: CalculationAnswerDetailRow[]): PrecursorRow[] {
         const p = JSON.parse(row.answerValue) as {
           drzava?: string;
           kolicina?: string;
+          clanica_eu?: string;
           emisije_poznate?: string;
           ugradjene_emisije?: string;
         };
-        const known = p.emisije_poznate === 'YES';
+        const zero = isZeroEmbeddedOrigin(p.clanica_eu, p.drzava);
+        const known = !zero && p.emisije_poznate === 'YES';
         out.push({
           ...emptyPrecursor(),
           cnCode: '7601',
@@ -467,9 +491,13 @@ function mapPrecursorRows(rows: CalculationAnswerDetailRow[]): PrecursorRow[] {
           countryOfOrigin: p.drzava ?? '',
           // kolicina is entered in kg ("Količina (kg)") -> shown in t
           quantity: precursorKgToTonnesText(p.kolicina),
-          valueType: known ? 'actual' : 'default',
-          // ugradjene_emisije entered in kgCO2e/kg == t CO2e/t numerically
-          specificDirectEmbedded: known ? (p.ugradjene_emisije ?? '') : PRECURSOR_DEFAULT_SEE_TEXT,
+          // neither actual nor default data: zero by rule (explained in the SEE column)
+          valueType: zero ? '' : known ? 'actual' : 'default',
+          // ugradjene_emisije entered in kgCO2e/kg == t CO2e/t numerically; EU / Annex III origin counts
+          // as zero (IR 2025/2547 Annex III B, p. 72). The report is the EU template, kept in English.
+          specificDirectEmbedded: zero
+            ? ZERO_ORIGIN_SEE_TEXT
+            : known ? (p.ugradjene_emisije ?? '') : PRECURSOR_DEFAULT_SEE_TEXT,
         });
       } catch {
         /* skip */
@@ -597,15 +625,23 @@ const GenerateReport: React.FC = () => {
     otherElementsPct: '',
   });
 
+  const [steelParams, setSteelParams] = useState<SteelParamRow[]>([]);
+  const [cementParams, setCementParams] = useState<CementParamRow[]>([]);
+  const [al2Params, setAl2Params] = useState<Al2ParamRow[]>([]);
+  const [resultErrors, setResultErrors] = useState(0);
+
   const [toolDirectTotal, setToolDirectTotal] = useState<number | null>(null);
   const [toolIndirectTotal, setToolIndirectTotal] = useState<number | null>(null);
   const [directFromAnswer, setDirectFromAnswer] = useState<string | null>(null);
   const [productionRouteDefault, setProductionRouteDefault] = useState('');
 
-  const isAluminium = (productInfo.productCategory ?? '').toLowerCase().includes('aluminium')
-    || (productInfo.productCategory ?? '').toLowerCase().includes('aluminum');
-  /** Aluminium is listed in Annex II → only direct emissions for CBAM. */
-  const isAnnexII = isAluminium;
+  /** One report page for all sectors: the parts below follow the sector of the selected calculation. */
+  const sector = reportSector(productInfo.productCategory);
+  const isAluminium = sector === 'ALUMINIUM';
+  const hasSectorSection = sector !== 'OTHER';
+  const isAluminium2 = sector === 'ALUMINIUM_II';
+  /** Aluminium (old and Aluminium II) is listed in Annex II → only direct emissions for CBAM (CBAM-R Art. 7(1)). */
+  const isAnnexII = isAluminium || isAluminium2;
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -671,6 +707,10 @@ const GenerateReport: React.FC = () => {
       setPrecursors([]);
       setTopFuels([]);
       setSectorParams({ scrapTonnes: '', preConsumerScrapPct: '', otherElementsPct: '' });
+      setSteelParams([]);
+      setCementParams([]);
+      setAl2Params([]);
+      setResultErrors(0);
       setToolDirectTotal(null);
       setToolIndirectTotal(null);
       setDirectFromAnswer(null);
@@ -739,8 +779,37 @@ const GenerateReport: React.FC = () => {
         setCalcResult(result);
         const category = productInfoRes?.data?.productInfo?.productCategory
           ?? extractLatestAnswer(answers, 'CBAM_PRODUCT_CATEGORY');
-        // This report path is aluminium-only: never sum steel items (t CO2e/t, t, % mixed with t CO2e).
-        const totals = isSteelCategory(category) ? null : aluminiumToolTotals(result.items ?? []);
+        const calcSector = reportSector(category);
+        setResultErrors(resultErrorCount(result.warnings));
+        if (calcSector === 'STEEL' || calcSector === 'CEMENT' || calcSector === 'ALUMINIUM_II') {
+          // Iron & steel / cement / Aluminium II: goods, SEE, precursors and totals come from the sector result
+          // (docs/steel-api-contract.md §4, docs/cement-api-contract.md §4, docs/aluminium2-api-contract.md §4);
+          // never mixed with the old aluminium items.
+          const items = result.items ?? [];
+          const goods = sectorGoods(calcSector, items);
+          if (goods.length > 0) {
+            setProducts(goods.map((g) => ({ ...emptyProduct(), ...g })));
+          }
+          setPrecursors(sectorPrecursors(calcSector, items).map((pr) => ({ ...emptyPrecursor(), ...pr })));
+          setTopFuels([]);
+          const proc = sectorProcessTotals(calcSector, items);
+          setToolDirectTotal(proc.direct);
+          setToolIndirectTotal(proc.indirect);
+          setSteelParams(calcSector === 'STEEL'
+            ? withLanguage('en', () => steelParamRows(answers, {
+              category: (c) => tr(`steel.category.${c}`, { defaultValue: c }),
+              reducingAgent: (c) => tr(`steel.reducingAgent.${c}`, { defaultValue: c }),
+            }))
+            : []);
+          setCementParams(calcSector === 'CEMENT' ? cementParamRows(items) : []);
+          setAl2Params(calcSector === 'ALUMINIUM_II' ? al2ParamRows(items) : []);
+          setProductionRouteDefault(sectorProcessNames(calcSector, answers));
+          setManual((prev) => ({ ...prev, cbamProcesses: sectorProcessNames(calcSector, answers) }));
+          setResultLoading(false);
+          return;
+        }
+        // Aluminium report path: never sum steel / cement items (t CO2e/t, t, % mixed with t CO2e).
+        const totals = calcSector === 'ALUMINIUM' || calcSector === 'OTHER' ? aluminiumToolTotals(result.items ?? []) : null;
         // Prefer explicit direct answer when on HAS_EMISSIONS_ONLY path and nothing else was computed.
         // Since post-043 that path continues (products stage / secondary module); then the entered total
         // is one item among others and the summed totals (same as the backend total) are used.
@@ -778,7 +847,8 @@ const GenerateReport: React.FC = () => {
 
   /** Auto-fill specific direct embedded = direct total / quantity when possible. */
   useEffect(() => {
-    if (toolDirectTotal == null) return;
+    // Aluminium only: steel / cement goods carry their own SEE from the result.
+    if (toolDirectTotal == null || !isAluminium) return;
     setProducts((prev) => {
       const withQty = prev.filter((p) => parseNum(p.quantity) != null && parseNum(p.quantity)! > 0);
       if (withQty.length === 0) return prev;
@@ -802,7 +872,7 @@ const GenerateReport: React.FC = () => {
         return { ...p, specificDirectEmbedded: specificDirectText(toolDirectTotal, totalQty) };
       });
     });
-  }, [toolDirectTotal, selectedCalcId]);
+  }, [toolDirectTotal, selectedCalcId, isAluminium]);
 
   const reportingPeriodText = useMemo(() => {
     const from = productInfo.reportingPeriodFrom;
@@ -859,7 +929,7 @@ const GenerateReport: React.FC = () => {
       .map((p) => {
         const indirectCell = isAnnexII
           ? '<td colspan="1" style="color:#666;font-style:italic;">N/A (Annex II — aluminium: direct only)</td>'
-          : `<td>—</td>`;
+          : `<td>${esc(p.specificIndirectEmbedded || '—')}</td>`;
         return `<tr>
           <td>${esc(p.description)}</td>
           <td>${esc(p.cnCode)}</td>
@@ -882,7 +952,7 @@ const GenerateReport: React.FC = () => {
         <td>${esc(p.countryOfOrigin)}</td>
         <td>${esc(p.quantity)}</td>
         <td>${esc(p.valueType)}</td>
-        <td>${esc(p.specificDirectEmbedded)}${isAnnexII ? ' (direct)' : ''}</td>
+        <td>${esc(p.specificDirectEmbedded)}${isAnnexII && !p.specificDirectEmbedded.startsWith('0 (') ? ' (direct)' : ''}</td>
         <td>${esc(p.reportingPeriod)}</td>
         <td>${esc(p.originOperator)} / ${esc(p.originInstallation)} / ${esc(p.originCbamId)}</td>
       </tr>`)
@@ -934,7 +1004,34 @@ ${mode === 'full' ? `<div class="field"><span class="field-label">How attributed
 <div class="field"><span class="field-label">Free allocation method:</span> <span class="field-value">${manual.freeAllocationMethodConfirm ? 'Confirmed' : 'Not confirmed'}</span></div>
 `;
 
-    const sectorBlock = (sectorParams.scrapTonnes || sectorParams.preConsumerScrapPct || sectorParams.otherElementsPct) ? `
+    const dash = (v: string) => esc(v || 'N/A');
+    const steelBlock = sector === 'STEEL' ? `
+<h2>Sector-specific parameters (iron and steel)</h2>
+<p style="color:#555;">IR (EU) 2025/2547 Annex IV, point 2 (pp. 84-85).</p>
+${steelParams.length ? `<table><thead><tr>
+  <th>Process</th><th>Goods category</th><th>Main reducing agent</th><th>Mn %</th><th>Cr %</th><th>Ni %</th>
+  <th>Other alloy elements %</th><th>C %</th><th>Scrap (t per t)</th><th>Pre-consumer scrap %</th>
+</tr></thead><tbody>${steelParams.map((r) => `<tr><td>${dash(r.process)}</td><td>${dash(r.category)}</td><td>${dash(r.reducingAgent)}</td>
+  <td>${dash(r.mnPct)}</td><td>${dash(r.crPct)}</td><td>${dash(r.niPct)}</td><td>${dash(r.otherAlloyPct)}</td><td>${dash(r.carbonPct)}</td>
+  <td>${dash(r.scrapTPerT)}</td><td>${dash(r.preConsumerScrapPct)}</td></tr>`).join('')}</tbody></table>`
+    : '<p>No sector parameters entered in the calculation.</p>'}` : '';
+
+    const cementBlock = sector === 'CEMENT' ? `
+<h2>Sector-specific parameters (cement)</h2>
+<p style="color:#555;">IR (EU) 2025/2547 Annex IV, point 2 (p. 84): clinker to cement ratio for cement; calcined clay, cement clinker and aluminous cement: N.a.</p>
+${cementParams.length ? `<table><thead><tr><th>Good</th><th>CN / TARIC</th><th>Clinker to cement ratio</th></tr></thead>
+<tbody>${cementParams.map((r) => `<tr><td>${dash(r.good)}</td><td>${dash(r.cnCode)}</td><td>${dash(r.clinkerToCementPct)}</td></tr>`).join('')}</tbody></table>`
+    : '<p>No cement goods in the calculation (N.a.).</p>'}` : '';
+
+    const al2Block = sector === 'ALUMINIUM_II' ? `
+<h2>Sector-specific parameters (aluminium)</h2>
+<p style="color:#555;">IR (EU) 2025/2547 Annex IV, point 2 (p. 85): tonnes scrap used for producing 1 t of the product, % pre-consumer scrap, total content of elements other than aluminium (reported if above 1 %).</p>
+${al2Params.length ? `<table><thead><tr><th>Good</th><th>CN</th><th>Scrap (t per t)</th><th>Pre-consumer scrap %</th><th>Elements other than Al %</th></tr></thead>
+<tbody>${al2Params.map((r) => `<tr><td>${dash(r.good)}</td><td>${dash(r.cnCode)}</td><td>${dash(r.scrapTPerT)}</td><td>${dash(r.preConsumerScrapPct)}</td><td>${r.otherElementsReported === false ? '&le; 1 % (not reported)' : dash(r.otherElementsPct)}</td></tr>`).join('')}</tbody></table>`
+    : '<p>No sector parameters entered in the calculation.</p>'}` : '';
+
+    const sectorBlock = sector === 'STEEL' ? steelBlock : sector === 'CEMENT' ? cementBlock : sector === 'ALUMINIUM_II' ? al2Block
+      : (sectorParams.scrapTonnes || sectorParams.preConsumerScrapPct || sectorParams.otherElementsPct) ? `
 <h2>Sector-specific parameters (aluminium)</h2>
 <div class="field"><span class="field-label">Tonnes scrap used per 1 t product:</span> <span class="field-value">${esc(sectorParams.scrapTonnes || 'N/A')}</span></div>
 <div class="field"><span class="field-label">% pre-consumer scrap:</span> <span class="field-value">${esc(sectorParams.preConsumerScrapPct || 'N/A')}</span></div>
@@ -958,7 +1055,7 @@ ${mode === 'full' ? `<div class="field"><span class="field-label">How attributed
 </style></head><body>
 <h1>${esc(title)}</h1>
 <p class="subtitle">Regulation (EU) 2025/2547 — Annex IV<br>
-Reporting period: ${esc(reportingPeriodText)} &middot; Report year: ${esc(reportingYear)}
+${sector !== 'OTHER' ? `Sector: ${sector === 'ALUMINIUM' ? 'Aluminium' : sector === 'ALUMINIUM_II' ? 'Aluminium (Aluminium II)' : sector === 'STEEL' ? 'Iron and steel' : 'Cement'} &middot; ` : ''}Reporting period: ${esc(reportingPeriodText)} &middot; Report year: ${esc(reportingYear)}
 ${selectedCalcId ? ` &middot; Calculation #${selectedCalcId}` : ''}</p>
 ${annexNote}
 
@@ -981,17 +1078,18 @@ ${annexNote}
 ${monitoringFull}
 
 <h2>3. Emissions &amp; goods</h2>
-<div class="field"><span class="field-label">Total direct emissions of the installation:</span> <span class="field-value">${esc(directTotalDisplay)}</span></div>
+${resultErrors > 0 ? `<p style="color:#C0392B;">Note: ${resultErrors} product(s) or process(es) of the calculation have errors and are not included.</p>` : ''}
+<div class="field"><span class="field-label">${isAluminium ? 'Total direct emissions of the installation' : 'Attributed direct emissions of the production processes'}:</span> <span class="field-value">${esc(directTotalDisplay)}</span></div>
 ${isAnnexII
     ? `<div class="field"><span class="field-label">Indirect emissions:</span> <span class="field-value">Not applicable (Annex II)</span></div>`
-    : `<div class="field"><span class="field-label">Indirect emissions:</span> <span class="field-value">${toolIndirectTotal != null ? esc(reportTotalText(toolIndirectTotal)) : 'N/A'}</span></div>`}
+    : `<div class="field"><span class="field-label">${isAluminium ? 'Indirect emissions' : 'Attributed indirect emissions of the production processes'}:</span> <span class="field-value">${toolIndirectTotal != null ? esc(reportTotalText(toolIndirectTotal)) : 'N/A'}</span></div>`}
 
 <p style="font-weight:600;margin-top:12px;">Goods produced — specific embedded emissions</p>
 <table>
 <thead><tr>
   <th>Good</th><th>CN</th><th>Route</th><th>Quantity (t)</th><th>Origin</th>
   <th>Specific direct (tCO₂e/t)</th>
-  <th>Indirect</th>
+  <th>${isAnnexII ? 'Indirect' : 'Specific indirect (tCO₂e/t)'}</th>
   <th>Share default values</th>
   <th>Specific embedded free allocation</th>
 </tr></thead>
@@ -1234,9 +1332,19 @@ ${methodsBlock}
                   <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.inkSoft }}>
                     {t('genReport.calcMeta', { category: productInfo.productCategory ?? '—', period: reportingPeriodText, year: reportingYear })}
                   </Typography>
-                  {isSteelCategory(productInfo.productCategory) && (
+                  {sector !== 'OTHER' && (
+                    <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.inkSoft }}>
+                      {t('genReport.sector', { sector: t(`genReport.sectorName.${sector}`) })}
+                    </Typography>
+                  )}
+                  {sector === 'OTHER' && productInfo.productCategory && (
                     <Alert severity="warning" sx={{ my: 1, borderRadius: T.radius.sm, fontFamily: T.font.body }}>
-                      {t('genReport.steelOnlyAlu')}
+                      {t('genReport.sectorNotSupported')}
+                    </Alert>
+                  )}
+                  {resultErrors > 0 && (
+                    <Alert severity="warning" sx={{ my: 1, borderRadius: T.radius.sm, fontFamily: T.font.body }}>
+                      {t('genReport.resultErrors', { count: resultErrors })}
                     </Alert>
                   )}
                   <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.inkSoft }}>
@@ -1518,7 +1626,7 @@ ${methodsBlock}
                             const next = prev.map((row, idx) =>
                               idx === i ? { ...row, quantity: qty } : row
                             );
-                            if (toolDirectTotal == null) return next;
+                            if (toolDirectTotal == null || !isAluminium) return next;
                             const totalQty = next.reduce((s, row) => s + (parseNum(row.quantity) ?? 0), 0);
                             if (totalQty <= 0) return next;
                             return next.map((row) => {
@@ -1546,7 +1654,9 @@ ${methodsBlock}
                           {t('genReport.na')}
                         </Typography>
                       ) : (
-                        <Typography sx={{ fontFamily: T.font.body, fontSize: '0.8rem', color: T.color.muted }}>—</Typography>
+                        <TextField variant="standard" fullWidth value={p.specificIndirectEmbedded}
+                          onChange={(e) => setProduct(i, 'specificIndirectEmbedded', e.target.value)}
+                          InputProps={{ sx: { fontFamily: T.font.body } }} />
                       )}
                     </TableCell>
                     <TableCell sx={tableCellSx}>
@@ -1682,10 +1792,120 @@ ${methodsBlock}
         </Accordion>
       )}
 
+      {/* 4. Iron & steel / cement sector params (IR 2025/2547 Annex IV point 2, pp. 84-85), read from the calculation */}
+      {(sector === 'STEEL' || sector === 'CEMENT') && (
+        <Accordion defaultExpanded sx={accordionSx}>
+          <AccordionSummary expandIcon={<ExpandMore />} sx={accordionSummarySx}>
+            <Chip label="4" size="small" sx={sectionChipSx} />
+            <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.05rem', color: T.color.ink }}>
+              {sector === 'STEEL' ? t('genReport.s4Steel') : t('genReport.s4Cement')}
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails sx={{ px: { xs: 2, md: 3 }, pb: 3 }}>
+            <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted, mb: 2 }}>
+              {sector === 'STEEL' ? t('genReport.s4SteelHelp') : t('genReport.s4CementHelp')}
+            </Typography>
+            {sector === 'STEEL' && (steelParams.length === 0 ? (
+              <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>{t('genReport.noSectorParams')}</Typography>
+            ) : (
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      {(['pProcess', 'pCategory', 'pReducingAgent', 'pMn', 'pCr', 'pNi', 'pOtherAlloy', 'pC', 'pScrap', 'pPreConsumer'] as const).map((k) => (
+                        <TableCell key={k} sx={tableHeadCellSx}>{t(`genReport.${k}`)}</TableCell>
+                      ))}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {steelParams.map((r, i) => (
+                      <TableRow key={i}>
+                        {[r.process, r.category, r.reducingAgent, r.mnPct, r.crPct, r.niPct, r.otherAlloyPct, r.carbonPct, r.scrapTPerT, r.preConsumerScrapPct].map((v, j) => (
+                          <TableCell key={j} sx={tableCellSx}>{v || '—'}</TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ))}
+            {sector === 'CEMENT' && (cementParams.length === 0 ? (
+              <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>{t('genReport.noCementGoods')}</Typography>
+            ) : (
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={tableHeadCellSx}>{t('genReport.colGood')}</TableCell>
+                      <TableCell sx={tableHeadCellSx}>CN / TARIC</TableCell>
+                      <TableCell sx={tableHeadCellSx}>{t('genReport.pClinkerRatio')}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {cementParams.map((r, i) => (
+                      <TableRow key={i}>
+                        <TableCell sx={tableCellSx}>{r.good || '—'}</TableCell>
+                        <TableCell sx={tableCellSx}>{r.cnCode || '—'}</TableCell>
+                        <TableCell sx={tableCellSx}>{r.clinkerToCementPct || t('genReport.na')}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ))}
+          </AccordionDetails>
+        </Accordion>
+      )}
+
+      {/* 4. Aluminium II sector params (IR 2025/2547 Annex IV point 2, p. 85), read from the calculation result */}
+      {isAluminium2 && (
+        <Accordion defaultExpanded sx={accordionSx}>
+          <AccordionSummary expandIcon={<ExpandMore />} sx={accordionSummarySx}>
+            <Chip label="4" size="small" sx={sectionChipSx} />
+            <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.05rem', color: T.color.ink }}>
+              {t('genReport.s4Al2')}
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails sx={{ px: { xs: 2, md: 3 }, pb: 3 }}>
+            <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted, mb: 2 }}>
+              {t('genReport.s4Al2Help')}
+            </Typography>
+            {al2Params.length === 0 ? (
+              <Typography sx={{ fontFamily: T.font.body, fontSize: '0.85rem', color: T.color.muted }}>{t('genReport.noSectorParams')}</Typography>
+            ) : (
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={tableHeadCellSx}>{t('genReport.colGood')}</TableCell>
+                      <TableCell sx={tableHeadCellSx}>CN</TableCell>
+                      <TableCell sx={tableHeadCellSx}>{t('genReport.scrapTonnes')}</TableCell>
+                      <TableCell sx={tableHeadCellSx}>{t('genReport.preConsumer')}</TableCell>
+                      <TableCell sx={tableHeadCellSx}>{t('genReport.otherElements')}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {al2Params.map((r, i) => (
+                      <TableRow key={i}>
+                        <TableCell sx={tableCellSx}>{r.good || '—'}</TableCell>
+                        <TableCell sx={tableCellSx}>{r.cnCode || '—'}</TableCell>
+                        <TableCell sx={tableCellSx}>{r.scrapTPerT || '—'}</TableCell>
+                        <TableCell sx={tableCellSx}>{r.preConsumerScrapPct || '—'}</TableCell>
+                        <TableCell sx={tableCellSx}>{r.otherElementsReported === false ? t('genReport.al2OtherNotReported') : (r.otherElementsPct || '—')}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </AccordionDetails>
+        </Accordion>
+      )}
+
       {/* 5. Methods */}
       <Accordion defaultExpanded sx={accordionSx}>
         <AccordionSummary expandIcon={<ExpandMore />} sx={accordionSummarySx}>
-          <Chip label={isAluminium ? '5' : '4'} size="small" sx={sectionChipSx} />
+          <Chip label={hasSectorSection ? '5' : '4'} size="small" sx={sectionChipSx} />
           <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.05rem', color: T.color.ink }}>
             {t('genReport.s5')}
           </Typography>
@@ -1732,7 +1952,7 @@ ${methodsBlock}
       {/* 6. Declaration */}
       <Accordion defaultExpanded sx={accordionSx}>
         <AccordionSummary expandIcon={<ExpandMore />} sx={accordionSummarySx}>
-          <Chip label={isAluminium ? '6' : '5'} size="small" sx={sectionChipSx} />
+          <Chip label={hasSectorSection ? '6' : '5'} size="small" sx={sectionChipSx} />
           <Typography sx={{ fontFamily: T.font.display, fontWeight: 600, fontSize: '1.05rem', color: T.color.ink }}>
             {t('genReport.declaration')}
           </Typography>

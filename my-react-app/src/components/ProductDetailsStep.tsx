@@ -18,7 +18,7 @@ import { useCountries } from '../hooks/useCountries';
 import { CountrySelect } from './CountrySelect';
 import { IssueList } from './steel/SteelUi';
 import type { StepIssue } from '../utils/steelSteps';
-import { checkAluminiumCn, filterAluminiumCn, findAluminiumCn, parseQuantity } from '../utils/aluminiumProduct';
+import { checkAluminiumCn, filterAluminiumCn, findAluminiumCn, mixesAluminiumProcesses, parseQuantity } from '../utils/aluminiumProduct';
 
 const T = {
   font: {
@@ -116,6 +116,10 @@ export function ProductDetailsStep({
       if (q == null || q <= 0) e.push({ code: '', message: t('product.details.eQty', { what }) });
       if (!en.countryOfOrigin.trim()) e.push({ code: '', message: t('product.details.eCountry', { what }) });
     });
+    // One calculation = one production process (CN 7601 or aluminium products), IR 2025/2547 Annex III A.
+    if (mixesAluminiumProcesses(entries.map((en: ProductDetailEntry) => en.cnCode))) {
+      e.push({ code: '', message: t('product.details.eMixedProcesses') });
+    }
     return e;
   }, [entries, cnCodeInfo, t]);
 

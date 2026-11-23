@@ -16,6 +16,7 @@ import { Add, ArrowBack, ArrowForward, Delete } from '@mui/icons-material';
 import { useCountries } from '../hooks/useCountries';
 import { CountrySelect } from './CountrySelect';
 import { useTranslation } from 'react-i18next';
+import { isZeroEmbeddedOrigin } from '../utils/zeroEmbeddedOrigin';
 
 const T = {
   font: {
@@ -72,7 +73,8 @@ function isEntryValid(entry: ExternalUnwroughtEntry): boolean {
   if (entry.countryId == null || !entry.kolicina.trim() || !entry.clanicaEu) {
     return false;
   }
-  if (entry.clanicaEu === 'EU_MEMBER') {
+  // EU or Annex III point 1 origin: embedded emissions count as zero, nothing more to ask.
+  if (isZeroEmbeddedOrigin(entry.clanicaEu, entry.drzava)) {
     return true;
   }
   if (!entry.emisijePoznate) {
@@ -206,7 +208,15 @@ export function ExternalUnwroughtInputStep({
             </FormControl>
           </Grid>
 
-          {entry.clanicaEu === 'NON_EU_MEMBER' && (
+          {entry.clanicaEu !== '' && isZeroEmbeddedOrigin(entry.clanicaEu, entry.drzava) && (
+            <Grid size={12}>
+              <Typography sx={{ fontFamily: T.font.body, fontSize: '0.9rem', color: T.color.forest, bgcolor: T.color.mint, borderRadius: T.radius.sm, px: 1.5, py: 1 }}>
+                {t('alu.ext.zeroOrigin')}
+              </Typography>
+            </Grid>
+          )}
+
+          {entry.clanicaEu === 'NON_EU_MEMBER' && !isZeroEmbeddedOrigin(entry.clanicaEu, entry.drzava) && (
             <Grid size={12}>
               <FormControl component="fieldset" sx={{ width: '100%' }}>
                 <Typography sx={{ fontFamily: T.font.body, fontSize: '0.95rem', color: T.color.inkSoft, mb: 1 }}>
@@ -230,7 +240,7 @@ export function ExternalUnwroughtInputStep({
             </Grid>
           )}
 
-          {entry.clanicaEu === 'NON_EU_MEMBER' && entry.emisijePoznate === 'YES' && (
+          {entry.clanicaEu === 'NON_EU_MEMBER' && !isZeroEmbeddedOrigin(entry.clanicaEu, entry.drzava) && entry.emisijePoznate === 'YES' && (
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth

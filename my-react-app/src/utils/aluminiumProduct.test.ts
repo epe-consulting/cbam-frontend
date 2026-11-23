@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { CnCodeDto } from '../hooks/useCnCodes';
-import { checkAluminiumCn, filterAluminiumCn, findAluminiumCn, parseQuantity } from './aluminiumProduct';
+import { checkAluminiumCn, filterAluminiumCn, findAluminiumCn, parseQuantity, aluminiumProcessOf, mixesAluminiumProcesses, declarationMatchesGoods } from './aluminiumProduct';
 
 const cn = (id: number, cnCode: string, description: string): CnCodeDto =>
   ({ id, cnCode, description, sortOrder: id, isActive: true });
@@ -57,5 +57,31 @@ describe('filterAluminiumCn', () => {
     expect(filterAluminiumCn(list, 'foil').map((c) => c.cnCode)).toEqual(['7607']);
     expect(filterAluminiumCn(list, '760').map((c) => c.cnCode)).toEqual(['7601', '7605', '7606', '7607', '7609 00 00']);
     expect(filterAluminiumCn(list, '').length).toBe(5);
+  });
+});
+
+// One calculation = one production process (IR 2025/2547 Annex III A, Eq. 57: SEE per production process).
+describe('one aluminium production process per calculation', () => {
+  it('tells CN 7601 from the aluminium products', () => {
+    expect(aluminiumProcessOf('7601 10 00')).toBe('UNWROUGHT');
+    expect(aluminiumProcessOf('7604')).toBe('PRODUCTS');
+    expect(aluminiumProcessOf('7616 99 10')).toBe('PRODUCTS');
+    expect(aluminiumProcessOf('')).toBeNull();
+    expect(aluminiumProcessOf('76')).toBeNull();
+  });
+
+  it('flags a mix of 7601 and other goods only', () => {
+    expect(mixesAluminiumProcesses(['7601 10 00', '7601 20'])).toBe(false);
+    expect(mixesAluminiumProcesses(['7604 10', '7606'])).toBe(false);
+    expect(mixesAluminiumProcesses(['7601 10 00', '7604 10'])).toBe(true);
+    expect(mixesAluminiumProcesses(['7601', ''])).toBe(false);
+  });
+
+  it('checks the declaration against the goods', () => {
+    expect(declarationMatchesGoods('unwrought', ['7601 10 00'])).toBe(true);
+    expect(declarationMatchesGoods('unwrought', ['7604 10'])).toBe(false);
+    expect(declarationMatchesGoods('products', ['7604 10', '7606'])).toBe(true);
+    expect(declarationMatchesGoods('products', ['7601'])).toBe(false);
+    expect(declarationMatchesGoods('', ['7601'])).toBe(true);
   });
 });

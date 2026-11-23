@@ -64,6 +64,7 @@ import {
   HourglassEmpty,
   EditNote,
   TrendingUp,
+  AssignmentOutlined,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { tr } from './i18n';
@@ -531,6 +532,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 <ListItemIcon><Settings sx={{ fontSize: 20, color: T.color.muted }} /></ListItemIcon>
                 <ListItemText primaryTypographyProps={{ fontFamily: T.font.body }}>{t('dashboard.settings')}</ListItemText>
               </MenuItem>
+              <MenuItem
+                onClick={() => { handleMenuClose(); navigate('/dashboard/monitoring-plan'); }}
+                sx={{ fontFamily: T.font.body, borderRadius: '8px', mx: 0.5 }}
+              >
+                <ListItemIcon><AssignmentOutlined sx={{ fontSize: 20, color: T.color.muted }} /></ListItemIcon>
+                <ListItemText primaryTypographyProps={{ fontFamily: T.font.body }}>{t('mp.title')}</ListItemText>
+              </MenuItem>
               <Divider sx={{ borderColor: T.color.lineFaint, mx: 1 }} />
               <MenuItem
                 onClick={handleLogout}
@@ -592,6 +600,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                     }}
                   >
                     {t('dashboard.genReport')}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<AssignmentOutlined />}
+                    onClick={() => navigate('/dashboard/monitoring-plan')}
+                    sx={{
+                      fontFamily: T.font.body, fontWeight: 600, textTransform: 'none',
+                      borderColor: T.color.line, color: T.color.inkSoft, borderRadius: T.radius.pill, px: 3, py: 1.1,
+                      '&:hover': { borderColor: T.color.forest, bgcolor: T.color.mint, color: T.color.forest },
+                    }}
+                  >
+                    {t('mp.title')}
                   </Button>
                 </Stack>
               </Box>

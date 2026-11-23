@@ -77,10 +77,10 @@ export function useCalculationAnswers(calculationId: number | null) {
 
   /** Deletes all answers for the given question IDs (e.g. when user presses Back from a step). */
   const deleteAnswersForQuestions = useCallback(
-    async (questionIds: number[]) => {
+    async (questionIds: number[], latestVisitAnchorQuestionId?: number) => {
       if (calculationId == null || questionIds.length === 0) return;
       try {
-        await deleteCalculationAnswersByCalculationAndQuestions(calculationId, questionIds);
+        await deleteCalculationAnswersByCalculationAndQuestions(calculationId, questionIds, latestVisitAnchorQuestionId);
         setAnswers((prev: AnswersMap) => {
           const next = { ...prev };
           for (const qId of questionIds) delete next[qId];

@@ -72,11 +72,16 @@ export async function upsertCalculationAnswer(payload: {
  */
 export async function deleteCalculationAnswersByCalculationAndQuestions(
   calculationId: number,
-  questionIds: number[]
+  questionIds: number[],
+  /** Only the latest visit of a step visited several times: rows from the latest answer of this question on. */
+  latestVisitAnchorQuestionId?: number
 ): Promise<{ deleted: number }> {
+  const body = latestVisitAnchorQuestionId != null
+    ? { calculationId, questionIds, latestVisitAnchorQuestionId }
+    : { calculationId, questionIds };
   const result = await apiRequest<{ success: boolean; deleted?: number; message?: string }>(
     '/calculation-answers/by-calculation-and-questions',
-    { method: 'DELETE', body: JSON.stringify({ calculationId, questionIds }) }
+    { method: 'DELETE', body: JSON.stringify(body) }
   );
   if (result === null || !result.data.success) {
     throw new Error(result?.data?.message ?? tr('err.deleteAnswers'));
